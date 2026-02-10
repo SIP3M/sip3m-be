@@ -44,7 +44,7 @@ export const getProfile = async (
       email: user.email,
       nidn: user.nidn_nip,
       fakultas: user.fakultas,
-      role: user.roles.roles,
+      roles: user.roles.roles,
       created_at: user.created_at,
     },
   });
@@ -95,7 +95,7 @@ export const updateProfile = async (
       email: updated.email,
       nidn: updated.nidn_nip,
       fakultas: updated.fakultas,
-      role: updated.roles.roles,
+      roles: updated.roles.roles,
     },
   });
 };

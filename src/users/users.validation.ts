@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { ROLES } from '../auth/role';
 
 export const updateUserRoleSchema = z.object({
-  role: z.enum([
+  roles: z.enum([
     ROLES.ADMIN_LPPM,
     ROLES.STAFF_LPPM,
     ROLES.DOSEN,

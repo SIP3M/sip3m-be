@@ -39,7 +39,7 @@ export const getUsers = async (
         created_at: user.created_at,
         roles: {
           id: user.roles.id,
-          role: user.roles.roles,
+          roles: user.roles.roles,
         },
       })),
     });
@@ -98,7 +98,7 @@ export const getUserById = async (
       updated_at: user.updated_at,
       roles: {
         id: user.roles.id,
-        role: user.roles.roles,
+        roles: user.roles.roles,
       },
     },
   });
@@ -164,7 +164,7 @@ export const updateUserRole = async (
       fakultas: updatedUser.fakultas,
       roles: {
         id: updatedUser.roles.id,
-        role: updatedUser.roles.roles,
+        roles: updatedUser.roles.roles,
       },
     },
   });
@@ -220,7 +220,7 @@ export const updateUserStatus = async (
       is_active: updatedUser.is_active,
       roles: {
         id: updatedUser.roles.id,
-        role: updatedUser.roles.roles,
+        roles: updatedUser.roles.roles,
       },
     },
   });

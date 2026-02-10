@@ -6,6 +6,9 @@ import authRoute from './auth/auth.routes';
 import usersRoute from './users/users.routes';
 import dosenRoute from './dosen/dosen.routes';
 
+import swaggerUi from 'swagger-ui-express';
+import { swaggerSpec } from './docs/swagger';
+
 dotenv.config();
 
 const app = express();
@@ -18,6 +21,8 @@ app.use((req, _res, next) => {
   console.log('[INCOMING]', req.method, req.url);
   next();
 });
+
+app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 
 // routes
