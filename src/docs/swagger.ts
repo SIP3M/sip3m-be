@@ -14,6 +14,10 @@ export const swaggerSpec = swaggerJSDoc({
         url: 'http://localhost:3000/api',
         description: 'Local development server',
       },
+      {
+        url: 'https://sip3m-be.vercel.app/api',
+        description: 'Production server',
+      }
     ],
     components: {
       securitySchemes: {
