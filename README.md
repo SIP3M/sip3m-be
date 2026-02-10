@@ -1,102 +1,55 @@
-# SIP3M Backend – Express.js API
+# 🚀 SIP3M Backend (sip3m-be)
+**Backend REST API – Sistem Informasi Penelitian, Pengabdian, dan Publikasi Masyarakat**
 
-Backend API untuk sistem **SIP3M** yang menangani proses autentikasi, manajemen data, dan layanan inti aplikasi.  
-Dibangun menggunakan **Node.js + Express.js** dan terhubung ke database.
+Repository ini berisi **backend REST API** untuk sistem SIP3M yang dikembangkan menggunakan  
+**Node.js (Express) + TypeScript + Prisma ORM**.
+
+Backend ini bertanggung jawab untuk:
+- Autentikasi & otorisasi pengguna
+- Manajemen user & role (RBAC)
+- Profil dosen (dummy)
+- Menyediakan API terstruktur untuk frontend SIP3M
 
 ---
 
-## 🚀 Teknologi yang Digunakan
-- Node.js
+## 🧠 Gambaran Umum Sistem
+
+Backend SIP3M mengimplementasikan:
+- **JWT Authentication**
+- **Role-Based Access Control (RBAC)**
+- **RESTful API**
+- **Input validation**
+- **Centralized error handling**
+- **Swagger API Documentation**
+
+Role utama:
+- `ADMIN_LPPM`
+- `STAFF_LPPM`
+- `DOSEN`
+- `REVIEWER`
+- `PIHAK_EKSTERNAL`
+
+---
+
+## 🛠️ Tech Stack
+
+### Core
+- Node.js ≥ 20
+- TypeScript ≥ 5
 - Express.js
-- TypeScript
-- Database (sesuai konfigurasi)
-- ORM / Query Builder (jika ada)
-- JWT Authentication
+- PostgreSQL
+
+### Backend Tools
+- Prisma ORM
+- JWT (jsonwebtoken)
+- Zod (validation)
+- Swagger (API Docs)
+- bcrypt (password hashing)
 
 ---
 
-## 📂 Struktur Project (Ringkas)
+## 📦 Cara Clone Repository
 
-sip3m-be-express/
-├── src/
-│ ├── controllers/
-│ ├── routes/
-│ ├── middlewares/
-│ ├── services/
-│ ├── utils/
-│ └── index.ts
-├── prisma/ (jika pakai Prisma)
-├── .env.example
-├── tsconfig.json
-└── package.json
-
-
----
-
-## 🔐 Fitur yang Sudah Dibuat
-
-### 1️⃣ Autentikasi & Otorisasi
-- Login user
-- Logout user
-- JWT-based authentication
-- Role-based access control (RBAC)
-
-**Role yang tersedia:**
-- Admin
-- Petugas
-- Manajemen
-
----
-
-### 2️⃣ Manajemen User
-- Tambah user
-- Lihat daftar user
-- Update data user
-- Hapus user
-
----
-
-### 3️⃣ (Tambahkan fitur sesuai project kamu)
-Contoh:
-- Manajemen data parkir
-- Manajemen kendaraan masuk & keluar
-- Laporan data
-- Dashboard statistik
-
-> 📌 **Catatan QA:**  
-> Semua endpoint yang dilindungi membutuhkan **Bearer Token**.
-
----
-
-## 🌐 Dokumentasi Endpoint (Contoh)
-
-### 🔑 Auth
-| Method | Endpoint | Deskripsi |
-|------|---------|----------|
-| POST | `/api/auth/login` | Login user |
-| POST | `/api/auth/logout` | Logout user |
-
----
-
-### 👤 User
-| Method | Endpoint | Deskripsi |
-|------|---------|----------|
-| GET | `/api/users` | Ambil semua user |
-| POST | `/api/users` | Tambah user |
-| PUT | `/api/users/:id` | Update user |
-| DELETE | `/api/users/:id` | Hapus user |
-
----
-
-## 🧪 Cara QA Melakukan Testing
-
-### 1️⃣ Clone Repository
 ```bash
-git clone https://github.com/SIP3M/sip3m-be.git
-cd sip3m-be-express
-
-### 2 Install Dependencies
-npm install
-
-### 3 Konfigurasi Environment
-minta ke Backend
+git clone https://github.com/<organization>/sip3m-be.git
+cd sip3m-be
