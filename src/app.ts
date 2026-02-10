@@ -5,8 +5,7 @@ import dotenv from 'dotenv';
 import authRoute from './auth/auth.routes';
 import usersRoute from './users/users.routes';
 import dosenRoute from './dosen/dosen.routes';
-
-import swaggerUi from 'swagger-ui-express';
+import swaggerUiDist from "swagger-ui-dist"
 import { swaggerSpec } from './docs/swagger';
 
 dotenv.config();
@@ -22,7 +21,48 @@ app.use((req, _res, next) => {
   next();
 });
 
-app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+app.use(
+  "/swagger-ui",
+  express.static(swaggerUiDist.getAbsoluteFSPath(), {
+    setHeaders: (res, filePath) => {
+      if (filePath.endsWith(".css")) {
+        res.setHeader("Content-Type", "text/css")
+      }
+    },
+  })
+)
+app.get("/docs/swagger.json", (_req, res) => {
+  res.setHeader("Content-Type", "application/json")
+  res.send(swaggerSpec)
+})
+
+
+app.get("/docs", (_req, res) => {
+  const html = `<!DOCTYPE html>
+<html>
+<head>
+  <title>SLK API Docs</title>
+  <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5.11.0/swagger-ui.css" />
+</head>
+<body>
+  <div id="swagger-ui"></div>
+
+  <script src="https://unpkg.com/swagger-ui-dist@5.11.0/swagger-ui-bundle.js"></script>
+  <script src="/swagger-ui/swagger-ui-standalone-preset.js"></script>
+  <script>
+    window.onload = () => {
+      SwaggerUIBundle({
+        url: "/docs/swagger.json",
+        dom_id: "#swagger-ui",
+        persistAuthorization: true
+      })
+    }
+  </script>
+</body>
+</html>`
+  res.send(html)
+})
+
 
 
 // routes
