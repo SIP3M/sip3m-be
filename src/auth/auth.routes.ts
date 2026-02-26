@@ -5,7 +5,7 @@ import multer from 'multer';
 
 const router = Router();
 const upload = multer({ 
-  dest: 'uploads/cv/', 
+  storage: multer.memoryStorage(), 
   limits: { 
     fileSize: 5 * 1024 * 1024 
   } 

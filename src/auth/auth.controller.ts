@@ -4,11 +4,17 @@ import { HttpError } from '../common/errors/http-error';
 import {
   LoginInput,
   RegisterDosenInput,
-  RegisterReviewerInput,
+
 } from './types/auth.types';
 import { AuthenticatedRequest } from './types/auth.jwt.types';
 import { prisma } from '../prisma';
 import { loginSchema, registerDosenSchema, registerReviewerSchema } from './auth.validation';
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+  process.env.SUPABASE_URL as string,
+  process.env.SUPABASE_ANON_KEY as string
+);
 
 // register
 export const registerDosenController = async (
@@ -48,14 +54,40 @@ export const registerDosenController = async (
 export const registerReviewerController = async (
   req: Request, 
   res: Response,
-): Promise<Response> => { 
+) => { 
   try {
     if (!req.file) {
       return res.status(400).json({ message: "File CV wajib diunggah." });
     }
     
-    const cvFilePath = req.file.path; 
+    // 👇 PROSES UPLOAD KE SUPABASE
+    // Buat nama file unik (gabungan timestamp dan nama asli file)
+    const uniqueFileName = `cv-${Date.now()}-${req.file.originalname.replace(/\s+/g, '-')}`;
+    
+    // Upload buffer dari memori ke Supabase Storage (bucket: cv_reviewer)
+    const { data: uploadData, error: uploadError } = await supabase
+      .storage
+      .from('cv_reviewer') // Pastikan nama bucket sesuai dengan yang kamu buat
+      .upload(uniqueFileName, req.file.buffer, {
+        contentType: req.file.mimetype,
+      });
 
+    if (uploadError) {
+      console.error('[SUPABASE_UPLOAD_ERROR]', uploadError);
+      return res.status(500).json({ message: "Gagal mengunggah file CV ke Storage." });
+    }
+
+    // Ambil Public URL dari file yang baru saja diupload
+    const { data: publicUrlData } = supabase
+      .storage
+      .from('cv_reviewer')
+      .getPublicUrl(uniqueFileName);
+
+    // Ini adalah URL asli yang bisa dibuka di browser (https://...)
+    const cvFilePath = publicUrlData.publicUrl; 
+
+    // 👇 PROSES VALIDASI ZOD
+    // Gabungkan body dengan cv_path (URL dari Supabase)
     const dataToValidate = {
       ...req.body,
       cv_path: cvFilePath 
@@ -64,12 +96,16 @@ export const registerReviewerController = async (
     const validation = registerReviewerSchema.safeParse(dataToValidate);
 
     if (!validation.success) {
+      // (Opsional tapi direkomendasikan: Hapus file dari Supabase jika validasi Zod gagal)
+      await supabase.storage.from('cv_reviewer').remove([uniqueFileName]);
+
       return res.status(400).json({
         message: "Validasi data gagal!",
         errors: validation.error.flatten().fieldErrors 
       });
     }
 
+    // Simpan ke database melalui service
     const user = await registerReviewer(validation.data, cvFilePath);
 
     return res.status(201).json({
@@ -81,6 +117,7 @@ export const registerReviewerController = async (
       return res.status(error.statusCode).json({ message: error.message });
     }
     
+    console.error('[REGISTER_REVIEWER_ERROR]', error);
     return res.status(500).json({ message: 'Terjadi kesalahan pada server saat registrasi.' });
   }
 };
