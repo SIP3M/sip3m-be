@@ -1,44 +1,88 @@
-import 'dotenv/config'; 
-import { PrismaClient } from '../src/generated/prisma/client';
-import bcrypt from 'bcrypt';
+// prisma/seed.ts
+const { PrismaClient } = require('../src/generated/prisma/client');
+const bcrypt = require('bcrypt');
+
+/**
+ * Type helper untuk role
+ * (biar TS tidak implicit any)
+ */
+type Role = {
+  id: number;
+  roles: string;
+};
 
 const prisma = new PrismaClient();
 
 async function main() {
-  const adminEmail = 'admin@lppm.ac.id';
+  console.log('🔥 SEED SCRIPT STARTED');
 
-  const existingAdmin = await prisma.users.findUnique({
-    where: { email: adminEmail },
-  });
+  const passwordHash = await bcrypt.hash('password123', 10);
 
-  if (existingAdmin) {
-    console.log('Admin already exists.');
-    return;
+  const roles = (await prisma.roles.findMany()) as Role[];
+
+  if (roles.length === 0) {
+    throw new Error('Roles table is empty. Seed roles first.');
   }
 
-  const adminRole = await prisma.roles.findUnique({
-    where: { roles: 'ADMIN_LPPM' },
-  });
-
-  if (!adminRole) {
-    throw new Error('ADMIN_LPPM role not found.');
-  }
-
-  const passwordHash = await bcrypt.hash('Admin@123', 10);
-
-  await prisma.users.create({
-    data: {
+  const users = [
+    {
       name: 'Admin LPPM',
-      email: adminEmail,
-      password_hash: passwordHash,
-      role_id: adminRole.id,
-      is_active: true,
+      email: 'admin@lppm.ac.id',
+      role: 'ADMIN_LPPM',
     },
-  });
+    {
+      name: 'Staff LPPM',
+      email: 'staff@lppm.ac.id',
+      role: 'STAFF_LPPM',
+    },
+    {
+      name: 'Dosen Dummy',
+      email: 'dosen@kampus.ac.id',
+      role: 'DOSEN',
+      nidn_nip: '1234567890',
+      fakultas: 'Teknik',
+    },
+    {
+      name: 'Reviewer Dummy',
+      email: 'reviewer@kampus.ac.id',
+      role: 'REVIEWER',
+    },
+    {
+      name: 'Pihak Eksternal',
+      email: 'eksternal@mitra.ac.id',
+      role: 'PIHAK EKSTERNAL',
+    },
+  ];
 
-  console.log('Admin LPPM created successfully.');
+  for (const u of users) {
+    const role = roles.find((r: Role) => r.roles === u.role);
+
+    if (!role) {
+      console.warn(`⚠️ Role ${u.role} not found, skipping`);
+      continue;
+    }
+
+    await prisma.users.upsert({
+      where: { email: u.email },
+      update: {},
+      create: {
+        name: u.name,
+        email: u.email,
+        password_hash: passwordHash,
+        role_id: role.id,
+        is_active: true,
+      },
+    });
+  }
+
+  console.log('✅ Dummy users seeded successfully');
 }
 
 main()
-  .catch(console.error)
-  .finally(() => prisma.$disconnect());
+  .catch((e: unknown) => {
+    console.error('❌ SEED ERROR:', e);
+    process.exit(1);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
+  });

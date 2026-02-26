@@ -23,13 +23,28 @@ model schema_migrations {
 model users {
   id            Int       @id @default(autoincrement())
   name          String    @db.VarChar(100)
-  email         String    @unique @db.VarChar(100)
-  password_hash String?
+  email         String   @unique @db.VarChar(100)
+  username      String?   @unique @db.VarChar(50)  
+  password_hash String
   role_id       Int
-  nidn_nip      String?   @db.VarChar(30)
+  
+  nidn_nip      String?   @unique @db.VarChar(30) 
   fakultas      String?   @db.VarChar(100)
+  program_studi String?   @db.VarChar(100)       
+  
+  tempat_lahir  String?   @db.VarChar(100)
+  tanggal_lahir DateTime? @db.Date
+  jenis_kelamin String?   @db.VarChar(15)
+  alamat        String?   @db.Text
+  nomor_hp      String?   @db.VarChar(20)
+
   is_active     Boolean?  @default(true)
   created_at    DateTime? @default(now()) @db.Timestamp(6)
   updated_at    DateTime? @default(now()) @db.Timestamp(6)
   roles         roles     @relation(fields: [role_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  instansi      String?   @db.VarChar(100) // untuk mahasiswa, bisa diisi dengan nama universitas atau sekolah tinggi
+  bidang_keahlian String?   @db.VarChar(100) // untuk mahasiswa, bisa diisi dengan jurusan atau program studi
+  pengalaman_review String?   @db.Text // untuk mahasiswa, bisa diisi dengan pengalaman organisasi atau magang
+  cv_path        String?   @db.VarChar(255) // untuk mahasiswa, bisa diisi dengan path atau URL ke file CV mereka
 }

@@ -51,31 +51,44 @@ export const swaggerSpec = swaggerJSDoc({
     security: [{ bearerAuth: [] }],
     paths: {
       /** ================= AUTH ================= */
-'/auth/register': {
+'/auth/register/dosen': {
   post: {
     tags: ['Auth'],
-    summary: 'Register user',
+    summary: 'Register Dosen',
     description: `
-Endpoint untuk registrasi user baru.
+Endpoint untuk registrasi user dengan role **DOSEN**.
 
 **Role akses:**
 - Public (tanpa login)
 
-Catatan:
-- Role default user adalah REVIEWER.
+**Catatan:**
+- Setelah registrasi, akun berstatus \`is_active: false\` dan harus diverifikasi oleh Admin LPPM terlebih dahulu sebelum bisa login.
+- Field \`nidn\`, \`username\`, dan \`email\` harus unik.
     `,
     requestBody: {
       required: true,
       content: {
         'application/json': {
           schema: {
-            required: ['name', 'email', 'password'],
+            required: [
+              'name', 'tempat_lahir', 'tanggal_lahir', 'jenis_kelamin',
+              'nomor_hp', 'email', 'nidn', 'fakultas', 'program_studi',
+              'username', 'password', 'konfirmasi_password',
+            ],
             properties: {
-              name: { type: 'string' },
-              email: { type: 'string' },
-              password: { type: 'string' },
-              nidn: { type: 'string' },
-              fakultas: { type: 'string' },
+              name: { type: 'string', example: 'Budi Santoso', description: 'Nama lengkap, min 3 karakter.' },
+              tempat_lahir: { type: 'string', example: 'Jakarta' },
+              tanggal_lahir: { type: 'string', format: 'date', example: '1985-06-15', description: 'Format YYYY-MM-DD.' },
+              jenis_kelamin: { type: 'string', enum: ['Laki-laki', 'Perempuan'], example: 'Laki-laki' },
+              alamat: { type: 'string', example: 'Jl. Merdeka No. 1, Jakarta', description: 'Opsional, maks 500 karakter.' },
+              nomor_hp: { type: 'string', example: '081234567890' },
+              email: { type: 'string', format: 'email', example: 'budi@kampus.ac.id' },
+              nidn: { type: 'string', example: '0123456789', description: 'NIDN atau NIP dosen.' },
+              fakultas: { type: 'string', example: 'Teknik' },
+              program_studi: { type: 'string', example: 'Teknik Informatika' },
+              username: { type: 'string', example: 'budi_santoso', description: 'Min 3 karakter, hanya huruf, angka, dan underscore.' },
+              password: { type: 'string', format: 'password', example: 'password123', description: 'Min 8 karakter.' },
+              konfirmasi_password: { type: 'string', format: 'password', example: 'password123', description: 'Harus sama dengan password.' },
             },
           },
         },
@@ -83,33 +96,146 @@ Catatan:
     },
     responses: {
       201: {
-        description: 'User registered successfully',
+        description: 'Registrasi dosen berhasil',
         content: {
           'application/json': {
             example: {
-              message: 'User registered successfully.',
+              message: 'Registrasi Dosen berhasil. Akun Anda sedang menunggu verifikasi oleh Admin.',
               data: {
-                id: 4,
-                name: 'Faqih Asyari',
-                email: 'faqih@kampus.ac.id',
-                nidn: '012732231',
-                fakultas: 'Teknik',
+                id: 5,
+                name: 'Budi Santoso',
+                email: 'budi@kampus.ac.id',
+                username: 'budi_santoso',
+                nidn: '0123456789',
                 roles: {
-                  id: 4,
-                  roles: 'REVIEWER',
+                  id: 3,
+                  roles: 'DOSEN',
                 },
-                created_at: '2026-02-10T10:00:00.000Z',
+                is_active: false,
+              },
+            },
+          },
+        },
+      },
+      400: {
+        description: 'Validasi data gagal',
+        content: {
+          'application/json': {
+            example: {
+              message: 'Validasi data gagal.',
+              errors: {
+                email: ['Email format tidak valid.'],
+                konfirmasi_password: ['Password dan konfirmasi password harus sama.'],
               },
             },
           },
         },
       },
       409: {
-        description: 'Email already exists',
+        description: 'Username / Email / NIDN sudah digunakan',
+        content: {
+          'application/json': {
+            examples: {
+              username: { value: { message: 'Username sudah digunakan.' } },
+              email: { value: { message: 'Email sudah digunakan.' } },
+              nidn: { value: { message: 'NIDN sudah digunakan.' } },
+            },
+          },
+        },
+      },
+    },
+  },
+},
+
+'/auth/register/reviewer': {
+  post: {
+    tags: ['Auth'],
+    summary: 'Register Reviewer Eksternal',
+    description: `
+Endpoint untuk registrasi user dengan role **REVIEWER_EKSTERNAL**.
+
+**Role akses:**
+- Public (tanpa login)
+
+**Catatan:**
+- Request menggunakan **multipart/form-data** karena terdapat upload file CV.
+- File CV maksimal **5 MB**.
+- Setelah registrasi, akun berstatus \`is_active: false\` dan harus diverifikasi oleh Admin LPPM.
+- \`username\` dan \`email\` harus unik.
+    `,
+    requestBody: {
+      required: true,
+      content: {
+        'multipart/form-data': {
+          schema: {
+            required: [
+              'name', 'email', 'nomor_hp', 'instansi', 'bidang_keahlian',
+              'pengalaman_review', 'cv', 'username', 'password', 'konfirmasi_password',
+            ],
+            properties: {
+              name: { type: 'string', example: 'Dr. Rina Wijaya', description: 'Nama lengkap, min 3 karakter.' },
+              email: { type: 'string', format: 'email', example: 'rina@instansi.org' },
+              nomor_hp: { type: 'string', example: '082345678901' },
+              instansi: { type: 'string', example: 'Universitas Indonesia' },
+              bidang_keahlian: { type: 'string', example: 'Kecerdasan Buatan' },
+              pengalaman_review: { type: 'string', example: 'Pernah mereview 15 proposal penelitian nasional sejak 2018.', description: 'Maks 1000 karakter.' },
+              cv: { type: 'string', format: 'binary', description: 'File CV, maks 5 MB.' },
+              username: { type: 'string', example: 'rina_wijaya', description: 'Min 3 karakter, hanya huruf, angka, dan underscore.' },
+              password: { type: 'string', format: 'password', example: 'password123', description: 'Min 8 karakter.' },
+              konfirmasi_password: { type: 'string', format: 'password', example: 'password123', description: 'Harus sama dengan password.' },
+            },
+          },
+        },
+      },
+    },
+    responses: {
+      201: {
+        description: 'Registrasi reviewer eksternal berhasil',
         content: {
           'application/json': {
             example: {
-              message: 'An account with this email address already exists.',
+              message: 'Registrasi Reviewer Eksternal berhasil. Akun Anda sedang menunggu verifikasi oleh Admin LPPM.',
+              data: {
+                id: 6,
+                name: 'Dr. Rina Wijaya',
+                email: 'rina@instansi.org',
+                username: 'rina_wijaya',
+                roles: {
+                  id: 5,
+                  roles: 'REVIEWER_EKSTERNAL',
+                },
+                is_active: false,
+              },
+            },
+          },
+        },
+      },
+      400: {
+        description: 'Validasi data gagal atau file CV tidak diunggah',
+        content: {
+          'application/json': {
+            examples: {
+              noFile: { value: { message: 'File CV wajib diunggah.' } },
+              validationFail: {
+                value: {
+                  message: 'Validasi data gagal!',
+                  errors: {
+                    email: ['Email format tidak valid.'],
+                    konfirmasi_password: ['Password dan konfirmasi password harus sama.'],
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      409: {
+        description: 'Username / Email sudah digunakan',
+        content: {
+          'application/json': {
+            examples: {
+              username: { value: { message: 'Username sudah digunakan.' } },
+              email: { value: { message: 'Email sudah digunakan.' } },
             },
           },
         },
@@ -126,21 +252,25 @@ Catatan:
     description: `
 Endpoint untuk autentikasi user.
 
-Role akses:
+**Role akses:**
 - Public (tanpa login)
 
-Catatan:
+**Catatan:**
+- \`identifier\` bisa berupa **email** atau **NIDN/NIP**.
 - Menghasilkan JWT token untuk akses API lain.
+- Jika \`remember_me: true\`, token berlaku selama **7 hari**. Jika tidak, token berlaku **1 hari**.
+- Akun yang belum diverifikasi Admin LPPM tidak dapat login (\`is_active: false\`).
     `,
     requestBody: {
       required: true,
       content: {
         'application/json': {
           schema: {
-            required: ['email', 'password'],
+            required: ['identifier', 'password'],
             properties: {
-              email: { type: 'string' },
-              password: { type: 'string' },
+              identifier: { type: 'string', example: 'budi@kampus.ac.id', description: 'Email atau NIDN/NIP.' },
+              password: { type: 'string', format: 'password', example: 'password123' },
+              remember_me: { type: 'boolean', example: false, description: 'Opsional. Jika true, token berlaku 7 hari.' },
             },
           },
         },
@@ -148,22 +278,22 @@ Catatan:
     },
     responses: {
       200: {
-        description: 'Login successful',
+        description: 'Login berhasil',
         content: {
           'application/json': {
             example: {
-              message: 'Login successful.',
+              message: 'Login berhasil.',
               data: {
-                access_token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+                token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
                 user: {
-                  id: 4,
-                  name: 'Faqih Asyari',
-                  email: 'faqih@kampus.ac.id',
-                  nidn: '012732231',
+                  id: 5,
+                  name: 'Budi Santoso',
+                  email: 'budi@kampus.ac.id',
+                  nidn: '0123456789',
                   fakultas: 'Teknik',
                   roles: {
-                    id: 4,
-                    roles: 'REVIEWER',
+                    id: 3,
+                    roles: 'DOSEN',
                   },
                 },
               },
@@ -172,11 +302,31 @@ Catatan:
         },
       },
       401: {
-        description: 'Invalid credentials',
+        description: 'Password salah',
         content: {
           'application/json': {
             example: {
-              message: 'Invalid email or password.',
+              message: 'Password salah. Silahkan coba lagi.',
+            },
+          },
+        },
+      },
+      403: {
+        description: 'Akun belum diverifikasi',
+        content: {
+          'application/json': {
+            example: {
+              message: 'Akun Anda belum diverifikasi oleh Admin LPPM.',
+            },
+          },
+        },
+      },
+      404: {
+        description: 'User tidak ditemukan',
+        content: {
+          'application/json': {
+            example: {
+              message: 'User tidak ditemukan. Silahkan daftar terlebih dahulu.',
             },
           },
         },
@@ -191,27 +341,59 @@ Catatan:
     tags: ['Auth'],
     summary: 'Get current logged-in user',
     description: `
-Mengambil data user yang sedang login.
+Mengambil data user yang sedang login berdasarkan JWT token.
 
-Role akses:
-SEMUA ROLE (HARUS LOGIN)
+**Role akses:**
+- SEMUA ROLE (HARUS LOGIN)
+
+**Catatan:**
+- Field yang ditampilkan bervariasi sesuai role. Dosen memiliki field \`nidn\`, \`fakultas\`, \`program_studi\`. Reviewer Eksternal memiliki field \`instansi\`, \`bidang_keahlian\`, \`pengalaman_review\`.
     `,
     security: [{ bearerAuth: [] }],
     responses: {
       200: {
-        description: 'Current user',
+        description: 'Data user yang sedang login',
         content: {
           'application/json': {
-            example: {
-              data: {
-                id: 4,
-                name: 'Faqih Asyari',
-                email: 'faqih@kampus.ac.id',
-                nidn: '012732231',
-                fakultas: 'Teknik',
-                roles: {
-                  id: 4,
-                  roles: 'REVIEWER',
+            examples: {
+              dosen: {
+                summary: 'Contoh response untuk role DOSEN',
+                value: {
+                  data: {
+                    id: 5,
+                    name: 'Budi Santoso',
+                    username: 'budi_santoso',
+                    email: 'budi@kampus.ac.id',
+                    nomor_hp: '081234567890',
+                    is_active: true,
+                    roles: { id: 3, roles: 'DOSEN' },
+                    nidn: '0123456789',
+                    fakultas: 'Teknik',
+                    program_studi: 'Teknik Informatika',
+                    instansi: null,
+                    bidang_keahlian: null,
+                    pengalaman_review: null,
+                  },
+                },
+              },
+              reviewer_eksternal: {
+                summary: 'Contoh response untuk role REVIEWER_EKSTERNAL',
+                value: {
+                  data: {
+                    id: 6,
+                    name: 'Dr. Rina Wijaya',
+                    username: 'rina_wijaya',
+                    email: 'rina@instansi.org',
+                    nomor_hp: '082345678901',
+                    is_active: true,
+                    roles: { id: 5, roles: 'REVIEWER_EKSTERNAL' },
+                    nidn: null,
+                    fakultas: null,
+                    program_studi: null,
+                    instansi: 'Universitas Indonesia',
+                    bidang_keahlian: 'Kecerdasan Buatan',
+                    pengalaman_review: 'Pernah mereview 15 proposal penelitian nasional sejak 2018.',
+                  },
                 },
               },
             },
@@ -219,11 +401,21 @@ SEMUA ROLE (HARUS LOGIN)
         },
       },
       401: {
-        description: 'Unauthorized',
+        description: 'Unauthorized - token tidak valid atau tidak dikirim',
         content: {
           'application/json': {
             example: {
               message: 'Unauthorized.',
+            },
+          },
+        },
+      },
+      404: {
+        description: 'User tidak ditemukan',
+        content: {
+          'application/json': {
+            example: {
+              message: 'User not found.',
             },
           },
         },
@@ -233,7 +425,40 @@ SEMUA ROLE (HARUS LOGIN)
 },
 
 
-      /** ================= USERS ================= */
+'/auth/oauth/google': {
+  get: {
+    tags: ['Auth'],
+    summary: 'Login dengan Google (OAuth)',
+    description: `
+Endpoint untuk autentikasi via Google OAuth.
+
+**Role akses:**
+- Public (tanpa login)
+
+Catatan:
+- Endpoint ini akan me-redirect browser ke halaman login Google.
+- Setelah autentikasi berhasil, user akan diarahkan kembali dengan JWT access token.
+- Gunakan link ini langsung di browser atau sebagai redirect URL pada frontend.
+    `,
+    security: [],
+    responses: {
+      302: {
+        description: 'Redirect ke halaman Google OAuth',
+        headers: {
+          Location: {
+            description: 'URL Google OAuth untuk autentikasi',
+            schema: {
+              type: 'string',
+              example: 'https://google-oauth-teal.vercel.app/api/auth/google',
+            },
+          },
+        },
+      },
+    },
+  },
+},
+
+
 '/users': {
   get: {
     tags: ['Users'],
@@ -430,7 +655,6 @@ Catatan:
         },
       },
 
-      /** ================= DOSEN ================= */
 '/dosen/profile': {
   get: {
     tags: ['Dosen'],
