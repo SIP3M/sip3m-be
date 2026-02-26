@@ -4,116 +4,193 @@ import { prisma } from '../prisma';
 import { HttpError } from '../common/errors/http-error';
 import { getJwtSignOptions } from './jwt.config';
 import {
-  RegisterInput,
-  RegisterResult,
+  RegisterDosenInput,
+  RegisterDosenResult,
   LoginInput,
   LoginResult,
+  RegisterReviewerInput,
+  RegisterReviewerResult,
 } from './types/auth.types';
 
-
-export const registerUser = async (
-  data: RegisterInput,
-): Promise<RegisterResult> => {
-  const existingUser = await prisma.users.findUnique({
-    where: { email: data.email },
+export const registerDosen = async (
+  data: RegisterDosenInput,
+) : Promise<RegisterDosenResult> => {
+  const existingUser = await prisma.users.findFirst({
+    where: {
+      OR: [
+        {username: data.username},
+        {email: data.email},
+        {nidn_nip: data.nidn},
+      ]
+    },
   });
 
-  if (existingUser) {
-    throw new HttpError(
-      'An account with this email address already exists.',
-      409,
-    );
+  if (existingUser){
+    if (existingUser.username === data.username) throw new HttpError('Username sudah digunakan.', 400);
+    if (existingUser.email === data.email) throw new HttpError('Email sudah digunakan.', 400);
+    if (existingUser.nidn_nip === data.nidn) throw new HttpError('NIDN sudah digunakan.', 400);
   }
 
-  const defaultRole = await prisma.roles.findUnique({
-    where: { roles: 'REVIEWER' },
+  const dosenRole = await prisma.roles.findFirst({
+    where: { roles: 'DOSEN' },
   });
 
-  if (!defaultRole) {
-    throw new HttpError(
-      'Default role REVIEWER is not configured in the system.',
-      500,
-    );
+  if (!dosenRole) {
+    throw new HttpError('Role DOSEN tidak ditemukan di database.', 500);
   }
 
   const passwordHash = await bcrypt.hash(data.password, 10);
 
-  const user = await prisma.users.create({
+  const newUser = await prisma.users.create({
     data: {
       name: data.name,
       email: data.email,
+      username: data.username,
       password_hash: passwordHash,
-      role_id: defaultRole.id,
-      nidn_nip: data.nidn ?? null,
-      fakultas: data.fakultas ?? null,
+      nidn_nip: data.nidn,
+      fakultas: data.fakultas,
+      program_studi: data.program_studi,
+      tempat_lahir: data.tempat_lahir,
+      tanggal_lahir: new Date(data.tanggal_lahir),
+      jenis_kelamin: data.jenis_kelamin,
+      alamat: data.alamat,
+      is_active: false,
+      nomor_hp: data.nomor_hp,
+      role_id: dosenRole.id,
     },
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      nidn_nip: true,
-      fakultas: true,
-      created_at: true,
-      roles: true,
-    },
-  });
-
-  return {
-    id: user.id,
-    name: user.name,
-    email: user.email,
-    nidn: user.nidn_nip,
-    fakultas: user.fakultas,
-    created_at: user.created_at!,
-    roles: {
-      id: user.roles.id,
-      roles: user.roles.roles,
-    },
-  };
-};
-
-export const loginUser = async (
-  data: LoginInput,
-): Promise<LoginResult> => {
-  const user = await prisma.users.findUnique({
-    where: { email: data.email },
     include: { roles: true },
   });
 
-  if (!user || !user.password_hash) {
-    throw new HttpError('Invalid email or password.', 401);
+  return {
+    id: newUser.id,
+    name: newUser.name,
+    email: newUser.email,
+    username: newUser.username,
+    nidn: newUser.nidn_nip,
+    roles: {
+      id: newUser.roles.id,
+      roles: newUser.roles.roles,
+    },
+    is_active: newUser.is_active, 
+    }
+}
+
+export const registerReviewer = async (
+data: RegisterReviewerInput, cvFilePath: string,
+) : Promise<RegisterReviewerResult> => {
+  const existingUser = await prisma.users.findFirst({
+    where: {
+      OR: [
+        {username: data.username},
+        {email: data.email},
+      ]
+    },
+  });
+
+  if (existingUser) {
+    if (existingUser.username === data.username) throw new HttpError('Username sudah digunakan.', 400);
+    if (existingUser.email === data.email) throw new HttpError('Email sudah digunakan.', 400);
   }
 
-  const valid = await bcrypt.compare(data.password, user.password_hash);
+  const reviewerRole = await prisma.roles.findFirst({
+    where: { roles: 'REVIEWER_EKSTERNAL' },
+  });
 
-  if (!valid) {
-    throw new HttpError('Invalid email or password.', 401);
+  if (!reviewerRole) {
+    throw new HttpError('Role REVIEWER_EKSTERNAL tidak ditemukan di database.', 500);
   }
 
-  const secret = process.env.JWT_SECRET;
+  const passwordHash = await bcrypt.hash(data.password, 10);
 
-  if (!secret) {
-    throw new HttpError('JWT secret is not configured.', 500);
+  const newUser = await prisma.users.create({
+    data: {
+      name: data.name,
+      email: data.email,
+      username: data.username,
+      password_hash: passwordHash,
+      nomor_hp: data.nomor_hp,
+      instansi: data.instansi,
+      bidang_keahlian: data.bidang_keahlian,
+      pengalaman_review: data.pengalaman_review,
+      cv_path: cvFilePath,
+      is_active: false,
+      role_id: reviewerRole.id,
+    },
+    include: { roles: true },
+  });
+
+  return {
+    id: newUser.id,
+    name: newUser.name,
+    email: newUser.email,
+    username: newUser.username,
+    roles: {
+      id: newUser.roles.id,
+      roles: newUser.roles.roles,
+    },
+    is_active: newUser.is_active, 
+   }
+}
+  
+export const loginUser = async (
+  data: LoginInput,
+) : Promise<LoginResult> => {
+  const user = await prisma.users.findFirst({
+    where: {
+      OR: [
+        { email: data.identifier },
+        { nidn_nip: data.identifier },
+      ]
+    },
+    include: { roles: true },
+  });
+
+  if (!user) {
+    throw new HttpError('User tidak ditemukan. Silahkan daftar terlebih dahulu.', 404);
+  }
+
+  if (!user.password_hash) {
+    throw new HttpError('Password tidak ditemukan.', 500);
+  }
+
+  const passwordMatch = await bcrypt.compare(data.password, user.password_hash);
+
+  if (!passwordMatch) {
+    throw new HttpError('Password salah. Silahkan coba lagi.', 401);
+  }
+
+  if (!user.is_active) {
+    throw new HttpError('Akun Anda belum diverifikasi oleh Admin LPPM.', 403);
+  }
+
+  const expiresIn = data.remember_me ? '7d' : '1d'; 
+  const jwtSecret = process.env.JWT_SECRET;
+
+  if (!jwtSecret) {
+    throw new HttpError('JWT_SECRET tidak ditemukan.', 500);
   }
 
   const token = jwt.sign(
-    { sub: String(user.id), role: user.roles.roles },
-    secret,
-    getJwtSignOptions(),
+    { 
+      userId: user.id, 
+      role: user.roles.roles 
+    },
+    jwtSecret,
+    { expiresIn }
   );
 
   return {
-    access_token: token,
+    token,
     user: {
       id: user.id,
       name: user.name,
       email: user.email,
-      nidn: user.nidn_nip,
-      fakultas: user.fakultas,
       roles: {
         id: user.roles.id,
         roles: user.roles.roles,
       },
-    },
+      nidn: user.nidn_nip,
+      fakultas: user.fakultas
+    }
   };
 };

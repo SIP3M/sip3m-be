@@ -1,43 +1,34 @@
-import { Response } from 'express';
-import { registerUser, loginUser } from './auth.service';
+import { Response, Request } from 'express';
+import { registerDosen, loginUser, registerReviewer } from './auth.service';
 import { HttpError } from '../common/errors/http-error';
 import {
-  RegisterRequestBody,
-  LoginRequestBody,
+  LoginInput,
+  RegisterDosenInput,
+  RegisterReviewerInput,
 } from './types/auth.types';
 import { AuthenticatedRequest } from './types/auth.jwt.types';
 import { prisma } from '../prisma';
+import { loginSchema, registerDosenSchema, registerReviewerSchema } from './auth.validation';
 
-/**
- * REGISTER
- */
-export const register = async (
-  req: { body: RegisterRequestBody },
+// register
+export const registerDosenController = async (
+  req: { body: RegisterDosenInput },
   res: Response,
-): Promise<Response> => {
+) : Promise<Response> => {
   try {
-    const { name, email, password, nidn, fakultas } = req.body;
+    const validation = registerDosenSchema.safeParse(req.body);
 
-    if (!name || !email || !password) {
+    if (!validation.success) {
       return res.status(400).json({
-        message: 'Name, email, and password are required.',
+        message: 'Validasi data gagal.',
+        errors: validation.error.flatten().fieldErrors,
       });
     }
 
-    console.log('[REGISTER BODY RAW]', req.body);
-console.log('[REGISTER NIDN]', req.body.nidn);
-
-
-    const user = await registerUser({
-      name,
-      email,
-      password,
-      nidn,
-      fakultas,
-    });
-
+    const user = await registerDosen(validation.data);
+    
     return res.status(201).json({
-      message: 'User registered successfully.',
+      message: 'Registrasi Dosen berhasil. Akun Anda sedang menunggu verifikasi oleh Admin.',
       data: user,
     });
   } catch (error) {
@@ -47,52 +38,84 @@ console.log('[REGISTER NIDN]', req.body.nidn);
       });
     }
 
-    console.error('[REGISTER_ERROR]', error);
     return res.status(500).json({
-      message: 'An unexpected error occurred during registration.',
+      message: 'Terjadi kesalahan pada server saat registrasi.',
     });
   }
-};
+}
 
-/**
- * LOGIN
- */
-export const login = async (
-  req: { body: LoginRequestBody },
+// register reviewer
+export const registerReviewerController = async (
+  req: Request, 
   res: Response,
-): Promise<Response> => {
+): Promise<Response> => { 
   try {
-    const { email, password } = req.body;
+    if (!req.file) {
+      return res.status(400).json({ message: "File CV wajib diunggah." });
+    }
+    
+    const cvFilePath = req.file.path; 
 
-    if (!email || !password) {
+    const dataToValidate = {
+      ...req.body,
+      cv_path: cvFilePath 
+    };
+
+    const validation = registerReviewerSchema.safeParse(dataToValidate);
+
+    if (!validation.success) {
       return res.status(400).json({
-        message: 'Email and password are required.',
+        message: "Validasi data gagal!",
+        errors: validation.error.flatten().fieldErrors 
       });
     }
 
-    const result = await loginUser({ email, password });
+    const user = await registerReviewer(validation.data, cvFilePath);
+
+    return res.status(201).json({
+      message: 'Registrasi Reviewer Eksternal berhasil. Akun Anda sedang menunggu verifikasi oleh Admin LPPM.',
+      data: user,
+    });
+  } catch (error) {
+    if (error instanceof HttpError) {
+      return res.status(error.statusCode).json({ message: error.message });
+    }
+    
+    return res.status(500).json({ message: 'Terjadi kesalahan pada server saat registrasi.' });
+  }
+};
+
+// login
+export const loginController = async (
+  req: { body: LoginInput },
+  res: Response
+): Promise<Response> => {
+  try {
+    const validation = loginSchema.safeParse(req.body);
+
+    if (!validation.success) {
+      return res.status(400).json({
+        message: "Validasi data gagal!",
+        errors: validation.error.flatten().fieldErrors 
+      });
+    }
+
+    const result = await loginUser(validation.data);
 
     return res.status(200).json({
-      message: 'Login successful.',
+      message: 'Login berhasil.',
       data: result,
     });
   } catch (error) {
     if (error instanceof HttpError) {
-      return res.status(error.statusCode).json({
-        message: error.message,
-      });
+      return res.status(error.statusCode).json({ message: error.message });
     }
 
-    console.error('[LOGIN_ERROR]', error);
-    return res.status(500).json({
-      message: 'An unexpected error occurred during login.',
-    });
+    return res.status(500).json({ message: 'Terjadi kesalahan pada server saat login.'});
   }
 };
 
-/**
- * GET CURRENT USER (/me)
- */
+// me endpoint untuk mendapatkan info user yang sedang login
 export const me = async (
   req: AuthenticatedRequest,
   res: Response,
@@ -103,8 +126,7 @@ export const me = async (
     });
   }
 
-  // JWT sub = string → convert ke number (WAJIB)
-  const userId = Number(req.user.sub);
+  const userId = Number(req.user.userId);
 
   if (Number.isNaN(userId)) {
     return res.status(401).json({
@@ -134,13 +156,22 @@ export const me = async (
     data: {
       id: user.id,
       name: user.name,
+      username: user.username,
       email: user.email,
-      nidn: user.nidn_nip,
-      fakultas: user.fakultas,
+      nomor_hp: user.nomor_hp,
+      is_active: user.is_active,
       roles: {
         id: user.roles.id,
         roles: user.roles.roles,
       },
+      nidn: user.nidn_nip,
+      fakultas: user.fakultas,
+      program_studi: user.program_studi,
+      instansi: user.instansi,
+      bidang_keahlian: user.bidang_keahlian,
+      pengalaman_review: user.pengalaman_review
     },
   });
 };
+
+// 

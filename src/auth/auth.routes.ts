@@ -1,48 +1,35 @@
 import { Router } from 'express';
-import { login, me, register } from './auth.controller';
+import { loginController, me, registerDosenController, registerReviewerController } from './auth.controller';
 import { authMiddleware } from './middleware/auth.middleware';
+import multer from 'multer';
 
 const router = Router();
-
+const upload = multer({ 
+  dest: 'uploads/cv/', 
+  limits: { 
+    fileSize: 5 * 1024 * 1024 
+  } 
+});
 // Register route
-router.post('/auth/register', register);
+router.post('/auth/register/dosen', registerDosenController);
 
 // Login route
-router.post('/auth/login', login);
+router.post(
+  '/auth/register/reviewer', 
+  upload.single('cv'), 
+  registerReviewerController
+);
 
-console.log('[AUTH MIDDLEWARE TYPE]', typeof authMiddleware);
-console.log('[AUTH MIDDLEWARE VALUE]', authMiddleware);
+// Login route
+router.post('/auth/login', loginController);
 
 // Protected route to get current user info
 router.get('/auth/me', authMiddleware,me);
 
-// comingsoon route
-
-// Admin & staff only assign reviewer, approve hibah
-// router.post(
-//   '/proposals/:id/assign-reviewer',
-//   authMiddleware,
-//   requireRole([ROLES.ADMIN_LPPM, ROLES.STAFF_LPPM]),
-//   assignReviewer,
-// );
-
-// Dosen only submit proposal
-// router.post(
-//   '/proposals',
-//   authMiddleware,
-//   requireRole(['DOSEN']),
-//   submitProposal,
-// );
-
-// Reviewer only submit review
-// router.post(
-//   '/reviews',
-//   authMiddleware,
-//   requireRole(['REVIEWER']),
-//   submitReview,
-// );
-
-
-
-
+// Oauth route
+router.get('/auth/oauth/google', (req, res) => {
+  const oauthUrl =
+    'https://google-oauth-teal.vercel.app/api/auth/google';
+  return res.redirect(oauthUrl);
+});
 export default router;
