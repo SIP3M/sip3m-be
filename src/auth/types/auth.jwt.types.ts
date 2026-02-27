@@ -1,5 +1,5 @@
-import { JwtPayload } from 'jsonwebtoken';
-import { Request } from 'express';
+import { JwtPayload } from "jsonwebtoken";
+import { Request } from "express";
 
 export interface AuthJwtPayload extends JwtPayload {
   sub: string;

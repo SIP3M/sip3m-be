@@ -1,5 +1,5 @@
-import { z } from 'zod';
-import { ROLES } from '../auth/role';
+import { z } from "zod";
+import { ROLES } from "../auth/role";
 
 export const updateUserRoleSchema = z.object({
   roles: z.enum([

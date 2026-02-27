@@ -1,7 +1,7 @@
-import { Response } from 'express';
-import { prisma } from '../prisma';
-import { AuthenticatedRequest } from '../auth/types/auth.jwt.types';
-import { HttpError } from '../common/errors/http-error';
+import { Response } from "express";
+import { prisma } from "../prisma";
+import { AuthenticatedRequest } from "../auth/types/auth.jwt.types";
+import { HttpError } from "../common/errors/http-error";
 
 /**
  * GET /dosen/profile
@@ -11,7 +11,7 @@ export const getProfile = async (
   res: Response,
 ): Promise<Response> => {
   if (!req.user) {
-    throw new HttpError('Unauthorized.', 401);
+    throw new HttpError("Unauthorized.", 401);
   }
 
   const userId = Number(req.user.sub);
@@ -34,7 +34,7 @@ export const getProfile = async (
   });
 
   if (!user) {
-    throw new HttpError('User not found.', 404);
+    throw new HttpError("User not found.", 404);
   }
 
   return res.status(200).json({
@@ -58,7 +58,7 @@ export const updateProfile = async (
   res: Response,
 ): Promise<Response> => {
   if (!req.user) {
-    throw new HttpError('Unauthorized.', 401);
+    throw new HttpError("Unauthorized.", 401);
   }
 
   const userId = Number(req.user.sub);
@@ -88,7 +88,7 @@ export const updateProfile = async (
   });
 
   return res.status(200).json({
-    message: 'Profile updated successfully.',
+    message: "Profile updated successfully.",
     data: {
       id: updated.id,
       name: updated.name,

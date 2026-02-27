@@ -1,6 +1,6 @@
-import { Request, Response } from 'express';
-import { prisma } from '../prisma';
-import { HttpError } from '../common/errors/http-error';
+import { Request, Response } from "express";
+import { prisma } from "../prisma";
+import { HttpError } from "../common/errors/http-error";
 
 export const getUsers = async (
   _req: Request,
@@ -24,7 +24,7 @@ export const getUsers = async (
         },
       },
       orderBy: {
-        created_at: 'desc',
+        created_at: "desc",
       },
     });
 
@@ -44,9 +44,9 @@ export const getUsers = async (
       })),
     });
   } catch (error) {
-    console.error('[GET_USERS_ERROR]', error);
+    console.error("[GET_USERS_ERROR]", error);
     throw new HttpError(
-      'An unexpected error occurred while fetching users.',
+      "An unexpected error occurred while fetching users.",
       500,
     );
   }
@@ -59,7 +59,7 @@ export const getUserById = async (
   const userId = Number(req.params.id);
 
   if (Number.isNaN(userId)) {
-    throw new HttpError('Invalid user id.', 400);
+    throw new HttpError("Invalid user id.", 400);
   }
 
   const user = await prisma.users.findUnique({
@@ -83,7 +83,7 @@ export const getUserById = async (
   });
 
   if (!user) {
-    throw new HttpError('User not found.', 404);
+    throw new HttpError("User not found.", 404);
   }
 
   return res.status(200).json({
@@ -111,7 +111,7 @@ export const updateUserRole = async (
   const userId = Number(req.params.id);
 
   if (Number.isNaN(userId)) {
-    throw new HttpError('Invalid user id.', 400);
+    throw new HttpError("Invalid user id.", 400);
   }
 
   const { role } = req.body as { role: string };
@@ -122,7 +122,7 @@ export const updateUserRole = async (
   });
 
   if (!user) {
-    throw new HttpError('User not found.', 404);
+    throw new HttpError("User not found.", 404);
   }
 
   // cari role_id berdasarkan nama role
@@ -131,7 +131,7 @@ export const updateUserRole = async (
   });
 
   if (!roleRecord) {
-    throw new HttpError('Role not found.', 400);
+    throw new HttpError("Role not found.", 400);
   }
 
   const updatedUser = await prisma.users.update({
@@ -155,7 +155,7 @@ export const updateUserRole = async (
   });
 
   return res.status(200).json({
-    message: 'User role updated successfully.',
+    message: "User role updated successfully.",
     data: {
       id: updatedUser.id,
       name: updatedUser.name,
@@ -177,7 +177,7 @@ export const updateUserStatus = async (
   const userId = Number(req.params.id);
 
   if (Number.isNaN(userId)) {
-    throw new HttpError('Invalid user id.', 400);
+    throw new HttpError("Invalid user id.", 400);
   }
 
   const { is_active } = req.body as { is_active: boolean };
@@ -187,7 +187,7 @@ export const updateUserStatus = async (
   });
 
   if (!user) {
-    throw new HttpError('User not found.', 404);
+    throw new HttpError("User not found.", 404);
   }
 
   const updatedUser = await prisma.users.update({
@@ -210,7 +210,7 @@ export const updateUserStatus = async (
   });
 
   return res.status(200).json({
-    message: 'User status updated successfully.',
+    message: "User status updated successfully.",
     data: {
       id: updatedUser.id,
       name: updatedUser.name,
@@ -225,4 +225,3 @@ export const updateUserStatus = async (
     },
   });
 };
-

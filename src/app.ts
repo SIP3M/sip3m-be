@@ -1,12 +1,12 @@
-import express from 'express';
-import cors from 'cors';
-import dotenv from 'dotenv';
+import express from "express";
+import cors from "cors";
+import dotenv from "dotenv";
 
-import authRoute from './auth/auth.routes';
-import usersRoute from './users/users.routes';
-import dosenRoute from './dosen/dosen.routes';
-import swaggerUiDist from "swagger-ui-dist"
-import { swaggerSpec } from './docs/swagger';
+import authRoute from "./auth/auth.routes";
+import usersRoute from "./users/users.routes";
+import dosenRoute from "./dosen/dosen.routes";
+import swaggerUiDist from "swagger-ui-dist";
+import { swaggerSpec } from "./docs/swagger";
 
 dotenv.config();
 
@@ -17,7 +17,7 @@ app.use(cors());
 app.use(express.json());
 
 app.use((req, _res, next) => {
-  console.log('[INCOMING]', req.method, req.url);
+  console.log("[INCOMING]", req.method, req.url);
   next();
 });
 
@@ -26,16 +26,15 @@ app.use(
   express.static(swaggerUiDist.getAbsoluteFSPath(), {
     setHeaders: (res, filePath) => {
       if (filePath.endsWith(".css")) {
-        res.setHeader("Content-Type", "text/css")
+        res.setHeader("Content-Type", "text/css");
       }
     },
-  })
-)
+  }),
+);
 app.get("/docs/swagger.json", (_req, res) => {
-  res.setHeader("Content-Type", "application/json")
-  res.send(swaggerSpec)
-})
-
+  res.setHeader("Content-Type", "application/json");
+  res.send(swaggerSpec);
+});
 
 app.get("/docs", (_req, res) => {
   const html = `<!DOCTYPE html>
@@ -59,20 +58,18 @@ app.get("/docs", (_req, res) => {
     }
   </script>
 </body>
-</html>`
-  res.send(html)
-})
-
-
+</html>`;
+  res.send(html);
+});
 
 // routes
-app.use('/api', authRoute);
-app.use('/api', usersRoute);
-app.use('/api', dosenRoute);
+app.use("/api", authRoute);
+app.use("/api", usersRoute);
+app.use("/api", dosenRoute);
 
 // health check (penting buat test)
-app.get('/health', (_req, res) => {
-  res.json({ status: 'ok' });
+app.get("/health", (_req, res) => {
+  res.json({ status: "ok" });
 });
 
 export default app;

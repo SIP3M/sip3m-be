@@ -88,5 +88,5 @@ export interface LoginResult {
       id: number;
       roles: string;
     };
-  }
+  };
 }
