@@ -46,22 +46,6 @@ export const swaggerSpec = swaggerJSDoc({
             },
           },
         },
-        AdminUserItem: {
-          type: "object",
-          properties: {
-            id: { type: "number", example: 5 },
-            name: { type: "string", example: "Budi Santoso" },
-            email: { type: "string", example: "budi@kampus.ac.id" },
-            is_active: { type: "boolean", example: false },
-            roles: {
-              type: "object",
-              nullable: true,
-              properties: {
-                roles: { type: "string", example: "DOSEN" },
-              },
-            },
-          },
-        },
       },
     },
     security: [{ bearerAuth: [] }],
