@@ -46,6 +46,22 @@ export const swaggerSpec = swaggerJSDoc({
             },
           },
         },
+        AdminUserItem: {
+          type: "object",
+          properties: {
+            id: { type: "number", example: 5 },
+            name: { type: "string", example: "Budi Santoso" },
+            email: { type: "string", example: "budi@kampus.ac.id" },
+            is_active: { type: "boolean", example: false },
+            roles: {
+              type: "object",
+              nullable: true,
+              properties: {
+                roles: { type: "string", example: "DOSEN" },
+              },
+            },
+          },
+        },
       },
     },
     security: [{ bearerAuth: [] }],
@@ -584,42 +600,156 @@ Catatan:
           tags: ["Users"],
           summary: "Get all users",
           description: `
-Mengambil daftar seluruh user dalam sistem.
+Mengambil daftar seluruh user dalam sistem dengan dukungan filter dan pencarian.
 
-Role akses:
+**Role akses:**
 - ADMIN_LPPM
 - STAFF_LPPM
+
+**Catatan:**
+- Parameter \`status\` memfilter berdasarkan status verifikasi akun.
+- Parameter \`role\` dikonversi ke UPPERCASE sebelum query (case-insensitive).
+- Parameter \`search\` mencari di field \`name\` dan \`email\` secara case-insensitive.
+- Hasil diurutkan berdasarkan \`created_at\` terbaru (descending).
     `,
           security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: "status",
+              in: "query",
+              required: false,
+              description:
+                "Filter berdasarkan status akun. `pending` = belum diverifikasi, `active` = sudah aktif.",
+              schema: {
+                type: "string",
+                enum: ["pending", "active"],
+                example: "pending",
+              },
+            },
+            {
+              name: "role",
+              in: "query",
+              required: false,
+              description:
+                "Filter berdasarkan nama role. Contoh: `dosen`, `REVIEWER_EKSTERNAL`.",
+              schema: {
+                type: "string",
+                example: "DOSEN",
+              },
+            },
+            {
+              name: "search",
+              in: "query",
+              required: false,
+              description: "Cari user berdasarkan nama atau email.",
+              schema: {
+                type: "string",
+                example: "budi",
+              },
+            },
+          ],
           responses: {
             200: {
-              description: "List of users",
+              description: "Daftar user berhasil diambil",
               content: {
                 "application/json": {
-                  example: {
-                    data: [
-                      {
-                        id: 1,
-                        name: "Admin LPPM",
-                        email: "admin@kampus.ac.id",
-                        is_active: true,
-                        roles: {
-                          id: 1,
-                          roles: "ADMIN_LPPM",
-                        },
+                  examples: {
+                    allUsers: {
+                      summary: "Semua user tanpa filter",
+                      value: {
+                        data: [
+                          {
+                            id: 1,
+                            name: "Admin LPPM",
+                            email: "admin@kampus.ac.id",
+                            nidn: null,
+                            fakultas: null,
+                            is_active: true,
+                            created_at: "2025-01-01T00:00:00.000Z",
+                            roles: { id: 1, roles: "ADMIN_LPPM" },
+                          },
+                          {
+                            id: 5,
+                            name: "Budi Santoso",
+                            email: "budi@kampus.ac.id",
+                            nidn: "0123456789",
+                            fakultas: "Teknik",
+                            is_active: true,
+                            created_at: "2025-06-10T08:00:00.000Z",
+                            roles: { id: 3, roles: "DOSEN" },
+                          },
+                        ],
                       },
-                      {
-                        id: 2,
-                        name: "Dosen A",
-                        email: "dosen@kampus.ac.id",
-                        is_active: true,
-                        roles: {
-                          id: 3,
-                          roles: "DOSEN",
-                        },
+                    },
+                    filteredByPending: {
+                      summary: "Filter status=pending",
+                      value: {
+                        data: [
+                          {
+                            id: 5,
+                            name: "Budi Santoso",
+                            email: "budi@kampus.ac.id",
+                            nidn: "0123456789",
+                            fakultas: "Teknik",
+                            is_active: false,
+                            created_at: "2025-06-10T08:00:00.000Z",
+                            roles: { id: 3, roles: "DOSEN" },
+                          },
+                        ],
                       },
-                    ],
+                    },
+                    filteredByRole: {
+                      summary: "Filter role=DOSEN",
+                      value: {
+                        data: [
+                          {
+                            id: 5,
+                            name: "Budi Santoso",
+                            email: "budi@kampus.ac.id",
+                            nidn: "0123456789",
+                            fakultas: "Teknik",
+                            is_active: true,
+                            created_at: "2025-06-10T08:00:00.000Z",
+                            roles: { id: 3, roles: "DOSEN" },
+                          },
+                        ],
+                      },
+                    },
+                    searchResult: {
+                      summary: "Search berdasarkan nama/email",
+                      value: {
+                        data: [
+                          {
+                            id: 5,
+                            name: "Budi Santoso",
+                            email: "budi@kampus.ac.id",
+                            nidn: "0123456789",
+                            fakultas: "Teknik",
+                            is_active: true,
+                            created_at: "2025-06-10T08:00:00.000Z",
+                            roles: { id: 3, roles: "DOSEN" },
+                          },
+                        ],
+                      },
+                    },
                   },
+                },
+              },
+            },
+            401: {
+              description:
+                "Unauthorized — token tidak valid atau tidak dikirim",
+              content: {
+                "application/json": {
+                  example: { message: "Unauthorized." },
+                },
+              },
+            },
+            403: {
+              description: "Forbidden — role tidak memiliki akses",
+              content: {
+                "application/json": {
+                  example: { message: "Forbidden." },
                 },
               },
             },
@@ -634,9 +764,12 @@ Role akses:
           description: `
 Mengambil detail user berdasarkan ID.
 
-Role akses:
+**Role akses:**
 - ADMIN_LPPM
 - STAFF_LPPM
+
+**Catatan:**
+- \`id\` harus berupa angka valid, jika bukan akan mengembalikan 400.
     `,
           security: [{ bearerAuth: [] }],
           parameters: [
@@ -644,38 +777,61 @@ Role akses:
               name: "id",
               in: "path",
               required: true,
-              schema: { type: "number" },
+              description: "ID user (harus angka).",
+              schema: { type: "number", example: 5 },
             },
           ],
           responses: {
             200: {
-              description: "User detail",
+              description: "Detail user berhasil diambil",
               content: {
                 "application/json": {
                   example: {
                     data: {
-                      id: 3,
-                      name: "Dosen A",
-                      email: "dosen@kampus.ac.id",
-                      nidn: "012345678",
+                      id: 5,
+                      name: "Budi Santoso",
+                      email: "budi@kampus.ac.id",
+                      nidn: "0123456789",
                       fakultas: "Teknik",
                       is_active: true,
-                      roles: {
-                        id: 3,
-                        roles: "DOSEN",
-                      },
+                      created_at: "2025-06-10T08:00:00.000Z",
+                      updated_at: "2026-01-15T10:30:00.000Z",
+                      roles: { id: 3, roles: "DOSEN" },
                     },
                   },
                 },
               },
             },
-            404: {
-              description: "User not found",
+            400: {
+              description: "ID tidak valid",
               content: {
                 "application/json": {
-                  example: {
-                    message: "User not found.",
-                  },
+                  example: { message: "Invalid user id." },
+                },
+              },
+            },
+            401: {
+              description:
+                "Unauthorized — token tidak valid atau tidak dikirim",
+              content: {
+                "application/json": {
+                  example: { message: "Unauthorized." },
+                },
+              },
+            },
+            403: {
+              description: "Forbidden — role tidak memiliki akses",
+              content: {
+                "application/json": {
+                  example: { message: "Forbidden." },
+                },
+              },
+            },
+            404: {
+              description: "User tidak ditemukan",
+              content: {
+                "application/json": {
+                  example: { message: "User not found." },
                 },
               },
             },
@@ -688,13 +844,15 @@ Role akses:
           tags: ["Users"],
           summary: "Update user role",
           description: `
-Mengubah role user.
+Mengubah role user berdasarkan ID.
 
-Role akses:
+**Role akses:**
 - ADMIN_LPPM
 
-Catatan:
-- Hanya admin yang dapat mengubah role user.
+**Catatan:**
+- \`id\` harus berupa angka valid.
+- Field \`role\` harus sesuai dengan nama role yang ada di database.
+- Jika role tidak ditemukan di database, akan mengembalikan 400.
     `,
           security: [{ bearerAuth: [] }],
           parameters: [
@@ -702,7 +860,8 @@ Catatan:
               name: "id",
               in: "path",
               required: true,
-              schema: { type: "number" },
+              description: "ID user (harus angka).",
+              schema: { type: "number", example: 5 },
             },
           ],
           requestBody: {
@@ -710,16 +869,19 @@ Catatan:
             content: {
               "application/json": {
                 schema: {
+                  required: ["role"],
                   properties: {
-                    roles: {
+                    role: {
                       type: "string",
+                      description: "Nama role yang ingin di-assign ke user.",
                       enum: [
                         "ADMIN_LPPM",
                         "STAFF_LPPM",
                         "DOSEN",
-                        "REVIEWER",
-                        "PIHAK EKSTERNAL",
+                        "REVIEWER_INTERNAL",
+                        "REVIEWER_EKSTERNAL",
                       ],
+                      example: "DOSEN",
                     },
                   },
                 },
@@ -727,8 +889,66 @@ Catatan:
             },
           },
           responses: {
-            200: { description: "User role updated" },
-            403: { description: "Forbidden" },
+            200: {
+              description: "Role user berhasil diubah",
+              content: {
+                "application/json": {
+                  example: {
+                    message: "User role updated successfully.",
+                    data: {
+                      id: 5,
+                      name: "Budi Santoso",
+                      email: "budi@kampus.ac.id",
+                      nidn: "0123456789",
+                      fakultas: "Teknik",
+                      roles: { id: 3, roles: "DOSEN" },
+                    },
+                  },
+                },
+              },
+            },
+            400: {
+              description: "ID tidak valid atau role tidak ditemukan",
+              content: {
+                "application/json": {
+                  examples: {
+                    invalidId: {
+                      summary: "ID bukan angka",
+                      value: { message: "Invalid user id." },
+                    },
+                    roleNotFound: {
+                      summary: "Role tidak ada di database",
+                      value: { message: "Role not found." },
+                    },
+                  },
+                },
+              },
+            },
+            401: {
+              description:
+                "Unauthorized — token tidak valid atau tidak dikirim",
+              content: {
+                "application/json": {
+                  example: { message: "Unauthorized." },
+                },
+              },
+            },
+            403: {
+              description: "Forbidden — bukan ADMIN_LPPM",
+              content: {
+                "application/json": {
+                  example: { message: "Forbidden." },
+                },
+              },
+            },
+            404: {
+              description: "User tidak ditemukan",
+              content: {
+                "application/json": {
+                  example: { message: "User not found." },
+                },
+              },
+            },
           },
         },
       },
@@ -738,13 +958,16 @@ Catatan:
           tags: ["Users"],
           summary: "Update user active status",
           description: `
-Mengaktifkan / menonaktifkan user.
+Mengaktifkan atau menonaktifkan akun user berdasarkan ID.
 
-Role akses:
+**Role akses:**
 - ADMIN_LPPM
 
-Catatan:
-- Soft delete menggunakan field is_active.
+**Catatan:**
+- Menggunakan soft-delete via field \`is_active\`.
+- \`is_active: true\` → akun aktif (user bisa login).
+- \`is_active: false\` → akun dinonaktifkan (user tidak bisa login).
+- \`id\` harus berupa angka valid.
     `,
           security: [{ bearerAuth: [] }],
           parameters: [
@@ -752,7 +975,8 @@ Catatan:
               name: "id",
               in: "path",
               required: true,
-              schema: { type: "number" },
+              description: "ID user (harus angka).",
+              schema: { type: "number", example: 5 },
             },
           ],
           requestBody: {
@@ -760,19 +984,98 @@ Catatan:
             content: {
               "application/json": {
                 schema: {
+                  required: ["is_active"],
                   properties: {
-                    is_active: { type: "boolean" },
+                    is_active: {
+                      type: "boolean",
+                      description:
+                        "Status aktif user. true = aktif, false = nonaktif.",
+                      example: true,
+                    },
                   },
                 },
               },
             },
           },
           responses: {
-            200: { description: "User status updated" },
+            200: {
+              description: "Status user berhasil diubah",
+              content: {
+                "application/json": {
+                  examples: {
+                    activated: {
+                      summary: "Akun diaktifkan",
+                      value: {
+                        message: "User status updated successfully.",
+                        data: {
+                          id: 5,
+                          name: "Budi Santoso",
+                          email: "budi@kampus.ac.id",
+                          nidn: "0123456789",
+                          fakultas: "Teknik",
+                          is_active: true,
+                          roles: { id: 3, roles: "DOSEN" },
+                        },
+                      },
+                    },
+                    deactivated: {
+                      summary: "Akun dinonaktifkan",
+                      value: {
+                        message: "User status updated successfully.",
+                        data: {
+                          id: 5,
+                          name: "Budi Santoso",
+                          email: "budi@kampus.ac.id",
+                          nidn: "0123456789",
+                          fakultas: "Teknik",
+                          is_active: false,
+                          roles: { id: 3, roles: "DOSEN" },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            400: {
+              description: "ID tidak valid",
+              content: {
+                "application/json": {
+                  example: { message: "Invalid user id." },
+                },
+              },
+            },
+            401: {
+              description:
+                "Unauthorized — token tidak valid atau tidak dikirim",
+              content: {
+                "application/json": {
+                  example: { message: "Unauthorized." },
+                },
+              },
+            },
+            403: {
+              description: "Forbidden — bukan ADMIN_LPPM",
+              content: {
+                "application/json": {
+                  example: { message: "Forbidden." },
+                },
+              },
+            },
+            404: {
+              description: "User tidak ditemukan",
+              content: {
+                "application/json": {
+                  example: { message: "User not found." },
+                },
+              },
+            },
           },
         },
       },
 
+
+      /** ================= DOSEN ================= */
       "/dosen/profile": {
         get: {
           tags: ["Dosen"],

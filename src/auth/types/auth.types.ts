@@ -1,10 +1,4 @@
-export interface RegisterRequestBody {
-  name?: string;
-  email?: string;
-  password?: string;
-  nidn?: string;
-  fakultas?: string;
-}
+import { Request } from "express";
 
 export interface AuthUser {
   id: number;
@@ -15,6 +9,13 @@ export interface AuthUser {
   roles: {
     id: number;
     roles: string;
+  };
+}
+
+export interface AuthRequest extends Request {
+  user?: {
+    id: number;
+    role: string;
   };
 }
 

@@ -11,6 +11,7 @@ import rateLimit from "express-rate-limit";
 
 const router = Router();
 
+// rate limiter untuk mencegah brute-force attack pada endpoint register dan login
 const registerLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
   max: 50,

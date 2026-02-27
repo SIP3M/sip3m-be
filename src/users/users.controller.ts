@@ -1,13 +1,38 @@
 import { Request, Response } from "express";
 import { prisma } from "../prisma";
 import { HttpError } from "../common/errors/http-error";
+import { Prisma } from "../generated/prisma/client";
 
 export const getUsers = async (
-  _req: Request,
+  req: Request, // 👈 Ubah _req jadi req
   res: Response,
 ): Promise<Response> => {
   try {
+    const { status, role, search } = req.query;
+
+    const whereClause: Prisma.usersWhereInput = {};
+
+    if (status === 'pending') {
+      whereClause.is_active = false;
+    } else if (status === 'active') {
+      whereClause.is_active = true;
+    }
+
+    if (role) {
+      whereClause.roles = {
+        roles: String(role).toUpperCase(), 
+      };
+    }
+
+    if (search) {
+      whereClause.OR = [
+        { name: { contains: String(search), mode: 'insensitive' } },
+        { email: { contains: String(search), mode: 'insensitive' } },
+      ];
+    }
+
     const users = await prisma.users.findMany({
+      where: whereClause, 
       select: {
         id: true,
         name: true,
