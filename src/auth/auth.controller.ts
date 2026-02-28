@@ -136,16 +136,12 @@ export const loginController = async (
 
     const { token, user } = result;
 
-
     res.cookie("accessToken", token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      maxAge: validation.data.remember_me
-        ? 7 * 24 * 60 * 60 * 1000
-        : 24 * 60 * 60 * 1000,
+      secure: true, 
+      sameSite: "none", 
+      maxAge: 24 * 60 * 60 * 1000,
     });
-
 
     return res.status(200).json({
       message: "Login berhasil.",
