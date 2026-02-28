@@ -134,18 +134,9 @@ export const loginController = async (
 
     const result = await loginUser(validation.data);
 
-    const { token, user } = result;
-
-    res.cookie("accessToken", token, {
-      httpOnly: true,
-      secure: true, 
-      sameSite: "none", 
-      maxAge: 24 * 60 * 60 * 1000,
-    });
-
     return res.status(200).json({
       message: "Login berhasil.",
-      data: user,
+      data: result,
     });
   } catch (error) {
     if (error instanceof HttpError) {
