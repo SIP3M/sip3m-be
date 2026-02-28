@@ -159,7 +159,7 @@ export const loginUser = async (data: LoginInput): Promise<LoginResult> => {
   const passwordMatch = await bcrypt.compare(data.password, user.password_hash);
 
   if (!passwordMatch) {
-    throw new HttpError("Password salah. Silahkan coba lagi.", 401);
+    throw new HttpError("Invalid Credentials.", 401);
   }
 
   if (!user.is_active) {
