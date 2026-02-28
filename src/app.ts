@@ -7,19 +7,14 @@ import usersRoute from "./users/users.routes";
 import dosenRoute from "./dosen/dosen.routes";
 import swaggerUiDist from "swagger-ui-dist";
 import { swaggerSpec } from "./docs/swagger";
-import cookieParser from "cookie-parser";
 
 dotenv.config();
 
 const app = express();
 
 // middleware global
-app.use(cors({
-  origin: "http://localhost:5173",
-  credentials: true,
-}));
+app.use(cors());
 app.use(express.json());
-app.use(cookieParser());
 
 app.use((req, _res, next) => {
   console.log("[INCOMING]", req.method, req.url);
