@@ -4,11 +4,11 @@ import { HttpError } from "../common/errors/http-error";
 import { Prisma } from "../generated/prisma/client";
 
 export const getUsers = async (
-  req: Request, // 👈 Ubah _req jadi req
+  req: Request, 
   res: Response,
 ): Promise<Response> => {
   try {
-    const { status, role, search } = req.query;
+    const { status, roles, search } = req.query;
 
     const whereClause: Prisma.usersWhereInput = {};
 
@@ -18,9 +18,9 @@ export const getUsers = async (
       whereClause.is_active = true;
     }
 
-    if (role) {
+    if (roles) {
       whereClause.roles = {
-        roles: String(role).toUpperCase(), 
+        roles: String(roles).toUpperCase(), 
       };
     }
 
