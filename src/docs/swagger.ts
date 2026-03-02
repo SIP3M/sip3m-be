@@ -580,6 +580,175 @@ Catatan:
       },
 
       "/users": {
+        post: {
+          tags: ["Users"],
+          summary: "Create user",
+          description: `
+Membuat user baru dengan role apapun.
+
+**Role akses:**
+- ADMIN_LPPM
+
+**Catatan:**
+- Field \`email\`, \`username\`, dan \`nidn_nip\` harus unik.
+- Password otomatis di-hash sebelum disimpan.
+- \`is_active\` default \`true\` jika tidak dikirim.
+    `,
+          security: [{ bearerAuth: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  required: ["name", "email", "password", "roles"],
+                  properties: {
+                    name: {
+                      type: "string",
+                      example: "Budi Santoso",
+                      description: "Min 3 karakter.",
+                    },
+                    email: {
+                      type: "string",
+                      format: "email",
+                      example: "budi@kampus.ac.id",
+                    },
+                    username: {
+                      type: "string",
+                      example: "budi_santoso",
+                      description: "Opsional, min 3 karakter.",
+                    },
+                    password: {
+                      type: "string",
+                      format: "password",
+                      example: "password123",
+                      description: "Min 6 karakter.",
+                    },
+                    roles: {
+                      type: "string",
+                      description: "Nama role (case-insensitive).",
+                      enum: [
+                        "ADMIN_LPPM",
+                        "STAFF_LPPM",
+                        "DOSEN",
+                        "REVIEWER",
+                        "PIHAK EKSTERNAL",
+                      ],
+                      example: "DOSEN",
+                    },
+                    nidn_nip: {
+                      type: "string",
+                      example: "0123456789",
+                      description: "Opsional.",
+                    },
+                    fakultas: {
+                      type: "string",
+                      example: "Teknik",
+                      description: "Opsional.",
+                    },
+                    program_studi: {
+                      type: "string",
+                      example: "Teknik Informatika",
+                      description: "Opsional.",
+                    },
+                    tempat_lahir: {
+                      type: "string",
+                      example: "Jakarta",
+                      description: "Opsional.",
+                    },
+                    tanggal_lahir: {
+                      type: "string",
+                      format: "date",
+                      example: "1985-06-15",
+                      description: "Opsional. Format YYYY-MM-DD.",
+                    },
+                    jenis_kelamin: {
+                      type: "string",
+                      enum: ["Laki-laki", "Perempuan"],
+                      example: "Laki-laki",
+                      description: "Opsional.",
+                    },
+                    alamat: {
+                      type: "string",
+                      example: "Jl. Merdeka No. 1",
+                      description: "Opsional.",
+                    },
+                    nomor_hp: {
+                      type: "string",
+                      example: "081234567890",
+                      description: "Opsional.",
+                    },
+                    is_active: {
+                      type: "boolean",
+                      example: true,
+                      description: "Opsional. Default true.",
+                    },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            201: {
+              description: "User berhasil dibuat",
+              content: {
+                "application/json": {
+                  example: {
+                    message: "User berhasil dibuat.",
+                    data: {
+                      id: 10,
+                      name: "Budi Santoso",
+                      email: "budi@kampus.ac.id",
+                      username: "budi_santoso",
+                      nidn: "0123456789",
+                      fakultas: "Teknik",
+                      is_active: true,
+                      created_at: "2026-03-02T08:00:00.000Z",
+                      roles: { id: 3, roles: "DOSEN" },
+                    },
+                  },
+                },
+              },
+            },
+            400: {
+              description: "Validasi gagal atau data duplikat",
+              content: {
+                "application/json": {
+                  examples: {
+                    roleNotFound: {
+                      summary: "Role tidak ditemukan",
+                      value: { message: "Role tidak ditemukan." },
+                    },
+                    emailDup: {
+                      summary: "Email duplikat",
+                      value: { message: "Email sudah digunakan." },
+                    },
+                    usernameDup: {
+                      summary: "Username duplikat",
+                      value: { message: "Username sudah digunakan." },
+                    },
+                    nidnDup: {
+                      summary: "NIDN/NIP duplikat",
+                      value: { message: "NIDN/NIP sudah digunakan." },
+                    },
+                  },
+                },
+              },
+            },
+            401: {
+              description:
+                "Unauthorized — token tidak valid atau tidak dikirim",
+              content: {
+                "application/json": { example: { message: "Unauthorized." } },
+              },
+            },
+            403: {
+              description: "Forbidden — bukan ADMIN_LPPM",
+              content: {
+                "application/json": { example: { message: "Forbidden." } },
+              },
+            },
+          },
+        },
         get: {
           tags: ["Users"],
           summary: "Get all users",
@@ -588,7 +757,6 @@ Mengambil daftar seluruh user dalam sistem dengan dukungan filter dan pencarian.
 
 **Role akses:**
 - ADMIN_LPPM
-- STAFF_LPPM
 
 **Catatan:**
 - Parameter \`status\` memfilter berdasarkan status verifikasi akun.
@@ -750,7 +918,6 @@ Mengambil detail user berdasarkan ID.
 
 **Role akses:**
 - ADMIN_LPPM
-- STAFF_LPPM
 
 **Catatan:**
 - \`id\` harus berupa angka valid, jika bukan akan mengembalikan 400.
@@ -816,6 +983,258 @@ Mengambil detail user berdasarkan ID.
               content: {
                 "application/json": {
                   example: { message: "User not found." },
+                },
+              },
+            },
+          },
+        },
+        put: {
+          tags: ["Users"],
+          summary: "Update user",
+          description: `
+Memperbarui data user berdasarkan ID.
+
+**Role akses:**
+- ADMIN_LPPM
+
+**Catatan:**
+- Semua field bersifat opsional (partial update).
+- Jika \`password\` dikirim, akan otomatis di-hash ulang.
+- Jika \`roles\` dikirim, role user akan diganti.
+- Field \`email\`, \`username\`, dan \`nidn_nip\` dicek keunikannya terhadap user lain.
+    `,
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: "id",
+              in: "path",
+              required: true,
+              description: "ID user (harus angka).",
+              schema: { type: "number", example: 5 },
+            },
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  properties: {
+                    name: {
+                      type: "string",
+                      example: "Budi Santoso Updated",
+                      description: "Opsional, min 3 karakter.",
+                    },
+                    email: {
+                      type: "string",
+                      format: "email",
+                      example: "budi.baru@kampus.ac.id",
+                      description: "Opsional.",
+                    },
+                    username: {
+                      type: "string",
+                      example: "budi_baru",
+                      description: "Opsional, min 3 karakter.",
+                    },
+                    password: {
+                      type: "string",
+                      format: "password",
+                      example: "newpassword123",
+                      description: "Opsional. Min 6 karakter.",
+                    },
+                    roles: {
+                      type: "string",
+                      enum: [
+                        "ADMIN_LPPM",
+                        "STAFF_LPPM",
+                        "DOSEN",
+                        "REVIEWER",
+                        "PIHAK EKSTERNAL",
+                      ],
+                      example: "STAFF_LPPM",
+                      description: "Opsional. Ganti role user.",
+                    },
+                    nidn_nip: {
+                      type: "string",
+                      example: "0123456789",
+                      description: "Opsional.",
+                    },
+                    fakultas: {
+                      type: "string",
+                      example: "Teknik",
+                      description: "Opsional.",
+                    },
+                    program_studi: {
+                      type: "string",
+                      example: "Teknik Informatika",
+                      description: "Opsional.",
+                    },
+                    tempat_lahir: {
+                      type: "string",
+                      example: "Jakarta",
+                      description: "Opsional.",
+                    },
+                    tanggal_lahir: {
+                      type: "string",
+                      format: "date",
+                      example: "1985-06-15",
+                      description: "Opsional. Format YYYY-MM-DD.",
+                    },
+                    jenis_kelamin: {
+                      type: "string",
+                      enum: ["Laki-laki", "Perempuan"],
+                      example: "Laki-laki",
+                      description: "Opsional.",
+                    },
+                    alamat: {
+                      type: "string",
+                      example: "Jl. Merdeka No. 1",
+                      description: "Opsional.",
+                    },
+                    nomor_hp: {
+                      type: "string",
+                      example: "081234567890",
+                      description: "Opsional.",
+                    },
+                    is_active: {
+                      type: "boolean",
+                      example: true,
+                      description: "Opsional.",
+                    },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            200: {
+              description: "User berhasil diperbarui",
+              content: {
+                "application/json": {
+                  example: {
+                    message: "User berhasil diperbarui.",
+                    data: {
+                      id: 5,
+                      name: "Budi Santoso Updated",
+                      email: "budi.baru@kampus.ac.id",
+                      username: "budi_baru",
+                      nidn: "0123456789",
+                      fakultas: "Teknik",
+                      is_active: true,
+                      created_at: "2025-06-10T08:00:00.000Z",
+                      updated_at: "2026-03-02T10:00:00.000Z",
+                      roles: { id: 3, roles: "DOSEN" },
+                    },
+                  },
+                },
+              },
+            },
+            400: {
+              description:
+                "ID tidak valid, role tidak ditemukan, atau data duplikat",
+              content: {
+                "application/json": {
+                  examples: {
+                    invalidId: {
+                      summary: "ID bukan angka",
+                      value: { message: "Invalid user id." },
+                    },
+                    roleNotFound: {
+                      summary: "Role tidak ada",
+                      value: { message: "Role tidak ditemukan." },
+                    },
+                    emailDup: {
+                      summary: "Email duplikat",
+                      value: { message: "Email sudah digunakan." },
+                    },
+                    usernameDup: {
+                      summary: "Username duplikat",
+                      value: { message: "Username sudah digunakan." },
+                    },
+                  },
+                },
+              },
+            },
+            401: {
+              description:
+                "Unauthorized — token tidak valid atau tidak dikirim",
+              content: {
+                "application/json": { example: { message: "Unauthorized." } },
+              },
+            },
+            403: {
+              description: "Forbidden — bukan ADMIN_LPPM",
+              content: {
+                "application/json": { example: { message: "Forbidden." } },
+              },
+            },
+            404: {
+              description: "User tidak ditemukan",
+              content: {
+                "application/json": {
+                  example: { message: "User tidak ditemukan." },
+                },
+              },
+            },
+          },
+        },
+        delete: {
+          tags: ["Users"],
+          summary: "Delete user",
+          description: `
+Menghapus user secara permanen berdasarkan ID.
+
+**Role akses:**
+- ADMIN_LPPM
+
+**Catatan:**
+- Penghapusan bersifat **permanent** (hard delete).
+- \`id\` harus berupa angka valid.
+    `,
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: "id",
+              in: "path",
+              required: true,
+              description: "ID user (harus angka).",
+              schema: { type: "number", example: 5 },
+            },
+          ],
+          responses: {
+            200: {
+              description: "User berhasil dihapus",
+              content: {
+                "application/json": {
+                  example: { message: "User berhasil dihapus." },
+                },
+              },
+            },
+            400: {
+              description: "ID tidak valid",
+              content: {
+                "application/json": {
+                  example: { message: "Invalid user id." },
+                },
+              },
+            },
+            401: {
+              description:
+                "Unauthorized — token tidak valid atau tidak dikirim",
+              content: {
+                "application/json": { example: { message: "Unauthorized." } },
+              },
+            },
+            403: {
+              description: "Forbidden — bukan ADMIN_LPPM",
+              content: {
+                "application/json": { example: { message: "Forbidden." } },
+              },
+            },
+            404: {
+              description: "User tidak ditemukan",
+              content: {
+                "application/json": {
+                  example: { message: "User tidak ditemukan." },
                 },
               },
             },
@@ -1057,7 +1476,6 @@ Mengaktifkan atau menonaktifkan akun user berdasarkan ID.
           },
         },
       },
-
 
       /** ================= DOSEN ================= */
       "/dosen/profile": {
