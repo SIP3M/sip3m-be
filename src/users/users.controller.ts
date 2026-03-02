@@ -139,7 +139,7 @@ export const updateUserRole = async (
     throw new HttpError("Invalid user id.", 400);
   }
 
-  const { role } = req.body as { role: string };
+  const { roles } = req.body as { roles: string };
 
   // pastikan user ada
   const user = await prisma.users.findUnique({
@@ -152,7 +152,7 @@ export const updateUserRole = async (
 
   // cari role_id berdasarkan nama role
   const roleRecord = await prisma.roles.findUnique({
-    where: { roles: role },
+    where: { roles: roles.toUpperCase() },
   });
 
   if (!roleRecord) {
