@@ -139,6 +139,7 @@ export const loginController = async (
       data: result,
     });
   } catch (error) {
+    console.error("[LOGIN_ERROR]", error);
     if (error instanceof HttpError) {
       return res.status(error.statusCode).json({ message: error.message });
     }
