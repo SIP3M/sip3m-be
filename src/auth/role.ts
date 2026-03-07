@@ -3,7 +3,7 @@ export const ROLES = {
   STAFF_LPPM: "STAFF_LPPM",
   DOSEN: "DOSEN",
   REVIEWER: "REVIEWER",
-  PIHAK_EKSTERNAL: "PIHAK EKSTERNAL",
+  REVIEWER_EKSTERNAL: "REVIEWER_EKSTERNAL",
 } as const;
 
 export type Role = (typeof ROLES)[keyof typeof ROLES];

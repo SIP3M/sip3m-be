@@ -29,7 +29,7 @@ router.get(
     ROLES.ADMIN_LPPM,
     ROLES.STAFF_LPPM,
     ROLES.REVIEWER,
-    ROLES.PIHAK_EKSTERNAL,
+    ROLES.REVIEWER_EKSTERNAL,
   ]),
   getAllProposalsController,
 );

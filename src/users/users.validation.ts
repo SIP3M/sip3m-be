@@ -7,7 +7,7 @@ export const updateUserRoleSchema = z.object({
     ROLES.STAFF_LPPM,
     ROLES.DOSEN,
     ROLES.REVIEWER,
-    ROLES.PIHAK_EKSTERNAL,
+    ROLES.REVIEWER_EKSTERNAL,
   ]),
 });
 

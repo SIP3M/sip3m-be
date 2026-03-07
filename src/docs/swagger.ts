@@ -46,6 +46,57 @@ export const swaggerSpec = swaggerJSDoc({
             },
           },
         },
+        Proposal: {
+          type: "object",
+          properties: {
+            id: { type: "number", example: 1 },
+            title: { type: "string", example: "Penelitian AI untuk Pertanian" },
+            lead_researcher_id: { type: "number", example: 3 },
+            faculty: { type: ["string", "null"], example: "Teknik" },
+            skema: { type: ["string", "null"], example: "Penelitian Dasar" },
+            funding_request_amount: {
+              type: ["number", "null"],
+              example: 15000000,
+            },
+            status: {
+              type: "string",
+              enum: [
+                "DRAFT",
+                "SUBMITTED",
+                "ADMIN_VERIFIED",
+                "UNDER_REVIEW",
+                "REVISION",
+                "ACCEPTED",
+                "REJECTED",
+              ],
+              example: "SUBMITTED",
+            },
+            proposal_file_path: {
+              type: ["string", "null"],
+              example:
+                "https://storage.example.com/proposals/3_1234567890_proposal.pdf",
+            },
+            rab_file_path: {
+              type: ["string", "null"],
+              example: "https://storage.example.com/rabs/3_1234567890_rab.pdf",
+            },
+            submitted_at: {
+              type: ["string", "null"],
+              format: "date-time",
+              example: "2026-03-07T10:00:00.000Z",
+            },
+            created_at: {
+              type: "string",
+              format: "date-time",
+              example: "2026-03-07T09:00:00.000Z",
+            },
+            updated_at: {
+              type: "string",
+              format: "date-time",
+              example: "2026-03-07T10:00:00.000Z",
+            },
+          },
+        },
       },
     },
     security: [{ bearerAuth: [] }],
@@ -1470,6 +1521,376 @@ Mengaktifkan atau menonaktifkan akun user berdasarkan ID.
               content: {
                 "application/json": {
                   example: { message: "User not found." },
+                },
+              },
+            },
+          },
+        },
+      },
+
+      /** ================= PROPOSAL ================= */
+      "/proposals": {
+        post: {
+          tags: ["Proposal"],
+          summary: "Buat proposal baru",
+          description: `
+Endpoint untuk membuat proposal penelitian baru.
+
+**Role akses:**
+- DOSEN
+
+**Catatan:**
+- Request menggunakan **multipart/form-data** karena terdapat upload file proposal dan RAB.
+- Jika \`is_draft: true\`, file tidak wajib diunggah. Data disimpan sebagai draf.
+- Jika \`is_draft: false\` (submit), file **proposal** dan **RAB** wajib diunggah.
+- Field \`funding_request_amount\` menerima string atau number, akan dikonversi ke number.
+          `,
+          security: [{ bearerAuth: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              "multipart/form-data": {
+                schema: {
+                  required: ["title"],
+                  properties: {
+                    title: {
+                      type: "string",
+                      example: "Penelitian AI untuk Pertanian",
+                      description:
+                        "Judul proposal, min 5 karakter, maks 255 karakter.",
+                    },
+                    faculty: {
+                      type: "string",
+                      example: "Teknik",
+                      description: "Opsional, maks 100 karakter.",
+                    },
+                    skema: {
+                      type: "string",
+                      example: "Penelitian Dasar",
+                      description: "Opsional, maks 100 karakter.",
+                    },
+                    funding_request_amount: {
+                      type: "number",
+                      example: 15000000,
+                      description: "Jumlah pendanaan yang diminta. Default 0.",
+                    },
+                    is_draft: {
+                      type: "boolean",
+                      example: false,
+                      description:
+                        "Jika true, disimpan sebagai draf. Default false.",
+                    },
+                    proposal_file: {
+                      type: "string",
+                      format: "binary",
+                      description: "File proposal. Wajib jika bukan draf.",
+                    },
+                    rab_file: {
+                      type: "string",
+                      format: "binary",
+                      description: "File RAB. Wajib jika bukan draf.",
+                    },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            201: {
+              description: "Proposal berhasil dibuat / Draf berhasil disimpan",
+              content: {
+                "application/json": {
+                  examples: {
+                    submitted: {
+                      summary: "Proposal berhasil dikirim",
+                      value: {
+                        message: "Proposal berhasil dikirim.",
+                        data: {
+                          id: 1,
+                          title: "Penelitian AI untuk Pertanian",
+                          lead_researcher_id: 3,
+                          faculty: "Teknik",
+                          skema: "Penelitian Dasar",
+                          funding_request_amount: 15000000,
+                          status: "SUBMITTED",
+                          proposal_file_path:
+                            "https://storage.example.com/proposals/3_1234567890_proposal.pdf",
+                          rab_file_path:
+                            "https://storage.example.com/rabs/3_1234567890_rab.pdf",
+                          submitted_at: "2026-03-07T10:00:00.000Z",
+                          created_at: "2026-03-07T09:00:00.000Z",
+                          updated_at: "2026-03-07T10:00:00.000Z",
+                        },
+                      },
+                    },
+                    draft: {
+                      summary: "Draf berhasil disimpan",
+                      value: {
+                        message: "Draf berhasil disimpan.",
+                        data: {
+                          id: 2,
+                          title: "Penelitian AI untuk Pertanian",
+                          lead_researcher_id: 3,
+                          faculty: "Teknik",
+                          skema: "Penelitian Dasar",
+                          funding_request_amount: 15000000,
+                          status: "DRAFT",
+                          proposal_file_path: null,
+                          rab_file_path: null,
+                          submitted_at: null,
+                          created_at: "2026-03-07T09:00:00.000Z",
+                          updated_at: "2026-03-07T09:00:00.000Z",
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            400: {
+              description: "Validasi gagal atau file wajib tidak diunggah",
+              content: {
+                "application/json": {
+                  examples: {
+                    validationFail: {
+                      summary: "Validasi data gagal",
+                      value: {
+                        message: "Validasi data gagal.",
+                        errors: {
+                          title: ["Judul proposal minimal 5 karakter."],
+                        },
+                      },
+                    },
+                    fileMissing: {
+                      summary: "File wajib tidak diunggah saat submit",
+                      value: {
+                        message:
+                          "File Proposal dan RAB wajib diunggah untuk melakukan Submit.",
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            401: {
+              description: "Unauthorized",
+              content: {
+                "application/json": {
+                  example: { message: "Unauthorized" },
+                },
+              },
+            },
+            403: {
+              description: "Forbidden — role tidak memiliki akses",
+              content: {
+                "application/json": {
+                  example: { message: "Forbidden: insufficient role" },
+                },
+              },
+            },
+            500: {
+              description: "Internal server error",
+              content: {
+                "application/json": {
+                  example: {
+                    message:
+                      "Terjadi kesalahan pada server saat menyimpan proposal.",
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+
+      "/getAllProposals": {
+        get: {
+          tags: ["Proposal"],
+          summary: "Ambil semua proposal",
+          description: `
+Endpoint untuk mengambil seluruh data proposal.
+
+**Role akses:**
+- ADMIN_LPPM
+- STAFF_LPPM
+- REVIEWER
+- REVIEWER_EKSTERNAL
+
+**Catatan:**
+- Mengembalikan semua proposal yang ada, diurutkan dari yang terbaru.
+- Membutuhkan autentikasi JWT.
+          `,
+          security: [{ bearerAuth: [] }],
+          responses: {
+            200: {
+              description: "Berhasil mengambil semua proposal",
+              content: {
+                "application/json": {
+                  example: {
+                    message: "Berhasil mengambil semua proposal.",
+                    data: [
+                      {
+                        id: 1,
+                        title: "Penelitian AI untuk Pertanian",
+                        lead_researcher_id: 3,
+                        faculty: "Teknik",
+                        skema: "Penelitian Dasar",
+                        funding_request_amount: 15000000,
+                        status: "SUBMITTED",
+                        proposal_file_path:
+                          "https://storage.example.com/proposals/3_1234567890_proposal.pdf",
+                        rab_file_path:
+                          "https://storage.example.com/rabs/3_1234567890_rab.pdf",
+                        submitted_at: "2026-03-07T10:00:00.000Z",
+                        created_at: "2026-03-07T09:00:00.000Z",
+                        updated_at: "2026-03-07T10:00:00.000Z",
+                      },
+                      {
+                        id: 2,
+                        title: "Pengembangan IoT untuk Smart Campus",
+                        lead_researcher_id: 4,
+                        faculty: "MIPA",
+                        skema: "Penelitian Terapan",
+                        funding_request_amount: 20000000,
+                        status: "DRAFT",
+                        proposal_file_path: null,
+                        rab_file_path: null,
+                        submitted_at: null,
+                        created_at: "2026-03-06T08:00:00.000Z",
+                        updated_at: "2026-03-06T08:00:00.000Z",
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+            401: {
+              description: "Unauthorized",
+              content: {
+                "application/json": {
+                  example: { message: "Unauthorized" },
+                },
+              },
+            },
+            403: {
+              description: "Forbidden — role tidak memiliki akses",
+              content: {
+                "application/json": {
+                  example: { message: "Forbidden: insufficient role" },
+                },
+              },
+            },
+            500: {
+              description: "Internal server error",
+              content: {
+                "application/json": {
+                  example: {
+                    message:
+                      "Terjadi kesalahan pada server saat mengambil data proposal.",
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+
+      "/proposals/{id}": {
+        get: {
+          tags: ["Proposal"],
+          summary: "Ambil proposal berdasarkan ID",
+          description: `
+Endpoint untuk mengambil detail satu proposal berdasarkan ID.
+
+**Role akses:**
+- ADMIN_LPPM
+- STAFF_LPPM
+- REVIEWER
+
+**Catatan:**
+- Parameter \`id\` harus berupa angka valid.
+- Jika proposal tidak ditemukan, mengembalikan 404.
+          `,
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: "id",
+              in: "path",
+              required: true,
+              description: "ID proposal",
+              schema: {
+                type: "integer",
+                example: 1,
+              },
+            },
+          ],
+          responses: {
+            200: {
+              description: "Berhasil mengambil proposal",
+              content: {
+                "application/json": {
+                  example: {
+                    message: "Berhasil mengambil proposal.",
+                    data: {
+                      id: 1,
+                      title: "Penelitian AI untuk Pertanian",
+                      lead_researcher_id: 3,
+                      faculty: "Teknik",
+                      skema: "Penelitian Dasar",
+                      funding_request_amount: 15000000,
+                      status: "SUBMITTED",
+                      proposal_file_path:
+                        "https://storage.example.com/proposals/3_1234567890_proposal.pdf",
+                      rab_file_path:
+                        "https://storage.example.com/rabs/3_1234567890_rab.pdf",
+                      submitted_at: "2026-03-07T10:00:00.000Z",
+                      created_at: "2026-03-07T09:00:00.000Z",
+                      updated_at: "2026-03-07T10:00:00.000Z",
+                    },
+                  },
+                },
+              },
+            },
+            400: {
+              description: "ID proposal tidak valid",
+              content: {
+                "application/json": {
+                  example: { message: "ID proposal tidak valid." },
+                },
+              },
+            },
+            401: {
+              description: "Unauthorized",
+              content: {
+                "application/json": {
+                  example: { message: "Unauthorized" },
+                },
+              },
+            },
+            403: {
+              description: "Forbidden — role tidak memiliki akses",
+              content: {
+                "application/json": {
+                  example: { message: "Forbidden: insufficient role" },
+                },
+              },
+            },
+            404: {
+              description: "Proposal tidak ditemukan",
+              content: {
+                "application/json": {
+                  example: { message: "Proposal tidak ditemukan." },
+                },
+              },
+            },
+            500: {
+              description: "Internal server error",
+              content: {
+                "application/json": {
+                  example: {
+                    message:
+                      "Terjadi kesalahan pada server saat mengambil data proposal.",
+                  },
                 },
               },
             },
