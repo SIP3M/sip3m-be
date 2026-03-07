@@ -9,6 +9,38 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+enum ProposalStatus {
+  DRAFT
+  SUBMITTED
+  ADMIN_VERIFIED
+  UNDER_REVIEW
+  REVISION
+  ACCEPTED
+  REJECTED
+}
+
+model proposals {
+  id                     Int            @id @default(autoincrement())
+  title                  String         @db.VarChar(255)
+  lead_researcher_id     Int            @db.Integer
+  faculty                String?        @db.VarChar(100)
+  funding_request_amount Float?         
+  status                 ProposalStatus @default(DRAFT) 
+  
+  skema                  String?        @db.VarChar(100)
+  proposal_file_path     String?        @db.VarChar(255) 
+  rab_file_path          String?        @db.VarChar(255)
+
+  submitted_at           DateTime?     
+  created_at             DateTime       @default(now())
+  updated_at             DateTime       @updatedAt
+
+  user                   users          @relation(fields: [lead_researcher_id], references: [id])
+
+  @@index([lead_researcher_id])
+  @@index([status])
+}
+
 model roles {
   id    Int     @id @default(autoincrement())
   roles String  @unique(map: "roles_name_key") @db.VarChar(50)
@@ -43,8 +75,12 @@ model users {
   updated_at    DateTime? @default(now()) @db.Timestamp(6)
   roles         roles     @relation(fields: [role_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
-  instansi      String?   @db.VarChar(100) // untuk mahasiswa, bisa diisi dengan nama universitas atau sekolah tinggi
-  bidang_keahlian String?   @db.VarChar(100) // untuk mahasiswa, bisa diisi dengan jurusan atau program studi
-  pengalaman_review String?   @db.Text // untuk mahasiswa, bisa diisi dengan pengalaman organisasi atau magang
-  cv_path        String?   @db.VarChar(255) // untuk mahasiswa, bisa diisi dengan path atau URL ke file CV mereka
+  proposals     proposals[]
+
+  instansi      String?   @db.VarChar(100) 
+  bidang_keahlian String?   @db.VarChar(100)
+  pengalaman_review String?   @db.Text 
+  cv_path        String?   @db.VarChar(255) 
+
+  @@index([role_id])
 }

@@ -5,6 +5,7 @@ import dotenv from "dotenv";
 import authRoute from "./auth/auth.routes";
 import usersRoute from "./users/users.routes";
 import dosenRoute from "./dosen/dosen.routes";
+import proposalRoute from "./proposals/proposal.routes";
 import swaggerUiDist from "swagger-ui-dist";
 import { swaggerSpec } from "./docs/swagger";
 
@@ -66,6 +67,7 @@ app.get("/docs", (_req, res) => {
 app.use("/api", authRoute);
 app.use("/api", usersRoute);
 app.use("/api", dosenRoute);
+app.use("/api", proposalRoute);
 
 // health check (penting buat test)
 app.get("/health", (_req, res) => {
