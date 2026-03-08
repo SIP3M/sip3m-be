@@ -6,6 +6,7 @@ import type { ProposalFiles } from "./proposal.types";
 import type {
   CreateProposalInput,
   EditProposalInput,
+  UpdateProposalStatusInput,
 } from "./proposal.validation";
 
 const BUCKET_NAME = "lppm_documents";
@@ -62,7 +63,7 @@ export const createProposal = async (
   files: ProposalFiles | undefined,
 ) => {
   const isDraft = input.is_draft;
-  const status: ProposalStatus = isDraft ? "DRAFT" : "SUBMITTED";
+  const status = isDraft ? ProposalStatus.DRAFT : ProposalStatus.SUBMITTED;
 
   const { proposalFilePath, rabFilePath } = await uploadProposalFiles(
     files,
@@ -137,7 +138,7 @@ export const editProposal = async (
     );
   }
 
-  if (existingProposal.status !== "DRAFT") {
+  if (existingProposal.status !== ProposalStatus.DRAFT) {
     throw new HttpError(
       "Hanya proposal dengan status DRAFT yang dapat diedit.",
       400,
@@ -149,8 +150,9 @@ export const editProposal = async (
     userId,
   );
 
-  const isDraft = input.is_draft ?? existingProposal.status === "DRAFT";
-  const newStatus: ProposalStatus = isDraft ? "DRAFT" : "SUBMITTED";
+  const isDraft =
+    input.is_draft ?? existingProposal.status === ProposalStatus.DRAFT;
+  const newStatus = isDraft ? ProposalStatus.DRAFT : ProposalStatus.SUBMITTED;
 
   // Jika submit (bukan draft), pastikan file tersedia
   if (!isDraft) {
@@ -206,7 +208,7 @@ export const deleteProposal = async (proposalId: number, userId: number) => {
     );
   }
 
-  if (existingProposal.status !== "DRAFT") {
+  if (existingProposal.status !== ProposalStatus.DRAFT) {
     throw new HttpError(
       "Hanya proposal dengan status DRAFT yang dapat dihapus.",
       400,
@@ -219,5 +221,192 @@ export const deleteProposal = async (proposalId: number, userId: number) => {
 
   return {
     message: "Proposal berhasil dihapus.",
+  };
+};
+
+// =============================================
+// Submit Proposal (Dosen)
+// DRAFT → SUBMITTED, REVISION → SUBMITTED
+// =============================================
+export const submitProposal = async (proposalId: number, userId: number) => {
+  const proposal = await prisma.proposals.findUnique({
+    where: { id: proposalId },
+  });
+
+  if (!proposal) {
+    throw new HttpError("Proposal tidak ditemukan.", 404);
+  }
+
+  if (proposal.lead_researcher_id !== userId) {
+    throw new HttpError(
+      "Anda tidak memiliki izin untuk mengirim proposal ini.",
+      403,
+    );
+  }
+
+  if (
+    proposal.status !== ProposalStatus.DRAFT &&
+    proposal.status !== ProposalStatus.REVISION
+  ) {
+    throw new HttpError(
+      "Hanya proposal dengan status DRAFT atau REVISION yang dapat disubmit.",
+      400,
+    );
+  }
+
+  // File wajib ada saat submit
+  if (!proposal.proposal_file_path || !proposal.rab_file_path) {
+    throw new HttpError(
+      "File Proposal dan RAB wajib diunggah sebelum melakukan Submit.",
+      400,
+    );
+  }
+
+  const updatedProposal = await prisma.proposals.update({
+    where: { id: proposalId },
+    data: {
+      status: ProposalStatus.SUBMITTED,
+      submitted_at: new Date(),
+    },
+  });
+
+  return {
+    message: "Proposal berhasil disubmit.",
+    data: updatedProposal,
+  };
+};
+
+// =============================================
+// Update Status Proposal (Admin & Reviewer)
+// Transisi berdasarkan role pengguna
+// =============================================
+const ROLE_STATUS_TRANSITIONS: Record<
+  string,
+  Partial<Record<ProposalStatus, ProposalStatus[]>>
+> = {
+  ADMIN_LPPM: {
+    [ProposalStatus.SUBMITTED]: [
+      ProposalStatus.ADMIN_VERIFIED,
+      ProposalStatus.REJECTED,
+    ],
+  },
+  STAFF_LPPM: {
+    [ProposalStatus.SUBMITTED]: [
+      ProposalStatus.ADMIN_VERIFIED,
+      ProposalStatus.REJECTED,
+    ],
+  },
+  REVIEWER: {
+    [ProposalStatus.ADMIN_VERIFIED]: [ProposalStatus.UNDER_REVIEW],
+    [ProposalStatus.UNDER_REVIEW]: [
+      ProposalStatus.ACCEPTED,
+      ProposalStatus.REJECTED,
+      ProposalStatus.REVISION,
+    ],
+  },
+  REVIEWER_EKSTERNAL: {
+    [ProposalStatus.ADMIN_VERIFIED]: [ProposalStatus.UNDER_REVIEW],
+    [ProposalStatus.UNDER_REVIEW]: [
+      ProposalStatus.ACCEPTED,
+      ProposalStatus.REJECTED,
+      ProposalStatus.REVISION,
+    ],
+  },
+};
+
+export const updateProposalStatus = async (
+  proposalId: number,
+  userId: number,
+  userRole: string,
+  input: UpdateProposalStatusInput,
+) => {
+  const proposal = await prisma.proposals.findUnique({
+    where: { id: proposalId },
+  });
+
+  if (!proposal) {
+    throw new HttpError("Proposal tidak ditemukan.", 404);
+  }
+
+  const currentStatus = proposal.status;
+  const newStatus = input.status as ProposalStatus;
+
+  // Validasi transisi berdasarkan role
+  const roleTransitions = ROLE_STATUS_TRANSITIONS[userRole];
+  if (!roleTransitions) {
+    throw new HttpError(
+      "Role Anda tidak memiliki izin untuk mengubah status proposal.",
+      403,
+    );
+  }
+
+  const allowedStatuses = roleTransitions[currentStatus];
+  if (!allowedStatuses || !allowedStatuses.includes(newStatus)) {
+    throw new HttpError(
+      `Tidak dapat mengubah status dari ${currentStatus} ke ${newStatus} dengan role ${userRole}.`,
+      400,
+    );
+  }
+
+  // Update status proposal
+  const updatedProposal = await prisma.proposals.update({
+    where: { id: proposalId },
+    data: {
+      status: newStatus,
+    },
+  });
+
+  // 1. Simpan riwayat review
+  await prisma.proposalReviews.create({
+    data: {
+      proposal_id: proposalId,
+      reviewer_id: userId,
+      status: newStatus,
+      notes: input.notes ?? "",
+    },
+  });
+
+  // 2. Buat notifikasi otomatis
+  let notifTitle: string;
+  let notifMessage: string;
+
+  switch (newStatus) {
+    case ProposalStatus.ADMIN_VERIFIED:
+      notifTitle = "Proposal Terverifikasi";
+      notifMessage = `Proposal "${proposal.title}" telah diverifikasi oleh Admin LPPM dan siap untuk ditinjau oleh Reviewer.`;
+      break;
+    case ProposalStatus.UNDER_REVIEW:
+      notifTitle = "Proposal Sedang Ditinjau";
+      notifMessage = `Proposal "${proposal.title}" sedang dalam proses peninjauan oleh Reviewer.`;
+      break;
+    case ProposalStatus.REVISION:
+      notifTitle = "Proposal Perlu Revisi";
+      notifMessage = `Proposal "${proposal.title}" memerlukan revisi dari Reviewer.${input.notes ? ` Catatan Reviewer: ${input.notes}` : ""}`;
+      break;
+    case ProposalStatus.ACCEPTED:
+      notifTitle = "Proposal Diterima 🎉";
+      notifMessage = `Selamat! Proposal "${proposal.title}" telah diterima dan disetujui.`;
+      break;
+    case ProposalStatus.REJECTED:
+      notifTitle = "Proposal Ditolak";
+      notifMessage = `Mohon maaf, proposal "${proposal.title}" tidak dapat diterima.${input.notes ? ` Catatan: ${input.notes}` : ""}`;
+      break;
+    default:
+      notifTitle = "Update Status Proposal";
+      notifMessage = `Status proposal "${proposal.title}" telah diubah menjadi ${newStatus}.`;
+  }
+
+  // 3. Simpan notifikasi untuk Dosen (lead researcher)
+  await prisma.notifications.create({
+    data: {
+      user_id: proposal.lead_researcher_id,
+      title: notifTitle,
+      message: notifMessage,
+    },
+  });
+
+  return {
+    message: `Status proposal berhasil diubah dari ${currentStatus} ke ${newStatus}.`,
+    data: updatedProposal,
   };
 };

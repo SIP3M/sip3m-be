@@ -41,7 +41,7 @@ app.get("/docs", (_req, res) => {
   const html = `<!DOCTYPE html>
 <html>
 <head>
-  <title>SLK API Docs</title>
+  <title>LPPM API Docs</title>
   <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5.11.0/swagger-ui.css" />
 </head>
 <body>

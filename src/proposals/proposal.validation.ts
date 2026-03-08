@@ -1,43 +1,70 @@
 import { z } from "zod";
+import { ProposalStatus } from "../generated/prisma/enums";
 
+// =============================================
+// Base Fields (DRY - reusable across schemas)
+// =============================================
+const titleField = z
+  .string()
+  .min(5, "Judul proposal minimal 5 karakter.")
+  .max(255, "Judul proposal maksimal 255 karakter.");
+
+const facultyField = z.string().max(100, "Fakultas maksimal 100 karakter.");
+
+const skemaField = z.string().max(100, "Skema maksimal 100 karakter.");
+
+const fundingField = z
+  .union([z.string(), z.number()])
+  .transform((val) => Number(val))
+  .pipe(z.number().min(0, "Jumlah pendanaan tidak boleh negatif."));
+
+const isDraftField = z
+  .union([z.string(), z.boolean()])
+  .transform((val) => val === "true" || val === true);
+
+// =============================================
+// Create Proposal Schema
+// =============================================
 export const createProposalSchema = z.object({
-  title: z
-    .string()
-    .min(5, "Judul proposal minimal 5 karakter.")
-    .max(255, "Judul proposal maksimal 255 karakter."),
-  faculty: z.string().max(100, "Fakultas maksimal 100 karakter.").optional(),
-  skema: z.string().max(100, "Skema maksimal 100 karakter.").optional(),
-  funding_request_amount: z
-    .union([z.string(), z.number()])
-    .transform((val) => Number(val))
-    .pipe(z.number().min(0, "Jumlah pendanaan tidak boleh negatif."))
-    .optional()
-    .default(0),
-  is_draft: z
-    .union([z.string(), z.boolean()])
-    .transform((val) => val === "true" || val === true)
-    .optional()
-    .default(false),
+  title: titleField,
+  faculty: facultyField.optional(),
+  skema: skemaField.optional(),
+  funding_request_amount: fundingField.optional().default(0),
+  is_draft: isDraftField.optional().default(false),
 });
 
+// =============================================
+// Edit Proposal Schema (semua optional, partial update)
+// =============================================
 export const editProposalSchema = z.object({
-  title: z
-    .string()
-    .min(5, "Judul proposal minimal 5 karakter.")
-    .max(255, "Judul proposal maksimal 255 karakter.")
-    .optional(),
-  faculty: z.string().max(100, "Fakultas maksimal 100 karakter.").optional(),
-  skema: z.string().max(100, "Skema maksimal 100 karakter.").optional(),
-  funding_request_amount: z
-    .union([z.string(), z.number()])
-    .transform((val) => Number(val))
-    .pipe(z.number().min(0, "Jumlah pendanaan tidak boleh negatif."))
-    .optional(),
-  is_draft: z
-    .union([z.string(), z.boolean()])
-    .transform((val) => val === "true" || val === true)
-    .optional(),
+  title: titleField.optional(),
+  faculty: facultyField.optional(),
+  skema: skemaField.optional(),
+  funding_request_amount: fundingField.optional(),
+  is_draft: isDraftField.optional(),
 });
 
+// =============================================
+// Update Proposal Status Schema
+// Status diambil dari enum Prisma, kecuali DRAFT (hanya via create)
+// dan SUBMITTED (hanya via /submit endpoint oleh Dosen)
+// =============================================
+const adminReviewerStatuses = Object.values(ProposalStatus).filter(
+  (s) => s !== ProposalStatus.DRAFT && s !== ProposalStatus.SUBMITTED,
+) as [string, ...string[]];
+
+export const updateProposalStatusSchema = z.object({
+  status: z.enum(adminReviewerStatuses, {
+    message: `Status tidak valid. Status yang diperbolehkan: ${adminReviewerStatuses.join(", ")}.`,
+  }),
+  notes: z.string().max(500, "Catatan maksimal 500 karakter.").optional(),
+});
+
+// =============================================
+// Types
+// =============================================
 export type CreateProposalInput = z.infer<typeof createProposalSchema>;
 export type EditProposalInput = z.infer<typeof editProposalSchema>;
+export type UpdateProposalStatusInput = z.infer<
+  typeof updateProposalStatusSchema
+>;

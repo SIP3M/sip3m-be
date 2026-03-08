@@ -8,11 +8,16 @@ import {
   editProposalController,
   getAllProposalsController,
   getProposalByIdController,
+  submitProposalController,
+  updateProposalStatusController,
 } from "./proposal.controller";
 import { ROLES } from "../auth/role";
 
 const router = Router();
 
+// =============================================
+// CRUD Proposal
+// =============================================
 router.post(
   "/proposals",
   authMiddleware,
@@ -59,6 +64,31 @@ router.delete(
   authMiddleware,
   requireRole([ROLES.DOSEN]),
   deleteProposalController,
+);
+
+// =============================================
+// Status Transitions
+// =============================================
+
+// Dosen: DRAFT/REVISION → SUBMITTED
+router.patch(
+  "/proposals/:id/submit",
+  authMiddleware,
+  requireRole([ROLES.DOSEN]),
+  submitProposalController,
+);
+
+// Admin & Reviewer: role-based status update
+router.patch(
+  "/proposals/:id/status",
+  authMiddleware,
+  requireRole([
+    ROLES.ADMIN_LPPM,
+    ROLES.STAFF_LPPM,
+    ROLES.REVIEWER,
+    ROLES.REVIEWER_EKSTERNAL,
+  ]),
+  updateProposalStatusController,
 );
 
 export default router;

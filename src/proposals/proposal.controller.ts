@@ -4,6 +4,7 @@ import { HttpError } from "../common/errors/http-error";
 import {
   createProposalSchema,
   editProposalSchema,
+  updateProposalStatusSchema,
 } from "./proposal.validation";
 import {
   createProposal as createProposalService,
@@ -11,6 +12,8 @@ import {
   editProposal,
   getAllProposals as getAllProposalsService,
   getProposalById,
+  submitProposal,
+  updateProposalStatus,
 } from "./proposal.service";
 import type { ProposalFiles } from "./proposal.types";
 
@@ -183,6 +186,85 @@ export const deleteProposalController = async (
     console.error("[DELETE_PROPOSAL_ERROR]", error);
     return res.status(500).json({
       message: "Terjadi kesalahan pada server saat menghapus proposal.",
+    });
+  }
+};
+
+// =============================================
+// Submit Proposal (Dosen: DRAFT/REVISION → SUBMITTED)
+// =============================================
+export const submitProposalController = async (
+  req: AuthenticatedRequest,
+  res: Response,
+): Promise<Response> => {
+  try {
+    if (!req.user?.userId) {
+      throw new HttpError("Unauthorized", 401);
+    }
+
+    const userId = Number(req.user.userId);
+    const proposalId = Number(req.params.id);
+    if (isNaN(proposalId)) {
+      return res.status(400).json({ message: "ID proposal tidak valid." });
+    }
+
+    const result = await submitProposal(proposalId, userId);
+
+    return res.status(200).json(result);
+  } catch (error) {
+    if (error instanceof HttpError) {
+      return res.status(error.statusCode).json({ message: error.message });
+    }
+
+    console.error("[SUBMIT_PROPOSAL_ERROR]", error);
+    return res.status(500).json({
+      message: "Terjadi kesalahan pada server saat mengirim proposal.",
+    });
+  }
+};
+
+// =============================================
+// Update Status Proposal (Admin & Reviewer)
+// =============================================
+export const updateProposalStatusController = async (
+  req: AuthenticatedRequest,
+  res: Response,
+): Promise<Response> => {
+  try {
+    if (!req.user?.userId || !req.user?.role) {
+      throw new HttpError("Unauthorized", 401);
+    }
+
+    const userId = Number(req.user.userId);
+    const proposalId = Number(req.params.id);
+    if (isNaN(proposalId)) {
+      return res.status(400).json({ message: "ID proposal tidak valid." });
+    }
+
+    const validation = updateProposalStatusSchema.safeParse(req.body);
+    if (!validation.success) {
+      return res.status(400).json({
+        message: "Validasi data gagal.",
+        errors: validation.error.flatten().fieldErrors,
+      });
+    }
+
+    const result = await updateProposalStatus(
+      proposalId,
+      userId,
+      req.user.role,
+      validation.data,
+    );
+
+    return res.status(200).json(result);
+  } catch (error) {
+    if (error instanceof HttpError) {
+      return res.status(error.statusCode).json({ message: error.message });
+    }
+
+    console.error("[UPDATE_PROPOSAL_STATUS_ERROR]", error);
+    return res.status(500).json({
+      message: "Terjadi kesalahan pada server saat mengubah status proposal.",
     });
   }
 };
