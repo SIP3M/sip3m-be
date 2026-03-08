@@ -410,3 +410,29 @@ export const updateProposalStatus = async (
     data: updatedProposal,
   };
 };
+
+export const getProposalReviews = async (proposalId: number) => {
+  const proposal = await prisma.proposals.findUnique({
+    where: { id: proposalId },
+  });
+
+  if (!proposal) {
+    throw new HttpError("Proposal tidak ditemukan.", 404);
+  }
+
+  const reviews = await prisma.proposalReviews.findMany({
+    where: { proposal_id: proposalId },
+    orderBy: { created_at: "asc" },
+    include: {
+      reviewer: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+        },
+      },
+    },
+  });
+
+  return reviews;
+};

@@ -6,6 +6,7 @@ import authRoute from "./auth/auth.routes";
 import usersRoute from "./users/users.routes";
 import dosenRoute from "./dosen/dosen.routes";
 import proposalRoute from "./proposals/proposal.routes";
+import notificationRoute from "./notifications/notification.routes";
 import swaggerUiDist from "swagger-ui-dist";
 import { swaggerSpec } from "./docs/swagger";
 
@@ -68,6 +69,7 @@ app.use("/api", authRoute);
 app.use("/api", usersRoute);
 app.use("/api", dosenRoute);
 app.use("/api", proposalRoute);
+app.use("/api", notificationRoute);
 
 // health check (penting buat test)
 app.get("/health", (_req, res) => {

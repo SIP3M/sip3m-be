@@ -8,6 +8,7 @@ import {
   editProposalController,
   getAllProposalsController,
   getProposalByIdController,
+  getProposalReviewsController,
   submitProposalController,
   updateProposalStatusController,
 } from "./proposal.controller";
@@ -89,6 +90,19 @@ router.patch(
     ROLES.REVIEWER_EKSTERNAL,
   ]),
   updateProposalStatusController,
+);
+
+router.get(
+  "/proposals/:id/reviews",
+  authMiddleware,
+  requireRole([
+    ROLES.DOSEN,
+    ROLES.ADMIN_LPPM,
+    ROLES.STAFF_LPPM,
+    ROLES.REVIEWER,
+    ROLES.REVIEWER_EKSTERNAL,
+  ]),
+  getProposalReviewsController,
 );
 
 export default router;
