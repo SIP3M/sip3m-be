@@ -1,9 +1,14 @@
 import { Response } from "express";
 import { AuthenticatedRequest } from "../auth/types/auth.jwt.types";
 import { HttpError } from "../common/errors/http-error";
-import { createProposalSchema } from "./proposal.validation";
+import {
+  createProposalSchema,
+  editProposalSchema,
+} from "./proposal.validation";
 import {
   createProposal as createProposalService,
+  deleteProposal,
+  editProposal,
   getAllProposals as getAllProposalsService,
   getProposalById,
 } from "./proposal.service";
@@ -101,5 +106,83 @@ export const getProposalByIdController = async (
         message: "Terjadi kesalahan pada server saat mengambil data proposal.",
       });
     }
+  }
+};
+
+export const editProposalController = async (
+  req: AuthenticatedRequest,
+  res: Response,
+): Promise<Response> => {
+  try {
+    if (!req.user?.userId) {
+      throw new HttpError("Unauthorized", 401);
+    }
+    const userId = Number(req.user.userId);
+
+    const proposalId = Number(req.params.id);
+    if (isNaN(proposalId)) {
+      return res.status(400).json({ message: "ID proposal tidak valid." });
+    }
+
+    // Validasi input menggunakan Zod
+    const validation = editProposalSchema.safeParse(req.body);
+    if (!validation.success) {
+      return res.status(400).json({
+        message: "Validasi data gagal.",
+        errors: validation.error.flatten().fieldErrors,
+      });
+    }
+
+    const files = req.files as ProposalFiles | undefined;
+
+    const result = await editProposal(
+      proposalId,
+      userId,
+      validation.data,
+      files,
+    );
+
+    return res.status(200).json(result);
+  } catch (error) {
+    if (error instanceof HttpError) {
+      return res.status(error.statusCode).json({ message: error.message });
+    }
+
+    console.error("[EDIT_PROPOSAL_ERROR]", error);
+    return res.status(500).json({
+      message: "Terjadi kesalahan pada server saat mengedit proposal.",
+    });
+  }
+};
+
+export const deleteProposalController = async (
+  req: AuthenticatedRequest,
+  res: Response,
+): Promise<Response> => {
+  try {
+    if (!req.user?.userId) {
+      throw new HttpError("Unauthorized", 401);
+    }
+    const proposalId = Number(req.params.id);
+    if (isNaN(proposalId)) {
+      return res.status(400).json({ message: "ID proposal tidak valid." });
+    }
+
+    // Implementasi logika penghapusan proposal di sini
+    // Pastikan hanya lead researcher yang dapat menghapus proposal
+    await deleteProposal(proposalId, req.user.userId);
+
+    return res.status(200).json({
+      message: "Proposal berhasil dihapus.",
+    });
+  } catch (error) {
+    if (error instanceof HttpError) {
+      return res.status(error.statusCode).json({ message: error.message });
+    }
+
+    console.error("[DELETE_PROPOSAL_ERROR]", error);
+    return res.status(500).json({
+      message: "Terjadi kesalahan pada server saat menghapus proposal.",
+    });
   }
 };

@@ -20,4 +20,24 @@ export const createProposalSchema = z.object({
     .default(false),
 });
 
+export const editProposalSchema = z.object({
+  title: z
+    .string()
+    .min(5, "Judul proposal minimal 5 karakter.")
+    .max(255, "Judul proposal maksimal 255 karakter.")
+    .optional(),
+  faculty: z.string().max(100, "Fakultas maksimal 100 karakter.").optional(),
+  skema: z.string().max(100, "Skema maksimal 100 karakter.").optional(),
+  funding_request_amount: z
+    .union([z.string(), z.number()])
+    .transform((val) => Number(val))
+    .pipe(z.number().min(0, "Jumlah pendanaan tidak boleh negatif."))
+    .optional(),
+  is_draft: z
+    .union([z.string(), z.boolean()])
+    .transform((val) => val === "true" || val === true)
+    .optional(),
+});
+
 export type CreateProposalInput = z.infer<typeof createProposalSchema>;
+export type EditProposalInput = z.infer<typeof editProposalSchema>;
