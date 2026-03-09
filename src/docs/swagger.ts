@@ -7,17 +7,18 @@ export const swaggerSpec = swaggerJSDoc({
       title: "Sistem Informasi LPPM API",
       version: "1.0.0",
       description:
-        "REST API untuk Sistem Informasi LPPM. Dokumentasi ini mencakup autentikasi, RBAC, manajemen user, dan profil dosen.",
+        "REST API untuk Sistem Informasi LPPM (SIP3M). Dokumentasi ini mencakup autentikasi (register, login, OAuth Google), RBAC (Role-Based Access Control), manajemen user, profil dosen, manajemen proposal penelitian (CRUD, submit, review, status workflow), dan notifikasi.",
     },
     servers: [
+        {
+        url: "https://sip3m-be.vercel.app/api",
+        description: "Production server",
+      },
       {
         url: "http://localhost:3000/api",
         description: "Local development server",
       },
-      {
-        url: "https://sip3m-be.vercel.app/api",
-        description: "Production server",
-      },
+    
     ],
     components: {
       securitySchemes: {
@@ -94,6 +95,67 @@ export const swaggerSpec = swaggerJSDoc({
               type: "string",
               format: "date-time",
               example: "2026-03-07T10:00:00.000Z",
+            },
+          },
+        },
+        Notification: {
+          type: "object",
+          properties: {
+            id: { type: "number", example: 1 },
+            user_id: { type: "number", example: 3 },
+            title: {
+              type: "string",
+              example: "Proposal Terverifikasi",
+            },
+            message: {
+              type: "string",
+              example:
+                'Proposal "Penelitian AI" telah diverifikasi oleh Admin LPPM.',
+            },
+            is_read: { type: "boolean", example: false },
+            created_at: {
+              type: "string",
+              format: "date-time",
+              example: "2026-03-08T10:00:00.000Z",
+            },
+          },
+        },
+        ProposalReview: {
+          type: "object",
+          properties: {
+            id: { type: "number", example: 1 },
+            proposal_id: { type: "number", example: 1 },
+            reviewer_id: { type: "number", example: 5 },
+            status: {
+              type: "string",
+              enum: [
+                "ADMIN_VERIFIED",
+                "UNDER_REVIEW",
+                "REVISION",
+                "ACCEPTED",
+                "REJECTED",
+              ],
+              example: "ACCEPTED",
+            },
+            notes: {
+              type: ["string", "null"],
+              example: "Proposal sudah memenuhi semua kriteria.",
+            },
+            created_at: {
+              type: "string",
+              format: "date-time",
+              example: "2026-03-08T11:00:00.000Z",
+            },
+            reviewer: {
+              type: "object",
+              properties: {
+                id: { type: "number", example: 5 },
+                name: { type: "string", example: "Reviewer A" },
+                email: {
+                  type: "string",
+                  example: "reviewer@kampus.ac.id",
+                },
+              },
             },
           },
         },
@@ -1896,6 +1958,802 @@ Endpoint untuk mengambil detail satu proposal berdasarkan ID.
             },
           },
         },
+        put: {
+          tags: ["Proposal"],
+          summary: "Edit proposal",
+          description: `
+Endpoint untuk mengedit proposal yang sudah ada.
+
+**Role akses:**
+- DOSEN
+
+**Catatan:**
+- Hanya **lead researcher** (pemilik proposal) yang dapat mengedit.
+- Hanya proposal dengan status **DRAFT** yang dapat diedit.
+- Request menggunakan **multipart/form-data** karena terdapat upload file.
+- Semua field bersifat opsional (partial update).
+- Jika \`is_draft: false\`, file proposal dan RAB wajib tersedia (bisa file lama atau baru).
+          `,
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: "id",
+              in: "path",
+              required: true,
+              description: "ID proposal",
+              schema: { type: "integer", example: 1 },
+            },
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              "multipart/form-data": {
+                schema: {
+                  properties: {
+                    title: {
+                      type: "string",
+                      example: "Penelitian AI untuk Pertanian (Revisi)",
+                      description:
+                        "Opsional, min 5 karakter, maks 255 karakter.",
+                    },
+                    faculty: {
+                      type: "string",
+                      example: "Teknik",
+                      description: "Opsional, maks 100 karakter.",
+                    },
+                    skema: {
+                      type: "string",
+                      example: "Penelitian Dasar",
+                      description: "Opsional, maks 100 karakter.",
+                    },
+                    funding_request_amount: {
+                      type: "number",
+                      example: 20000000,
+                      description: "Opsional. Jumlah pendanaan yang diminta.",
+                    },
+                    is_draft: {
+                      type: "boolean",
+                      example: true,
+                      description:
+                        "Opsional. Jika false, proposal langsung disubmit.",
+                    },
+                    proposal_file: {
+                      type: "string",
+                      format: "binary",
+                      description: "File proposal baru (opsional).",
+                    },
+                    rab_file: {
+                      type: "string",
+                      format: "binary",
+                      description: "File RAB baru (opsional).",
+                    },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            200: {
+              description: "Proposal berhasil diperbarui",
+              content: {
+                "application/json": {
+                  examples: {
+                    updated: {
+                      summary: "Proposal diperbarui (tetap draft)",
+                      value: {
+                        message: "Proposal berhasil diperbarui.",
+                        data: {
+                          id: 1,
+                          title: "Penelitian AI untuk Pertanian (Revisi)",
+                          lead_researcher_id: 3,
+                          faculty: "Teknik",
+                          skema: "Penelitian Dasar",
+                          funding_request_amount: 20000000,
+                          status: "DRAFT",
+                          proposal_file_path: null,
+                          rab_file_path: null,
+                          submitted_at: null,
+                          created_at: "2026-03-07T09:00:00.000Z",
+                          updated_at: "2026-03-08T10:00:00.000Z",
+                        },
+                      },
+                    },
+                    updatedAndSubmitted: {
+                      summary: "Proposal diperbarui dan disubmit",
+                      value: {
+                        message: "Proposal berhasil diperbarui dan dikirim.",
+                        data: {
+                          id: 1,
+                          title: "Penelitian AI untuk Pertanian (Revisi)",
+                          lead_researcher_id: 3,
+                          faculty: "Teknik",
+                          skema: "Penelitian Dasar",
+                          funding_request_amount: 20000000,
+                          status: "SUBMITTED",
+                          proposal_file_path:
+                            "https://storage.example.com/proposals/3_1234567890_proposal.pdf",
+                          rab_file_path:
+                            "https://storage.example.com/rabs/3_1234567890_rab.pdf",
+                          submitted_at: "2026-03-08T10:00:00.000Z",
+                          created_at: "2026-03-07T09:00:00.000Z",
+                          updated_at: "2026-03-08T10:00:00.000Z",
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            400: {
+              description:
+                "Validasi gagal, status bukan DRAFT, atau file wajib tidak tersedia",
+              content: {
+                "application/json": {
+                  examples: {
+                    validationFail: {
+                      summary: "Validasi data gagal",
+                      value: {
+                        message: "Validasi data gagal.",
+                        errors: {
+                          title: ["Judul proposal minimal 5 karakter."],
+                        },
+                      },
+                    },
+                    notDraft: {
+                      summary: "Proposal bukan DRAFT",
+                      value: {
+                        message:
+                          "Hanya proposal dengan status DRAFT yang dapat diedit.",
+                      },
+                    },
+                    fileMissing: {
+                      summary: "File wajib tidak tersedia saat submit",
+                      value: {
+                        message:
+                          "File Proposal dan RAB wajib diunggah untuk melakukan Submit.",
+                      },
+                    },
+                    invalidId: {
+                      summary: "ID tidak valid",
+                      value: { message: "ID proposal tidak valid." },
+                    },
+                  },
+                },
+              },
+            },
+            401: {
+              description: "Unauthorized",
+              content: {
+                "application/json": {
+                  example: { message: "Unauthorized" },
+                },
+              },
+            },
+            403: {
+              description:
+                "Forbidden — bukan pemilik proposal atau role tidak sesuai",
+              content: {
+                "application/json": {
+                  examples: {
+                    notOwner: {
+                      summary: "Bukan pemilik proposal",
+                      value: {
+                        message:
+                          "Anda tidak memiliki izin untuk mengedit proposal ini.",
+                      },
+                    },
+                    insufficientRole: {
+                      summary: "Role tidak memiliki akses",
+                      value: {
+                        message: "Forbidden: insufficient role",
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            404: {
+              description: "Proposal tidak ditemukan",
+              content: {
+                "application/json": {
+                  example: { message: "Proposal tidak ditemukan." },
+                },
+              },
+            },
+            500: {
+              description: "Internal server error",
+              content: {
+                "application/json": {
+                  example: {
+                    message:
+                      "Terjadi kesalahan pada server saat mengedit proposal.",
+                  },
+                },
+              },
+            },
+          },
+        },
+        delete: {
+          tags: ["Proposal"],
+          summary: "Hapus proposal",
+          description: `
+Endpoint untuk menghapus proposal.
+
+**Role akses:**
+- DOSEN
+
+**Catatan:**
+- Hanya **lead researcher** (pemilik proposal) yang dapat menghapus.
+- Hanya proposal dengan status **DRAFT** yang dapat dihapus.
+- Penghapusan bersifat **permanent** (hard delete).
+          `,
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: "id",
+              in: "path",
+              required: true,
+              description: "ID proposal",
+              schema: { type: "integer", example: 1 },
+            },
+          ],
+          responses: {
+            200: {
+              description: "Proposal berhasil dihapus",
+              content: {
+                "application/json": {
+                  example: { message: "Proposal berhasil dihapus." },
+                },
+              },
+            },
+            400: {
+              description: "ID tidak valid atau proposal bukan status DRAFT",
+              content: {
+                "application/json": {
+                  examples: {
+                    invalidId: {
+                      summary: "ID tidak valid",
+                      value: { message: "ID proposal tidak valid." },
+                    },
+                    notDraft: {
+                      summary: "Proposal bukan DRAFT",
+                      value: {
+                        message:
+                          "Hanya proposal dengan status DRAFT yang dapat dihapus.",
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            401: {
+              description: "Unauthorized",
+              content: {
+                "application/json": {
+                  example: { message: "Unauthorized" },
+                },
+              },
+            },
+            403: {
+              description: "Forbidden — bukan pemilik proposal",
+              content: {
+                "application/json": {
+                  examples: {
+                    notOwner: {
+                      summary: "Bukan pemilik proposal",
+                      value: {
+                        message:
+                          "Anda tidak memiliki izin untuk menghapus proposal ini.",
+                      },
+                    },
+                    insufficientRole: {
+                      summary: "Role tidak memiliki akses",
+                      value: {
+                        message: "Forbidden: insufficient role",
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            404: {
+              description: "Proposal tidak ditemukan",
+              content: {
+                "application/json": {
+                  example: { message: "Proposal tidak ditemukan." },
+                },
+              },
+            },
+            500: {
+              description: "Internal server error",
+              content: {
+                "application/json": {
+                  example: {
+                    message:
+                      "Terjadi kesalahan pada server saat menghapus proposal.",
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+
+      "/proposals/{id}/submit": {
+        patch: {
+          tags: ["Proposal"],
+          summary: "Submit proposal",
+          description: `
+Endpoint untuk mengirim (submit) proposal ke pihak Admin/Reviewer.
+
+**Role akses:**
+- DOSEN
+
+**Catatan:**
+- Hanya **lead researcher** (pemilik proposal) yang dapat mengirim.
+- Hanya proposal dengan status **DRAFT** atau **REVISION** yang dapat disubmit.
+- File **proposal** dan **RAB** harus sudah diunggah sebelum submit.
+- Status akan berubah menjadi \`SUBMITTED\`.
+          `,
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: "id",
+              in: "path",
+              required: true,
+              description: "ID proposal",
+              schema: { type: "integer", example: 1 },
+            },
+          ],
+          responses: {
+            200: {
+              description: "Proposal berhasil disubmit",
+              content: {
+                "application/json": {
+                  example: {
+                    message: "Proposal berhasil disubmit.",
+                    data: {
+                      id: 1,
+                      title: "Penelitian AI untuk Pertanian",
+                      lead_researcher_id: 3,
+                      faculty: "Teknik",
+                      skema: "Penelitian Dasar",
+                      funding_request_amount: 15000000,
+                      status: "SUBMITTED",
+                      proposal_file_path:
+                        "https://storage.example.com/proposals/3_1234567890_proposal.pdf",
+                      rab_file_path:
+                        "https://storage.example.com/rabs/3_1234567890_rab.pdf",
+                      submitted_at: "2026-03-08T10:00:00.000Z",
+                      created_at: "2026-03-07T09:00:00.000Z",
+                      updated_at: "2026-03-08T10:00:00.000Z",
+                    },
+                  },
+                },
+              },
+            },
+            400: {
+              description:
+                "ID tidak valid, status tidak sesuai, atau file belum diunggah",
+              content: {
+                "application/json": {
+                  examples: {
+                    invalidId: {
+                      summary: "ID tidak valid",
+                      value: { message: "ID proposal tidak valid." },
+                    },
+                    wrongStatus: {
+                      summary: "Status tidak memungkinkan submit",
+                      value: {
+                        message:
+                          "Hanya proposal dengan status DRAFT atau REVISION yang dapat disubmit.",
+                      },
+                    },
+                    fileMissing: {
+                      summary: "File belum diunggah",
+                      value: {
+                        message:
+                          "File Proposal dan RAB wajib diunggah sebelum melakukan Submit.",
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            401: {
+              description: "Unauthorized",
+              content: {
+                "application/json": {
+                  example: { message: "Unauthorized" },
+                },
+              },
+            },
+            403: {
+              description: "Forbidden — bukan pemilik proposal",
+              content: {
+                "application/json": {
+                  example: {
+                    message:
+                      "Anda tidak memiliki izin untuk mengirim proposal ini.",
+                  },
+                },
+              },
+            },
+            404: {
+              description: "Proposal tidak ditemukan",
+              content: {
+                "application/json": {
+                  example: { message: "Proposal tidak ditemukan." },
+                },
+              },
+            },
+            500: {
+              description: "Internal server error",
+              content: {
+                "application/json": {
+                  example: {
+                    message:
+                      "Terjadi kesalahan pada server saat mengirim proposal.",
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+
+      "/proposals/{id}/status": {
+        patch: {
+          tags: ["Proposal"],
+          summary: "Update status proposal",
+          description: `
+Endpoint untuk mengubah status proposal oleh Admin atau Reviewer.
+
+**Role akses:**
+- ADMIN_LPPM
+- STAFF_LPPM
+- REVIEWER
+- REVIEWER_EKSTERNAL
+
+**Transisi status yang diperbolehkan:**
+
+| Role | Dari Status | Ke Status |
+|------|-------------|------------|
+| ADMIN_LPPM / STAFF_LPPM | SUBMITTED | ADMIN_VERIFIED, REJECTED |
+| REVIEWER / REVIEWER_EKSTERNAL | ADMIN_VERIFIED | UNDER_REVIEW |
+| REVIEWER / REVIEWER_EKSTERNAL | UNDER_REVIEW | ACCEPTED, REJECTED, REVISION |
+
+**Catatan:**
+- Setiap perubahan status akan mencatat riwayat review di tabel \`ProposalReviews\`.
+- Notifikasi otomatis akan dikirim ke lead researcher.
+- Field \`notes\` bersifat opsional, maks 500 karakter.
+          `,
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: "id",
+              in: "path",
+              required: true,
+              description: "ID proposal",
+              schema: { type: "integer", example: 1 },
+            },
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  required: ["status"],
+                  properties: {
+                    status: {
+                      type: "string",
+                      enum: [
+                        "ADMIN_VERIFIED",
+                        "UNDER_REVIEW",
+                        "REVISION",
+                        "ACCEPTED",
+                        "REJECTED",
+                      ],
+                      example: "ADMIN_VERIFIED",
+                      description:
+                        "Status baru. Harus sesuai transisi yang diperbolehkan berdasarkan role.",
+                    },
+                    notes: {
+                      type: "string",
+                      example:
+                        "Proposal sudah memenuhi persyaratan administratif.",
+                      description:
+                        "Opsional. Catatan reviewer, maks 500 karakter.",
+                    },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            200: {
+              description: "Status proposal berhasil diubah",
+              content: {
+                "application/json": {
+                  examples: {
+                    adminVerified: {
+                      summary: "Admin verifikasi proposal",
+                      value: {
+                        message:
+                          "Status proposal berhasil diubah dari SUBMITTED ke ADMIN_VERIFIED.",
+                        data: {
+                          id: 1,
+                          title: "Penelitian AI untuk Pertanian",
+                          lead_researcher_id: 3,
+                          faculty: "Teknik",
+                          skema: "Penelitian Dasar",
+                          funding_request_amount: 15000000,
+                          status: "ADMIN_VERIFIED",
+                          proposal_file_path:
+                            "https://storage.example.com/proposals/3_1234567890_proposal.pdf",
+                          rab_file_path:
+                            "https://storage.example.com/rabs/3_1234567890_rab.pdf",
+                          submitted_at: "2026-03-07T10:00:00.000Z",
+                          created_at: "2026-03-07T09:00:00.000Z",
+                          updated_at: "2026-03-08T11:00:00.000Z",
+                        },
+                      },
+                    },
+                    accepted: {
+                      summary: "Reviewer menerima proposal",
+                      value: {
+                        message:
+                          "Status proposal berhasil diubah dari UNDER_REVIEW ke ACCEPTED.",
+                        data: {
+                          id: 1,
+                          title: "Penelitian AI untuk Pertanian",
+                          lead_researcher_id: 3,
+                          faculty: "Teknik",
+                          skema: "Penelitian Dasar",
+                          funding_request_amount: 15000000,
+                          status: "ACCEPTED",
+                          proposal_file_path:
+                            "https://storage.example.com/proposals/3_1234567890_proposal.pdf",
+                          rab_file_path:
+                            "https://storage.example.com/rabs/3_1234567890_rab.pdf",
+                          submitted_at: "2026-03-07T10:00:00.000Z",
+                          created_at: "2026-03-07T09:00:00.000Z",
+                          updated_at: "2026-03-08T14:00:00.000Z",
+                        },
+                      },
+                    },
+                    revision: {
+                      summary: "Reviewer meminta revisi",
+                      value: {
+                        message:
+                          "Status proposal berhasil diubah dari UNDER_REVIEW ke REVISION.",
+                        data: {
+                          id: 1,
+                          title: "Penelitian AI untuk Pertanian",
+                          lead_researcher_id: 3,
+                          status: "REVISION",
+                          updated_at: "2026-03-08T14:00:00.000Z",
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            400: {
+              description:
+                "Validasi gagal atau transisi status tidak diperbolehkan",
+              content: {
+                "application/json": {
+                  examples: {
+                    invalidId: {
+                      summary: "ID tidak valid",
+                      value: { message: "ID proposal tidak valid." },
+                    },
+                    validationFail: {
+                      summary: "Validasi data gagal",
+                      value: {
+                        message: "Validasi data gagal.",
+                        errors: {
+                          status: [
+                            "Status tidak valid. Status yang diperbolehkan: ADMIN_VERIFIED, UNDER_REVIEW, REVISION, ACCEPTED, REJECTED.",
+                          ],
+                        },
+                      },
+                    },
+                    invalidTransition: {
+                      summary: "Transisi status tidak diperbolehkan",
+                      value: {
+                        message:
+                          "Tidak dapat mengubah status dari SUBMITTED ke ACCEPTED dengan role REVIEWER.",
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            401: {
+              description: "Unauthorized",
+              content: {
+                "application/json": {
+                  example: { message: "Unauthorized" },
+                },
+              },
+            },
+            403: {
+              description:
+                "Forbidden — role tidak memiliki izin mengubah status",
+              content: {
+                "application/json": {
+                  examples: {
+                    noPermission: {
+                      summary: "Role tidak punya izin",
+                      value: {
+                        message:
+                          "Role Anda tidak memiliki izin untuk mengubah status proposal.",
+                      },
+                    },
+                    insufficientRole: {
+                      summary: "Role tidak memiliki akses endpoint",
+                      value: {
+                        message: "Forbidden: insufficient role",
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            404: {
+              description: "Proposal tidak ditemukan",
+              content: {
+                "application/json": {
+                  example: { message: "Proposal tidak ditemukan." },
+                },
+              },
+            },
+            500: {
+              description: "Internal server error",
+              content: {
+                "application/json": {
+                  example: {
+                    message:
+                      "Terjadi kesalahan pada server saat mengubah status proposal.",
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+
+      "/proposals/{id}/reviews": {
+        get: {
+          tags: ["Proposal"],
+          summary: "Ambil riwayat review proposal",
+          description: `
+Endpoint untuk mengambil riwayat review sebuah proposal.
+
+**Role akses:**
+- DOSEN
+- ADMIN_LPPM
+- STAFF_LPPM
+- REVIEWER
+- REVIEWER_EKSTERNAL
+
+**Catatan:**
+- Mengembalikan daftar semua review yang pernah dilakukan terhadap proposal tersebut.
+- Diurutkan berdasarkan \`created_at\` ascending (paling lama di atas).
+- Menyertakan informasi reviewer (id, name, email).
+          `,
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: "id",
+              in: "path",
+              required: true,
+              description: "ID proposal",
+              schema: { type: "integer", example: 1 },
+            },
+          ],
+          responses: {
+            200: {
+              description: "Berhasil mengambil riwayat review",
+              content: {
+                "application/json": {
+                  example: {
+                    message: "Berhasil mengambil riwayat review.",
+                    data: [
+                      {
+                        id: 1,
+                        proposal_id: 1,
+                        reviewer_id: 2,
+                        status: "ADMIN_VERIFIED",
+                        notes:
+                          "Proposal sudah memenuhi persyaratan administratif.",
+                        created_at: "2026-03-08T11:00:00.000Z",
+                        reviewer: {
+                          id: 2,
+                          name: "Admin LPPM",
+                          email: "admin@kampus.ac.id",
+                        },
+                      },
+                      {
+                        id: 2,
+                        proposal_id: 1,
+                        reviewer_id: 5,
+                        status: "UNDER_REVIEW",
+                        notes: "",
+                        created_at: "2026-03-08T14:00:00.000Z",
+                        reviewer: {
+                          id: 5,
+                          name: "Reviewer A",
+                          email: "reviewer@kampus.ac.id",
+                        },
+                      },
+                      {
+                        id: 3,
+                        proposal_id: 1,
+                        reviewer_id: 5,
+                        status: "ACCEPTED",
+                        notes:
+                          "Proposal sudah memenuhi semua kriteria penilaian.",
+                        created_at: "2026-03-09T10:00:00.000Z",
+                        reviewer: {
+                          id: 5,
+                          name: "Reviewer A",
+                          email: "reviewer@kampus.ac.id",
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+            400: {
+              description: "ID proposal tidak valid",
+              content: {
+                "application/json": {
+                  example: { message: "ID proposal tidak valid." },
+                },
+              },
+            },
+            401: {
+              description: "Unauthorized",
+              content: {
+                "application/json": {
+                  example: { message: "Unauthorized" },
+                },
+              },
+            },
+            403: {
+              description: "Forbidden — role tidak memiliki akses",
+              content: {
+                "application/json": {
+                  example: { message: "Forbidden: insufficient role" },
+                },
+              },
+            },
+            404: {
+              description: "Proposal tidak ditemukan",
+              content: {
+                "application/json": {
+                  example: { message: "Proposal tidak ditemukan." },
+                },
+              },
+            },
+            500: {
+              description: "Internal server error",
+              content: {
+                "application/json": {
+                  example: {
+                    message:
+                      "Terjadi kesalahan pada server saat mengambil riwayat review.",
+                  },
+                },
+              },
+            },
+          },
+        },
       },
 
       /** ================= DOSEN ================= */
@@ -1906,16 +2764,17 @@ Endpoint untuk mengambil detail satu proposal berdasarkan ID.
           description: `
 Mengambil profil dosen yang sedang login.
 
-Role akses:
+**Role akses:**
 - DOSEN
 
-Catatan:
+**Catatan:**
 - Dosen hanya dapat melihat data miliknya sendiri.
-    `,
+- Data yang dikembalikan: id, name, email, nidn, fakultas, roles, created_at.
+          `,
           security: [{ bearerAuth: [] }],
           responses: {
             200: {
-              description: "Dosen profile",
+              description: "Profil dosen berhasil diambil",
               content: {
                 "application/json": {
                   example: {
@@ -1926,8 +2785,34 @@ Catatan:
                       nidn: "012345678",
                       fakultas: "Teknik",
                       roles: "DOSEN",
+                      created_at: "2025-06-10T08:00:00.000Z",
                     },
                   },
+                },
+              },
+            },
+            401: {
+              description:
+                "Unauthorized — token tidak valid atau tidak dikirim",
+              content: {
+                "application/json": {
+                  example: { message: "Unauthorized." },
+                },
+              },
+            },
+            403: {
+              description: "Forbidden — bukan role DOSEN",
+              content: {
+                "application/json": {
+                  example: { message: "Forbidden: insufficient role" },
+                },
+              },
+            },
+            404: {
+              description: "User tidak ditemukan",
+              content: {
+                "application/json": {
+                  example: { message: "User not found." },
                 },
               },
             },
@@ -1936,24 +2821,263 @@ Catatan:
         patch: {
           tags: ["Dosen"],
           summary: "Update dosen profile",
+          description: `
+Memperbarui profil dosen yang sedang login.
+
+**Role akses:**
+- DOSEN
+
+**Catatan:**
+- Dosen hanya dapat memperbarui data miliknya sendiri.
+- Semua field bersifat opsional (partial update).
+- Field yang dapat diubah: \`name\`, \`nidn\`, \`fakultas\`.
+          `,
           security: [{ bearerAuth: [] }],
           requestBody: {
+            required: false,
             content: {
               "application/json": {
-                example: {
-                  name: "Dosen A Updated",
-                  fakultas: "Teknik Informatika",
+                schema: {
+                  properties: {
+                    name: {
+                      type: "string",
+                      example: "Dosen A Updated",
+                      description: "Nama lengkap dosen.",
+                    },
+                    nidn: {
+                      type: "string",
+                      example: "012345679",
+                      description: "NIDN atau NIP dosen.",
+                    },
+                    fakultas: {
+                      type: "string",
+                      example: "Teknik Informatika",
+                      description: "Nama fakultas.",
+                    },
+                  },
                 },
               },
             },
           },
           responses: {
             200: {
-              description: "Profile updated",
+              description: "Profil berhasil diperbarui",
               content: {
                 "application/json": {
                   example: {
                     message: "Profile updated successfully.",
+                    data: {
+                      id: 3,
+                      name: "Dosen A Updated",
+                      email: "dosen@kampus.ac.id",
+                      nidn: "012345679",
+                      fakultas: "Teknik Informatika",
+                      roles: "DOSEN",
+                    },
+                  },
+                },
+              },
+            },
+            401: {
+              description:
+                "Unauthorized — token tidak valid atau tidak dikirim",
+              content: {
+                "application/json": {
+                  example: { message: "Unauthorized." },
+                },
+              },
+            },
+            403: {
+              description: "Forbidden — bukan role DOSEN",
+              content: {
+                "application/json": {
+                  example: { message: "Forbidden: insufficient role" },
+                },
+              },
+            },
+            404: {
+              description: "User tidak ditemukan",
+              content: {
+                "application/json": {
+                  example: { message: "User not found." },
+                },
+              },
+            },
+          },
+        },
+      },
+
+      /** ================= NOTIFICATIONS ================= */
+      "/notifications": {
+        get: {
+          tags: ["Notifications"],
+          summary: "Ambil semua notifikasi user",
+          description: `
+Endpoint untuk mengambil semua notifikasi milik user yang sedang login.
+
+**Role akses:**
+- SEMUA ROLE (HARUS LOGIN)
+
+**Catatan:**
+- Mengembalikan semua notifikasi user, diurutkan dari yang terbaru.
+- Menyertakan jumlah notifikasi yang belum dibaca (\`unread_count\`).
+          `,
+          security: [{ bearerAuth: [] }],
+          responses: {
+            200: {
+              description: "Berhasil mengambil notifikasi",
+              content: {
+                "application/json": {
+                  example: {
+                    message: "Berhasil mengambil notifikasi.",
+                    data: {
+                      unread_count: 2,
+                      notifications: [
+                        {
+                          id: 3,
+                          user_id: 3,
+                          title: "Proposal Diterima 🎉",
+                          message:
+                            'Selamat! Proposal "Penelitian AI untuk Pertanian" telah diterima dan disetujui.',
+                          is_read: false,
+                          created_at: "2026-03-09T10:00:00.000Z",
+                        },
+                        {
+                          id: 2,
+                          user_id: 3,
+                          title: "Proposal Sedang Ditinjau",
+                          message:
+                            'Proposal "Penelitian AI untuk Pertanian" sedang dalam proses peninjauan oleh Reviewer.',
+                          is_read: false,
+                          created_at: "2026-03-08T14:00:00.000Z",
+                        },
+                        {
+                          id: 1,
+                          user_id: 3,
+                          title: "Proposal Terverifikasi",
+                          message:
+                            'Proposal "Penelitian AI untuk Pertanian" telah diverifikasi oleh Admin LPPM dan siap untuk ditinjau oleh Reviewer.',
+                          is_read: true,
+                          created_at: "2026-03-08T11:00:00.000Z",
+                        },
+                      ],
+                    },
+                  },
+                },
+              },
+            },
+            401: {
+              description:
+                "Unauthorized — token tidak valid atau tidak dikirim",
+              content: {
+                "application/json": {
+                  example: { message: "Unauthorized" },
+                },
+              },
+            },
+            500: {
+              description: "Internal server error",
+              content: {
+                "application/json": {
+                  example: {
+                    message:
+                      "Terjadi kesalahan pada server saat mengambil notifikasi.",
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+
+      "/notifications/{id}/read": {
+        patch: {
+          tags: ["Notifications"],
+          summary: "Tandai notifikasi sebagai dibaca",
+          description: `
+Endpoint untuk menandai satu notifikasi sebagai telah dibaca.
+
+**Role akses:**
+- SEMUA ROLE (HARUS LOGIN)
+
+**Catatan:**
+- User hanya dapat menandai notifikasi miliknya sendiri.
+- Jika notifikasi sudah dibaca, akan mengembalikan data tanpa perubahan.
+          `,
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: "id",
+              in: "path",
+              required: true,
+              description: "ID notifikasi",
+              schema: { type: "integer", example: 1 },
+            },
+          ],
+          responses: {
+            200: {
+              description: "Notifikasi berhasil ditandai sebagai dibaca",
+              content: {
+                "application/json": {
+                  example: {
+                    message: "Notifikasi berhasil ditandai sebagai dibaca.",
+                    data: {
+                      id: 1,
+                      user_id: 3,
+                      title: "Proposal Terverifikasi",
+                      message:
+                        'Proposal "Penelitian AI untuk Pertanian" telah diverifikasi oleh Admin LPPM dan siap untuk ditinjau oleh Reviewer.',
+                      is_read: true,
+                      created_at: "2026-03-08T11:00:00.000Z",
+                    },
+                  },
+                },
+              },
+            },
+            400: {
+              description: "ID notifikasi tidak valid",
+              content: {
+                "application/json": {
+                  example: { message: "ID notifikasi tidak valid." },
+                },
+              },
+            },
+            401: {
+              description:
+                "Unauthorized — token tidak valid atau tidak dikirim",
+              content: {
+                "application/json": {
+                  example: { message: "Unauthorized" },
+                },
+              },
+            },
+            403: {
+              description:
+                "Forbidden — notifikasi bukan milik user yang sedang login",
+              content: {
+                "application/json": {
+                  example: {
+                    message:
+                      "Anda tidak memiliki izin untuk mengakses notifikasi ini.",
+                  },
+                },
+              },
+            },
+            404: {
+              description: "Notifikasi tidak ditemukan",
+              content: {
+                "application/json": {
+                  example: { message: "Notifikasi tidak ditemukan." },
+                },
+              },
+            },
+            500: {
+              description: "Internal server error",
+              content: {
+                "application/json": {
+                  example: {
+                    message:
+                      "Terjadi kesalahan pada server saat memperbarui notifikasi.",
                   },
                 },
               },
