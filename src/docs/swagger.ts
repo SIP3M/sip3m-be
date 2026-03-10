@@ -10,7 +10,7 @@ export const swaggerSpec = swaggerJSDoc({
         "REST API untuk Sistem Informasi LPPM (SIP3M). Dokumentasi ini mencakup autentikasi (register, login, OAuth Google), RBAC (Role-Based Access Control), manajemen user, profil dosen, manajemen proposal penelitian (CRUD, submit, review, status workflow), dan notifikasi.",
     },
     servers: [
-        {
+      {
         url: "https://sip3m-be.vercel.app/api",
         description: "Production server",
       },
@@ -18,7 +18,6 @@ export const swaggerSpec = swaggerJSDoc({
         url: "http://localhost:3000/api",
         description: "Local development server",
       },
-    
     ],
     components: {
       securitySchemes: {
@@ -1015,6 +1014,80 @@ Mengambil daftar seluruh user dalam sistem dengan dukungan filter dan pencarian.
               content: {
                 "application/json": {
                   example: { message: "Forbidden." },
+                },
+              },
+            },
+          },
+        },
+      },
+
+      "/users/reviewers": {
+        get: {
+          tags: ["Users"],
+          summary: "Get list reviewer (untuk dropdown)",
+          description: `
+Mengambil daftar user yang memiliki role **REVIEWER** atau **REVIEWER_EKSTERNAL** dan berstatus aktif.
+
+**Role akses:**
+- ADMIN_LPPM
+- STAFF_LPPM
+
+**Catatan:**
+- Endpoint ini digunakan untuk mengisi dropdown pemilihan reviewer di frontend.
+- Hanya mengembalikan field \`id\`, \`name\`, dan \`email\` agar payload ringan.
+- Diurutkan berdasarkan \`name\` ascending.
+          `,
+          security: [{ bearerAuth: [] }],
+          responses: {
+            200: {
+              description: "Daftar reviewer berhasil diambil",
+              content: {
+                "application/json": {
+                  example: {
+                    data: [
+                      {
+                        id: 4,
+                        name: "Reviewer A",
+                        email: "reviewer@kampus.ac.id",
+                      },
+                      {
+                        id: 6,
+                        name: "Reviewer Eksternal B",
+                        email: "eksternal@mitra.ac.id",
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+            401: {
+              description:
+                "Unauthorized — token tidak valid atau tidak dikirim",
+              content: {
+                "application/json": {
+                  example: { message: "Unauthorized." },
+                },
+              },
+            },
+            403: {
+              description: "Forbidden — bukan ADMIN_LPPM atau STAFF_LPPM",
+              content: {
+                "application/json": {
+                  example: {
+                    message:
+                      "You do not have permission to access this resource.",
+                  },
+                },
+              },
+            },
+            500: {
+              description: "Internal server error",
+              content: {
+                "application/json": {
+                  example: {
+                    message:
+                      "Terjadi kesalahan saat mengambil daftar reviewer.",
+                  },
                 },
               },
             },
@@ -2748,6 +2821,174 @@ Endpoint untuk mengambil riwayat review sebuah proposal.
                   example: {
                     message:
                       "Terjadi kesalahan pada server saat mengambil riwayat review.",
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+
+      /** ================= ASSIGN REVIEWERS ================= */
+      "/proposals/{id}/assign-reviewers": {
+        post: {
+          tags: ["Proposal"],
+          summary: "Assign 2 reviewer ke proposal",
+          description: `
+Endpoint untuk menugaskan 2 reviewer ke sebuah proposal.
+
+**Role akses:**
+- ADMIN_LPPM
+- STAFF_LPPM
+
+**Catatan:**
+- Proposal harus berstatus \`ADMIN_VERIFIED\` agar reviewer bisa ditugaskan.
+- Harus mengirim tepat 2 ID reviewer, dan keduanya tidak boleh sama.
+- Kedua ID harus merupakan user aktif dengan role REVIEWER atau REVIEWER_EKSTERNAL.
+- Setelah berhasil:
+  - Data reviewer disimpan ke tabel \`ProposalReviewers\`.
+  - Status proposal otomatis berubah menjadi \`UNDER_REVIEW\`.
+  - Notifikasi dikirim ke kedua reviewer dan pemilik proposal.
+          `,
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: "id",
+              in: "path",
+              required: true,
+              description: "ID proposal yang akan di-assign reviewer",
+              schema: { type: "integer", example: 1 },
+            },
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  required: ["reviewerIds"],
+                  properties: {
+                    reviewerIds: {
+                      type: "array",
+                      items: { type: "number" },
+                      minItems: 2,
+                      maxItems: 2,
+                      description:
+                        "Array berisi tepat 2 ID reviewer. Kedua ID tidak boleh sama.",
+                      example: [4, 6],
+                    },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            200: {
+              description:
+                "Reviewer berhasil ditugaskan, status proposal menjadi UNDER_REVIEW",
+              content: {
+                "application/json": {
+                  example: {
+                    message:
+                      "Reviewer berhasil ditugaskan dan status proposal diubah menjadi UNDER_REVIEW.",
+                    data: {
+                      id: 1,
+                      title: "Penelitian AI untuk Pertanian",
+                      lead_researcher_id: 3,
+                      faculty: "Teknik",
+                      skema: "Penelitian Dasar",
+                      funding_request_amount: 15000000,
+                      status: "UNDER_REVIEW",
+                      proposal_file_path:
+                        "https://storage.example.com/proposals/3_proposal.pdf",
+                      rab_file_path:
+                        "https://storage.example.com/rabs/3_rab.pdf",
+                      submitted_at: "2026-03-07T10:00:00.000Z",
+                      created_at: "2026-03-07T09:00:00.000Z",
+                      updated_at: "2026-03-10T08:00:00.000Z",
+                    },
+                  },
+                },
+              },
+            },
+            400: {
+              description: "Validasi gagal atau status proposal tidak sesuai",
+              content: {
+                "application/json": {
+                  examples: {
+                    validationError: {
+                      summary: "Validasi Zod gagal",
+                      value: {
+                        message: "Validasi data gagal.",
+                        errors: {
+                          reviewerIds: ["Harus memilih tepat 2 reviewer."],
+                        },
+                      },
+                    },
+                    duplicateIds: {
+                      summary: "ID reviewer sama",
+                      value: {
+                        message: "Validasi data gagal.",
+                        errors: {
+                          reviewerIds: ["ID reviewer tidak boleh sama."],
+                        },
+                      },
+                    },
+                    wrongStatus: {
+                      summary: "Status proposal bukan ADMIN_VERIFIED",
+                      value: {
+                        message:
+                          "Reviewer hanya dapat ditugaskan pada proposal berstatus ADMIN_VERIFIED. Status saat ini: SUBMITTED.",
+                      },
+                    },
+                    invalidReviewer: {
+                      summary: "Reviewer ID tidak valid",
+                      value: {
+                        message:
+                          "Reviewer dengan ID 99 tidak ditemukan atau bukan reviewer.",
+                      },
+                    },
+                    invalidId: {
+                      summary: "ID proposal tidak valid",
+                      value: { message: "ID proposal tidak valid." },
+                    },
+                  },
+                },
+              },
+            },
+            401: {
+              description: "Unauthorized",
+              content: {
+                "application/json": {
+                  example: { message: "Unauthorized" },
+                },
+              },
+            },
+            403: {
+              description: "Forbidden — bukan ADMIN_LPPM atau STAFF_LPPM",
+              content: {
+                "application/json": {
+                  example: {
+                    message:
+                      "You do not have permission to access this resource.",
+                  },
+                },
+              },
+            },
+            404: {
+              description: "Proposal tidak ditemukan",
+              content: {
+                "application/json": {
+                  example: { message: "Proposal tidak ditemukan." },
+                },
+              },
+            },
+            500: {
+              description: "Internal server error",
+              content: {
+                "application/json": {
+                  example: {
+                    message:
+                      "Terjadi kesalahan pada server saat menugaskan reviewer.",
                   },
                 },
               },
