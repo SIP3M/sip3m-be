@@ -1,6 +1,7 @@
 import { Router } from "express";
 import {
   getUserById,
+  getReviewers,
   getUsers,
   updateUserRole,
   updateUserStatus,
@@ -22,6 +23,13 @@ import { validate } from "../common/middleware/validate";
 const router = Router();
 
 router.get("/users", authMiddleware, requireRole([ROLES.ADMIN_LPPM]), getUsers);
+
+router.get(
+  "/users/reviewers",
+  authMiddleware,
+  requireRole([ROLES.ADMIN_LPPM, ROLES.STAFF_LPPM]),
+  getReviewers,
+);
 
 router.get(
   "/users/:id",

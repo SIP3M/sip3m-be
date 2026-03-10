@@ -4,6 +4,36 @@ import { prisma } from "../prisma";
 import { HttpError } from "../common/errors/http-error";
 import { Prisma } from "../generated/prisma/client";
 
+export const getReviewers = async (
+  _req: Request,
+  res: Response,
+): Promise<Response> => {
+  try {
+    const reviewers = await prisma.users.findMany({
+      where: {
+        roles: {
+          roles: { in: ["REVIEWER", "REVIEWER_EKSTERNAL"] },
+        },
+        is_active: true,
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+      },
+      orderBy: { name: "asc" },
+    });
+
+    return res.status(200).json({ data: reviewers });
+  } catch (error) {
+    console.error("[GET_REVIEWERS_ERROR]", error);
+    throw new HttpError(
+      "Terjadi kesalahan saat mengambil daftar reviewer.",
+      500,
+    );
+  }
+};
+
 export const getUsers = async (
   req: Request,
   res: Response,

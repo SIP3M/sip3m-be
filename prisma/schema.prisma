@@ -37,6 +37,7 @@ model proposals {
 
   user    users             @relation(fields: [lead_researcher_id], references: [id])
   reviews ProposalReviews[]
+  reviewers ProposalReviewers[]
 
   @@index([lead_researcher_id])
   @@index([status])
@@ -107,6 +108,19 @@ model users {
   cv_path           String?           @db.VarChar(255)
   proposalReviews   ProposalReviews[]
   notifications     Notifications[]
+  reviewers ProposalReviewers[]
 
   @@index([role_id])
+}
+
+model ProposalReviewers {
+  id          Int       @id @default(autoincrement())
+  proposal_id Int
+  reviewer_id Int
+  created_at  DateTime  @default(now())
+
+  proposal    proposals @relation(fields: [proposal_id], references: [id])
+  reviewer    users     @relation(fields: [reviewer_id], references: [id])
+
+  @@unique([proposal_id, reviewer_id]) 
 }

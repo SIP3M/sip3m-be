@@ -5,6 +5,7 @@ import {
   createProposalSchema,
   editProposalSchema,
   updateProposalStatusSchema,
+  assignReviewerSchema,
 } from "./proposal.validation";
 import {
   createProposal as createProposalService,
@@ -15,6 +16,7 @@ import {
   getProposalReviews,
   submitProposal,
   updateProposalStatus,
+  assignReviewersService,
 } from "./proposal.service";
 import type { ProposalFiles } from "./proposal.types";
 
@@ -191,9 +193,6 @@ export const deleteProposalController = async (
   }
 };
 
-// =============================================
-// Submit Proposal (Dosen: DRAFT/REVISION → SUBMITTED)
-// =============================================
 export const submitProposalController = async (
   req: AuthenticatedRequest,
   res: Response,
@@ -263,6 +262,46 @@ export const updateProposalStatusController = async (
     console.error("[UPDATE_PROPOSAL_STATUS_ERROR]", error);
     return res.status(500).json({
       message: "Terjadi kesalahan pada server saat mengubah status proposal.",
+    });
+  }
+};
+
+export const assignReviewersController = async (
+  req: AuthenticatedRequest,
+  res: Response,
+): Promise<Response> => {
+  try {
+    if (!req.user?.userId) {
+      throw new HttpError("Unauthorized", 401);
+    }
+
+    const proposalId = Number(req.params.id);
+    if (isNaN(proposalId)) {
+      return res.status(400).json({ message: "ID proposal tidak valid." });
+    }
+
+    const validation = assignReviewerSchema.safeParse(req.body);
+    if (!validation.success) {
+      return res.status(400).json({
+        message: "Validasi data gagal.",
+        errors: validation.error.flatten().fieldErrors,
+      });
+    }
+
+    const result = await assignReviewersService(
+      proposalId,
+      validation.data.reviewerIds,
+    );
+
+    return res.status(200).json(result);
+  } catch (error) {
+    if (error instanceof HttpError) {
+      return res.status(error.statusCode).json({ message: error.message });
+    }
+
+    console.error("[ASSIGN_REVIEWERS_ERROR]", error);
+    return res.status(500).json({
+      message: "Terjadi kesalahan pada server saat menugaskan reviewer.",
     });
   }
 };

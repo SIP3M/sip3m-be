@@ -411,6 +411,90 @@ export const updateProposalStatus = async (
   };
 };
 
+export const assignReviewersService = async (
+  proposalId: number,
+  reviewerIds: number[],
+) => {
+  // 1. Cek proposal & pastikan statusnya ADMIN_VERIFIED
+  const proposal = await prisma.proposals.findUnique({
+    where: { id: proposalId },
+  });
+
+  if (!proposal) {
+    throw new HttpError("Proposal tidak ditemukan.", 404);
+  }
+
+  if (proposal.status !== ProposalStatus.ADMIN_VERIFIED) {
+    throw new HttpError(
+      `Reviewer hanya dapat ditugaskan pada proposal berstatus ADMIN_VERIFIED. Status saat ini: ${proposal.status}.`,
+      400,
+    );
+  }
+
+  // 2. Validasi kedua reviewer: harus ada & memiliki role REVIEWER / REVIEWER_EKSTERNAL
+  const reviewers = await prisma.users.findMany({
+    where: {
+      id: { in: reviewerIds },
+      roles: {
+        roles: { in: ["REVIEWER", "REVIEWER_EKSTERNAL"] },
+      },
+    },
+    select: { id: true, name: true },
+  });
+
+  if (reviewers.length !== reviewerIds.length) {
+    const foundIds = reviewers.map((r) => r.id);
+    const invalidIds = reviewerIds.filter((id) => !foundIds.includes(id));
+    throw new HttpError(
+      `Reviewer dengan ID ${invalidIds.join(", ")} tidak ditemukan atau bukan reviewer.`,
+      400,
+    );
+  }
+
+  // 3. Jalankan semua operasi dalam satu transaksi
+  const result = await prisma.$transaction(async (tx) => {
+    // a. Insert ke ProposalReviewers
+    await tx.proposalReviewers.createMany({
+      data: reviewerIds.map((reviewerId) => ({
+        proposal_id: proposalId,
+        reviewer_id: reviewerId,
+      })),
+    });
+
+    // b. Update status proposal → UNDER_REVIEW
+    const updatedProposal = await tx.proposals.update({
+      where: { id: proposalId },
+      data: { status: ProposalStatus.UNDER_REVIEW },
+    });
+
+    // c. Notifikasi untuk kedua reviewer
+    await tx.notifications.createMany({
+      data: reviewerIds.map((reviewerId) => ({
+        user_id: reviewerId,
+        title: "Penugasan Review Proposal",
+        message: `Anda ditugaskan mereview proposal "${proposal.title}".`,
+      })),
+    });
+
+    // d. Notifikasi untuk pemilik proposal (lead researcher)
+    await tx.notifications.create({
+      data: {
+        user_id: proposal.lead_researcher_id,
+        title: "Proposal Sedang Ditinjau",
+        message: "Proposal Anda sedang ditinjau oleh reviewer.",
+      },
+    });
+
+    return updatedProposal;
+  });
+
+  return {
+    message:
+      "Reviewer berhasil ditugaskan dan status proposal diubah menjadi UNDER_REVIEW.",
+    data: result,
+  };
+};
+
 export const getProposalReviews = async (proposalId: number) => {
   const proposal = await prisma.proposals.findUnique({
     where: { id: proposalId },

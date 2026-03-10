@@ -3,6 +3,7 @@ import { authMiddleware } from "../auth/middleware/auth.middleware";
 import { requireRole } from "../auth/middleware/role.middleware";
 import { uploadMiddleware } from "../config/storage";
 import {
+  assignReviewersController,
   createProposalController,
   deleteProposalController,
   editProposalController,
@@ -90,6 +91,14 @@ router.patch(
     ROLES.REVIEWER_EKSTERNAL,
   ]),
   updateProposalStatusController,
+);
+
+// Admin/Staff LPPM: assign 2 reviewers → UNDER_REVIEW
+router.post(
+  "/proposals/:id/assign-reviewers",
+  authMiddleware,
+  requireRole([ROLES.ADMIN_LPPM, ROLES.STAFF_LPPM]),
+  assignReviewersController,
 );
 
 router.get(
