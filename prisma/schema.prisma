@@ -19,6 +19,12 @@ enum ProposalStatus {
   REJECTED
 }
 
+enum PengabdianStatus {
+  SEDANG_BERJALAN
+  PENDING
+  SELESAI
+}
+
 model proposals {
   id                     Int            @id @default(autoincrement())
   title                  String         @db.VarChar(255)
@@ -38,6 +44,7 @@ model proposals {
   user    users             @relation(fields: [lead_researcher_id], references: [id])
   reviews ProposalReviews[]
   reviewers ProposalReviewers[]
+  pengabdianProject PengabdianProjects[]
 
   @@index([lead_researcher_id])
   @@index([status])
@@ -123,4 +130,14 @@ model ProposalReviewers {
   reviewer    users     @relation(fields: [reviewer_id], references: [id])
 
   @@unique([proposal_id, reviewer_id]) 
+}
+
+model PengabdianProjects {
+  id          Int                 @id @default(autoincrement())
+  proposal_id Int              @unique
+  status      PengabdianStatus     @default(PENDING)
+  created_at  DateTime            @default(now())
+  updated_at  DateTime            @updatedAt
+
+  proposal proposals @relation(fields: [proposal_id], references: [id])
 }
