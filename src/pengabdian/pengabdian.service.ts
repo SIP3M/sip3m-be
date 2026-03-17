@@ -32,25 +32,26 @@ export const createPengabdianProject = async (proposalId: number) => {
     );
   }
 
-  if (proposal.pengabdianProject.length > 0) {
+  if (proposal.pengabdianProject) {
     throw new HttpError("Proyek pengabdian untuk proposal ini sudah ada.", 409);
   }
 
-  try {
-    const project = await prisma.pengabdianProjects.create({
-      data: {
-        proposal_id: proposalId,
-        status: PengabdianStatus.PENDING,
-      },
-    });
+  const generatedProjectCode = `PENG-${new Date().getFullYear()}-${proposal.id}`;
 
-    return {
-      message: "Proyek pengabdian berhasil dibuat.",
-      data: project,
-    };
-  } catch {
-    throw new HttpError("Proyek pengabdian untuk proposal ini sudah ada.", 409);
-  }
+  // Create Project
+  const project = await prisma.pengabdianProjects.create({
+    data: {
+      proposal_id: proposalId,
+      status: PengabdianStatus.PENDING,
+      title: proposal.title,            
+      project_code: generatedProjectCode, 
+    },
+  });
+
+  return {
+    message: "Proyek pengabdian berhasil dibuat.",
+    data: project,
+  };
 };
 
 export const getPengabdianProjectByProposalId = async (proposalId: number) => {

@@ -175,8 +175,10 @@ export const loginUser = async (data: LoginInput): Promise<LoginResult> => {
 
   const token = jwt.sign(
     {
+      sub: String(user.id),
       userId: user.id,
       role: user.roles.roles,
+      roles: user.roles.roles,
     },
     jwtSecret,
     { expiresIn },

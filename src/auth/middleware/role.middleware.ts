@@ -10,7 +10,11 @@ export const requireRole =
       throw new HttpError("Unauthorized.", 401);
     }
 
-    const userRole = req.user.role;
+    const userRole = (req.user.role ?? req.user.roles) as Role | undefined;
+
+    if (!userRole) {
+      throw new HttpError("Unauthorized.", 401);
+    }
 
     if (!allowedRoles.includes(userRole)) {
       throw new HttpError(

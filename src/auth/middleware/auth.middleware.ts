@@ -28,7 +28,13 @@ export const authMiddleware = (
 
   try {
     const decoded = jwt.verify(token, secret) as AuthJwtPayload;
-    req.user = decoded;
+    req.user = {
+      ...decoded,
+      sub: decoded.sub ?? (decoded.userId ? String(decoded.userId) : undefined),
+      userId: decoded.userId ?? (decoded.sub ? Number(decoded.sub) : undefined),
+      role: decoded.role ?? decoded.roles,
+      roles: decoded.roles ?? decoded.role,
+    };
     next();
   } catch {
     throw new HttpError("Invalid or expired authentication token.", 401);

@@ -25,6 +25,27 @@ enum PengabdianStatus {
   SELESAI
 }
 
+enum PengabdianMilestoneStatus {
+  PENDING
+  ONGOING
+  COMPLETED
+  OVERDUE
+}
+
+enum PengabdianDocumentType {
+  DOKUMEN_KONTRAK
+  LAPORAN_KEMAJUAN_1
+  LAPORAN_KEMAJUAN_2
+  LAPORAN_AKHIR
+  LAINNYA
+}
+
+enum DocumentVerificationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 model proposals {
   id                     Int            @id @default(autoincrement())
   title                  String         @db.VarChar(255)
@@ -44,7 +65,7 @@ model proposals {
   user    users             @relation(fields: [lead_researcher_id], references: [id])
   reviews ProposalReviews[]
   reviewers ProposalReviewers[]
-  pengabdianProject PengabdianProjects[]
+  pengabdianProject PengabdianProjects?
 
   @@index([lead_researcher_id])
   @@index([status])
@@ -116,6 +137,7 @@ model users {
   proposalReviews   ProposalReviews[]
   notifications     Notifications[]
   reviewers ProposalReviewers[]
+  pengabdianDocumentsUploaded PengabdianDocuments[] @relation("UploadedByUser")
 
   @@index([role_id])
 }
@@ -133,11 +155,70 @@ model ProposalReviewers {
 }
 
 model PengabdianProjects {
-  id          Int                 @id @default(autoincrement())
-  proposal_id Int              @unique
-  status      PengabdianStatus     @default(PENDING)
-  created_at  DateTime            @default(now())
-  updated_at  DateTime            @updatedAt
+  id               Int              @id @default(autoincrement())
+  proposal_id      Int              @unique
+  project_code     String?          @unique @db.VarChar(30)
+  title            String?          @db.VarChar(255)
+  summary          String?          @db.Text
+  start_date       DateTime?        @db.Date
+  end_date         DateTime?        @db.Date
+  overall_progress Int              @default(0)
+  status           PengabdianStatus @default(PENDING)
+  is_archived      Boolean          @default(false)
+  created_at       DateTime         @default(now())
+  updated_at       DateTime         @updatedAt
 
   proposal proposals @relation(fields: [proposal_id], references: [id])
+
+  milestones PengabdianMilestones[]
+  documents  PengabdianDocuments[]
+
+  @@index([status])
+  @@index([is_archived])
+}
+
+model PengabdianMilestones {
+  id                Int                       @id @default(autoincrement())
+  project_id        Int
+  title             String                    @db.VarChar(255)
+  description       String?                   @db.Text
+  sequence          Int
+  target_percentage Int                       @default(0)
+  due_date          DateTime?                 @db.Date
+  status            PengabdianMilestoneStatus @default(PENDING)
+  completed_at      DateTime?
+  created_at        DateTime                  @default(now())
+  updated_at        DateTime                  @updatedAt
+
+  project PengabdianProjects @relation(fields: [project_id], references: [id], onDelete: Cascade)
+
+  documents PengabdianDocuments[]
+
+  @@unique([project_id, sequence])
+  @@index([project_id])
+  @@index([status])
+}
+
+model PengabdianDocuments {
+  id                  Int                        @id @default(autoincrement())
+  project_id          Int
+  milestone_id        Int?
+  document_type       PengabdianDocumentType
+  title               String?                    @db.VarChar(255)
+  file_path           String                     @db.VarChar(500)
+  file_size           Int?
+  mime_type           String?                    @db.VarChar(100)
+  verification_status DocumentVerificationStatus @default(PENDING)
+  verification_notes  String?                    @db.Text
+  uploaded_by         Int
+  uploaded_at         DateTime                   @default(now())
+
+  project    PengabdianProjects   @relation(fields: [project_id], references: [id], onDelete: Cascade)
+  milestone  PengabdianMilestones? @relation(fields: [milestone_id], references: [id], onDelete: SetNull)
+  uploader   users                @relation("UploadedByUser", fields: [uploaded_by], references: [id])
+
+  @@index([project_id])
+  @@index([milestone_id])
+  @@index([document_type])
+  @@index([verification_status])
 }
