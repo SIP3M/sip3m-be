@@ -236,6 +236,68 @@ export const swaggerSpec = swaggerJSDoc({
             },
           },
         },
+        PengabdianDocumentUploader: {
+          type: "object",
+          properties: {
+            id: { type: "number", example: 3 },
+            name: { type: "string", example: "Dr. Budi Santoso" },
+            email: {
+              type: "string",
+              format: "email",
+              example: "budi@kampus.ac.id",
+            },
+          },
+        },
+        PengabdianDocument: {
+          type: "object",
+          properties: {
+            id: { type: "number", example: 10 },
+            project_id: { type: "number", example: 1 },
+            milestone_id: { type: ["number", "null"], example: null },
+            title: {
+              type: ["string", "null"],
+              example: "Laporan Kemajuan Tahap 1.pdf",
+            },
+            file_path: {
+              type: "string",
+              example:
+                "pengabdian/1/1711234567890-Laporan_Kemajuan_Tahap_1.pdf",
+            },
+            file_size: { type: ["number", "null"], example: 2456780 },
+            mime_type: {
+              type: ["string", "null"],
+              example: "application/pdf",
+            },
+            document_type: {
+              type: "string",
+              enum: [
+                "DOKUMEN_KONTRAK",
+                "LAPORAN_KEMAJUAN_1",
+                "LAPORAN_KEMAJUAN_2",
+                "LAPORAN_AKHIR",
+                "LAINNYA",
+              ],
+              example: "LAPORAN_KEMAJUAN_1",
+            },
+            verification_status: {
+              type: "string",
+              enum: ["PENDING", "APPROVED", "REJECTED"],
+              example: "PENDING",
+            },
+            verification_notes: {
+              type: ["string", "null"],
+              example: "Dokumen sudah sesuai format pelaporan.",
+            },
+            uploaded_at: {
+              type: "string",
+              format: "date-time",
+              example: "2026-03-23T09:12:00.000Z",
+            },
+            uploader: {
+              $ref: "#/components/schemas/PengabdianDocumentUploader",
+            },
+          },
+        },
       },
     },
     security: [{ bearerAuth: [] }],
@@ -3604,6 +3666,367 @@ Mengarsipkan proyek pengabdian dengan mengubah flag \`is_archived\` menjadi \`tr
             401: { description: "Unauthorized" },
             403: { description: "Forbidden" },
             404: { description: "Proyek pengabdian tidak ditemukan" },
+          },
+        },
+      },
+
+      /** ================= PENGABDIAN DOCUMENTS ================= */
+      "/pengabdian-documents/upload": {
+        post: {
+          tags: ["Pengabdian Documents"],
+          summary: "Upload dokumen laporan pengabdian (PDF)",
+          description: `
+Upload dokumen laporan pengabdian menggunakan **multipart/form-data**.
+
+**Role akses:**
+- Semua role terautentikasi (wajib login)
+
+**Ketentuan file:**
+- Hanya file **PDF**
+- MIME type harus **application/pdf**
+- Ukuran maksimal **5 MB**
+
+**Catatan implementasi:**
+- File disimpan ke Supabase Storage bucket \`lppm_documents\`.
+- Metadata disimpan ke tabel \`PengabdianDocuments\`.
+          `,
+          security: [{ bearerAuth: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              "multipart/form-data": {
+                schema: {
+                  type: "object",
+                  required: ["projectId", "documentType", "document"],
+                  properties: {
+                    projectId: {
+                      type: "integer",
+                      minimum: 1,
+                      example: 1,
+                    },
+                    documentType: {
+                      type: "string",
+                      enum: [
+                        "DOKUMEN_KONTRAK",
+                        "LAPORAN_KEMAJUAN_1",
+                        "LAPORAN_KEMAJUAN_2",
+                        "LAPORAN_AKHIR",
+                        "LAINNYA",
+                      ],
+                      example: "LAPORAN_KEMAJUAN_1",
+                    },
+                    document: {
+                      type: "string",
+                      format: "binary",
+                      description: "File dokumen PDF (maksimal 5 MB).",
+                    },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            201: {
+              description: "Dokumen berhasil diunggah",
+              content: {
+                "application/json": {
+                  example: {
+                    message: "Dokumen berhasil diunggah.",
+                    data: {
+                      id: 10,
+                      project_id: 1,
+                      file_path:
+                        "pengabdian/1/1711234567890-Laporan_Kemajuan_Tahap_1.pdf",
+                      title: "Laporan Kemajuan Tahap 1.pdf",
+                      document_type: "LAPORAN_KEMAJUAN_1",
+                      verification_status: "PENDING",
+                      uploaded_at: "2026-03-23T09:12:00.000Z",
+                    },
+                  },
+                },
+              },
+            },
+            400: {
+              description: "Validasi input/file gagal",
+              content: {
+                "application/json": {
+                  examples: {
+                    invalidPayload: {
+                      value: {
+                        message: "Validation failed.",
+                        errors: [
+                          {
+                            field: "projectId",
+                            message: "ID harus lebih dari 0.",
+                          },
+                        ],
+                      },
+                    },
+                    invalidFileType: {
+                      value: {
+                        message:
+                          "File type tidak didukung. Hanya file PDF yang diperbolehkan. Anda mengunggah: image/png",
+                      },
+                    },
+                    fileTooLarge: {
+                      value: {
+                        message: "Ukuran file terlalu besar. Maksimal 5 MB.",
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            401: {
+              description: "Unauthorized",
+              content: {
+                "application/json": {
+                  example: { message: "Unauthorized." },
+                },
+              },
+            },
+            404: {
+              description: "Project pengabdian tidak ditemukan",
+              content: {
+                "application/json": {
+                  example: {
+                    message: "Proyek pengabdian dengan ID 1 tidak ditemukan.",
+                  },
+                },
+              },
+            },
+            500: { description: "Internal server error" },
+          },
+        },
+      },
+
+      "/pengabdian-documents/{projectId}": {
+        get: {
+          tags: ["Pengabdian Documents"],
+          summary: "Ambil semua dokumen berdasarkan project ID",
+          description: `
+Mengambil daftar dokumen laporan pengabdian berdasarkan \`projectId\`.
+
+**Role akses:**
+- Semua role terautentikasi (wajib login)
+          `,
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: "projectId",
+              in: "path",
+              required: true,
+              schema: { type: "integer", minimum: 1, example: 1 },
+              description: "ID project pengabdian.",
+            },
+          ],
+          responses: {
+            200: {
+              description: "Berhasil mengambil daftar dokumen project",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    properties: {
+                      message: {
+                        type: "string",
+                        example: "Dokumen berhasil diambil.",
+                      },
+                      data: {
+                        type: "array",
+                        items: {
+                          $ref: "#/components/schemas/PengabdianDocument",
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            400: {
+              description: "Parameter projectId tidak valid",
+              content: {
+                "application/json": {
+                  example: { message: "projectId harus berupa angka positif." },
+                },
+              },
+            },
+            401: { description: "Unauthorized" },
+            404: {
+              description: "Project pengabdian tidak ditemukan",
+              content: {
+                "application/json": {
+                  example: {
+                    message: "Proyek pengabdian dengan ID 1 tidak ditemukan.",
+                  },
+                },
+              },
+            },
+            500: { description: "Internal server error" },
+          },
+        },
+      },
+
+      "/pengabdian-documents/{documentId}/verify": {
+        patch: {
+          tags: ["Pengabdian Documents"],
+          summary: "Verifikasi dokumen pengabdian",
+          description: `
+Memperbarui status verifikasi dokumen dan catatan verifikator.
+
+**Role akses:**
+- ADMIN_LPPM
+- STAFF_LPPM
+
+**Status yang tersedia saat ini:**
+- PENDING
+- APPROVED
+- REJECTED
+          `,
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: "documentId",
+              in: "path",
+              required: true,
+              schema: { type: "integer", minimum: 1, example: 10 },
+              description: "ID dokumen pengabdian.",
+            },
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["status"],
+                  properties: {
+                    status: {
+                      type: "string",
+                      enum: ["PENDING", "APPROVED", "REJECTED"],
+                      example: "APPROVED",
+                    },
+                    notes: {
+                      type: "string",
+                      maxLength: 1000,
+                      example: "Dokumen sudah sesuai format pelaporan.",
+                    },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            200: {
+              description: "Verifikasi dokumen berhasil diperbarui",
+              content: {
+                "application/json": {
+                  example: {
+                    message:
+                      "Dokumen berhasil diverifikasi dengan status APPROVED.",
+                    data: {
+                      id: 10,
+                      verification_status: "APPROVED",
+                      verification_notes:
+                        "Dokumen sudah sesuai format pelaporan.",
+                    },
+                  },
+                },
+              },
+            },
+            400: {
+              description: "Input tidak valid",
+              content: {
+                "application/json": {
+                  example: {
+                    message:
+                      "Status tidak valid. Status yang diperbolehkan: PENDING, APPROVED, REJECTED.",
+                  },
+                },
+              },
+            },
+            401: { description: "Unauthorized" },
+            403: {
+              description: "Forbidden — hanya ADMIN_LPPM atau STAFF_LPPM",
+            },
+            404: {
+              description: "Dokumen tidak ditemukan",
+              content: {
+                "application/json": {
+                  example: {
+                    message: "Dokumen dengan ID 10 tidak ditemukan.",
+                  },
+                },
+              },
+            },
+            500: { description: "Internal server error" },
+          },
+        },
+      },
+
+      "/pengabdian-documents/{documentId}": {
+        delete: {
+          tags: ["Pengabdian Documents"],
+          summary: "Hapus dokumen pengabdian",
+          description: `
+Menghapus dokumen dari Supabase Storage dan metadata di database.
+
+**Role akses:**
+- ADMIN_LPPM
+- STAFF_LPPM
+
+**Aturan bisnis:**
+- Dokumen dengan status \`APPROVED\` tidak dapat dihapus.
+          `,
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: "documentId",
+              in: "path",
+              required: true,
+              schema: { type: "integer", minimum: 1, example: 10 },
+              description: "ID dokumen pengabdian.",
+            },
+          ],
+          responses: {
+            200: {
+              description: "Dokumen berhasil dihapus",
+              content: {
+                "application/json": {
+                  example: {
+                    message: "Dokumen berhasil dihapus.",
+                    id: 10,
+                  },
+                },
+              },
+            },
+            400: {
+              description:
+                "Dokumen sudah APPROVED sehingga tidak boleh dihapus",
+              content: {
+                "application/json": {
+                  example: {
+                    message:
+                      "Dokumen yang sudah disetujui tidak dapat dihapus.",
+                  },
+                },
+              },
+            },
+            401: { description: "Unauthorized" },
+            403: {
+              description: "Forbidden — hanya ADMIN_LPPM atau STAFF_LPPM",
+            },
+            404: {
+              description: "Dokumen tidak ditemukan",
+              content: {
+                "application/json": {
+                  example: {
+                    message: "Dokumen dengan ID 10 tidak ditemukan.",
+                  },
+                },
+              },
+            },
+            500: { description: "Internal server error" },
           },
         },
       },
