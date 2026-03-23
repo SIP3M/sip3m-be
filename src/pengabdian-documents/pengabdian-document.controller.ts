@@ -3,6 +3,7 @@ import { AuthenticatedRequest } from "../auth/types/auth.jwt.types";
 import { HttpError } from "../common/errors/http-error";
 import {
   uploadDocument,
+  uploadMilestoneDocuments,
   getDocumentsByProjectId,
   verifyDocument,
   deleteDocument,
@@ -78,6 +79,98 @@ export const uploadDocumentController = async (
     console.error("[UPLOAD_DOCUMENT_ERROR]", error);
     return res.status(500).json({
       message: "Terjadi kesalahan pada server saat upload dokumen.",
+    });
+  }
+};
+
+/**
+ * POST /pengabdian-documents/upload
+ * Upload dokumen per milestone (laporan/logbook/anggaran)
+ */
+export const uploadMilestoneDocumentsController = async (
+  req: AuthenticatedRequest,
+  res: Response,
+): Promise<Response> => {
+  try {
+    if (!req.user?.sub) {
+      return res.status(401).json({ message: "Unauthorized." });
+    }
+
+    const files = (req.files ?? {}) as {
+      [fieldname: string]: Express.Multer.File[];
+    };
+
+    const totalFiles = Object.values(files).reduce(
+      (count, current) => count + (current?.length ?? 0),
+      0,
+    );
+
+    if (totalFiles < 1) {
+      return res.status(400).json({
+        message:
+          "Minimal satu file wajib diunggah (laporan, logbook, atau anggaran).",
+      });
+    }
+
+    const { projectId, milestoneId, isDraft } = req.body as {
+      projectId?: string | number;
+      milestoneId?: string | number;
+      isDraft?: string | boolean;
+    };
+
+    if (!projectId) {
+      return res.status(400).json({ message: "projectId wajib diisi." });
+    }
+
+    if (!milestoneId) {
+      return res.status(400).json({ message: "milestoneId wajib diisi." });
+    }
+
+    const projectIdNum = Number(projectId);
+    const milestoneIdNum = Number(milestoneId);
+
+    if (Number.isNaN(projectIdNum) || projectIdNum <= 0) {
+      return res
+        .status(400)
+        .json({ message: "projectId harus berupa angka positif." });
+    }
+
+    if (Number.isNaN(milestoneIdNum) || milestoneIdNum <= 0) {
+      return res
+        .status(400)
+        .json({ message: "milestoneId harus berupa angka positif." });
+    }
+
+    const parsedIsDraft =
+      typeof isDraft === "string"
+        ? isDraft.toLowerCase() === "true"
+        : Boolean(isDraft);
+
+    const userId = Number(req.user.sub);
+
+    const uploadedDocuments = await uploadMilestoneDocuments(
+      projectIdNum,
+      milestoneIdNum,
+      files,
+      userId,
+      parsedIsDraft,
+    );
+
+    return res.status(201).json({
+      message: "Dokumen milestone berhasil diunggah.",
+      data: uploadedDocuments,
+    });
+  } catch (error) {
+    if (error instanceof HttpError) {
+      return res.status(error.statusCode).json({ message: error.message });
+    }
+
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown upload error";
+
+    console.error("[UPLOAD_MILESTONE_DOCUMENTS_ERROR]", error);
+    return res.status(500).json({
+      message: `Terjadi kesalahan pada server saat upload dokumen milestone: ${errorMessage}`,
     });
   }
 };

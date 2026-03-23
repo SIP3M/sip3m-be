@@ -4,29 +4,24 @@ import { Response, NextFunction, Request } from "express";
 // Konfigurasi Multer dengan memory storage
 const storage = multer.memoryStorage();
 
-// Filter file: hanya terima PDF
+const allowedMimeTypes = new Set([
+  "application/pdf",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "application/zip",
+  "application/x-zip-compressed",
+]);
+
+// Filter file: terima PDF, DOCX, XLSX, ZIP
 const fileFilter = (
   _req: Request,
   file: Express.Multer.File,
   callback: multer.FileFilterCallback,
 ): void => {
-  // Cek MIME type
-  if (file.mimetype !== "application/pdf") {
+  if (!allowedMimeTypes.has(file.mimetype)) {
     callback(
       new Error(
-        `File type tidak didukung. Hanya file PDF yang diperbolehkan. Anda mengunggah: ${file.mimetype}`,
-      ),
-    );
-    return;
-  }
-
-  // Cek ekstensi file
-  const allowedExtensions = [".pdf"];
-  const fileExtension = (file.originalname.match(/\.[^/.]+$/) || [""])[0];
-  if (!allowedExtensions.includes(fileExtension.toLowerCase())) {
-    callback(
-      new Error(
-        `Ekstensi file tidak didukung. Hanya file PDF (.pdf) yang diperbolehkan.`,
+        `File type tidak didukung. Format yang diperbolehkan: PDF, DOCX, XLSX, ZIP. Anda mengunggah: ${file.mimetype}`,
       ),
     );
     return;
@@ -40,9 +35,15 @@ export const uploadDocumentMiddleware = multer({
   storage,
   fileFilter,
   limits: {
-    fileSize: 5 * 1024 * 1024, // 5 MB
+    fileSize: 10 * 1024 * 1024, // 10 MB
   },
 });
+
+export const milestoneDocumentUploadFields: multer.Field[] = [
+  { name: "laporan", maxCount: 1 },
+  { name: "logbook", maxCount: 1 },
+  { name: "anggaran", maxCount: 1 },
+];
 
 // Error handler untuk upload
 export const handleUploadError = (
@@ -54,7 +55,7 @@ export const handleUploadError = (
   if (err instanceof MulterError) {
     if (err.code === "LIMIT_FILE_SIZE") {
       res.status(400).json({
-        message: `Ukuran file terlalu besar. Maksimal 5 MB.`,
+        message: `Ukuran file terlalu besar. Maksimal 10 MB.`,
       });
       return;
     }

@@ -7,6 +7,47 @@ import {
 } from "../generated/prisma/enums";
 
 const SUPABASE_BUCKET = "lppm_documents";
+// const MILESTONE_DOCUMENT_BUCKET = "documents";
+
+type MilestoneUploadFiles = {
+  [fieldname: string]: Express.Multer.File[];
+};
+
+const getBaseDocumentTypeFromMilestone = (
+  milestoneTitle: string,
+  milestoneSequence: number,
+): PengabdianDocumentType => {
+  const title = milestoneTitle.toLowerCase();
+
+  if (title.includes("akhir") || title.includes("final")) {
+    return PengabdianDocumentType.LAPORAN_AKHIR;
+  }
+
+  if (milestoneSequence <= 1) {
+    return PengabdianDocumentType.LAPORAN_KEMAJUAN_1;
+  }
+
+  return PengabdianDocumentType.LAPORAN_KEMAJUAN_2;
+};
+
+const mapFieldToDocumentType = (
+  fieldName: string,
+  baseDocumentType: PengabdianDocumentType,
+): PengabdianDocumentType => {
+  if (fieldName === "laporan") {
+    return baseDocumentType;
+  }
+
+  if (fieldName === "logbook") {
+    return PengabdianDocumentType.LOGBOOK_KEGIATAN;
+  }
+
+  if (fieldName === "anggaran") {
+    return PengabdianDocumentType.BUKTI_PENGGUNAAN_ANGGARAN;
+  }
+
+  throw new HttpError(`Field upload tidak dikenali: ${fieldName}`, 400);
+};
 
 /**
  * Upload dokumen laporan pengabdian ke Supabase Storage
@@ -91,6 +132,97 @@ export const uploadDocument = async (
       500,
     );
   }
+};
+
+export const uploadMilestoneDocuments = async (
+  projectId: number,
+  milestoneId: number,
+  files: MilestoneUploadFiles,
+  userId: number,
+  isDraft: boolean,
+) => {
+  const [project, milestone] = await Promise.all([
+    prisma.pengabdianProjects.findUnique({ where: { id: projectId } }),
+    prisma.pengabdianMilestones.findUnique({ where: { id: milestoneId } }),
+  ]);
+
+  if (!project) {
+    throw new HttpError(
+      `Proyek pengabdian dengan ID ${projectId} tidak ditemukan.`,
+      404,
+    );
+  }
+
+  if (!milestone || milestone.project_id !== projectId) {
+    throw new HttpError(
+      `Milestone dengan ID ${milestoneId} tidak ditemukan pada proyek ${projectId}.`,
+      404,
+    );
+  }
+
+  const initialStatus = (
+    isDraft ? "DRAFT" : DocumentVerificationStatus.PENDING
+  ) as DocumentVerificationStatus;
+
+  const baseDocumentType = getBaseDocumentTypeFromMilestone(
+    milestone.title,
+    milestone.sequence,
+  );
+
+  const fileEntries = Object.entries(files).flatMap(([fieldName, values]) =>
+    (values ?? []).map((file) => ({ fieldName, file })),
+  );
+
+  if (fileEntries.length === 0) {
+    throw new HttpError("Minimal satu file harus diunggah.", 400);
+  }
+
+  const uploadTasks = fileEntries.map(async ({ fieldName, file }) => {
+    const documentType = mapFieldToDocumentType(fieldName, baseDocumentType);
+    const safeFileName = file.originalname.replace(/[^a-zA-Z0-9.-]/g, "_");
+    const uniqueFileName = `${Date.now()}-${safeFileName}`;
+    const filePath = `pengabdian/${projectId}/milestone_${milestoneId}/${uniqueFileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from(SUPABASE_BUCKET)
+      .upload(filePath, file.buffer, {
+        contentType: file.mimetype,
+        upsert: false,
+      });
+
+    if (uploadError) {
+      throw new HttpError(
+        `Gagal upload file ${file.originalname}: ${uploadError.message}`,
+        500,
+      );
+    }
+
+    const {
+      data: { publicUrl },
+    } = supabase.storage.from(SUPABASE_BUCKET).getPublicUrl(filePath);
+
+    const createdDocument = await prisma.pengabdianDocuments.create({
+      data: {
+        project_id: projectId,
+        milestone_id: milestoneId,
+        document_type: documentType,
+        title: file.originalname,
+        file_path: filePath,
+        file_size: file.size,
+        mime_type: file.mimetype,
+        verification_status: initialStatus,
+        uploaded_by: userId,
+      },
+    });
+
+    return {
+      ...createdDocument,
+      public_url: publicUrl,
+      upload_field: fieldName,
+    };
+  });
+
+  return Promise.all(uploadTasks);
 };
 
 /**

@@ -6,17 +6,15 @@ import { ROLES } from "../auth/role";
 import {
   uploadDocumentMiddleware,
   handleUploadError,
+  milestoneDocumentUploadFields,
 } from "./upload.middleware";
 import {
-  uploadDocumentController,
+  uploadMilestoneDocumentsController,
   getDocumentsController,
   verifyDocumentController,
   deleteDocumentController,
 } from "./pengabdian-document.controller";
-import {
-  uploadDocumentSchema,
-  verifyDocumentSchema,
-} from "./pengabdian-document.validation";
+import { verifyDocumentSchema } from "./pengabdian-document.validation";
 
 const router = Router();
 
@@ -31,10 +29,9 @@ const router = Router();
 router.post(
   "/pengabdian-documents/upload",
   authMiddleware,
-  uploadDocumentMiddleware.single("document"),
+  uploadDocumentMiddleware.fields(milestoneDocumentUploadFields),
   handleUploadError,
-  validate(uploadDocumentSchema),
-  uploadDocumentController,
+  uploadMilestoneDocumentsController,
 );
 
 /**
