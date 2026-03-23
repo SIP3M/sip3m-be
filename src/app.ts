@@ -6,6 +6,7 @@ import authRoute from "./auth/auth.routes";
 import usersRoute from "./users/users.routes";
 import dosenRoute from "./dosen/dosen.routes";
 import pengabdianRoute from "./pengabdian/pengabdian.routes";
+import pengabdianDocumentsRoute from "./pengabdian-documents/pengabdian-document.routes";
 import proposalRoute from "./proposals/proposal.routes";
 import notificationRoute from "./notifications/notification.routes";
 import swaggerUiDist from "swagger-ui-dist";
@@ -70,6 +71,7 @@ app.use("/api", authRoute);
 app.use("/api", usersRoute);
 app.use("/api", dosenRoute);
 app.use("/api", pengabdianRoute);
+app.use("/api", pengabdianDocumentsRoute);
 app.use("/api", proposalRoute);
 app.use("/api", notificationRoute);
 
