@@ -3,8 +3,11 @@ import { authMiddleware } from "../auth/middleware/auth.middleware";
 import { requireRole } from "../auth/middleware/role.middleware";
 import { ROLES } from "../auth/role";
 import {
+  archiveProjectController,
   createPengabdianProjectController,
+  getAllPengabdianProjectsController,
   getPengabdianProjectByProposalIdController,
+  updateProjectDetailsController,
   updatePengabdianStatusController,
 } from "./pengabdian.controller";
 
@@ -38,6 +41,33 @@ router.patch(
   authMiddleware,
   requireRole([ROLES.ADMIN_LPPM, ROLES.STAFF_LPPM]),
   updatePengabdianStatusController,
+);
+
+router.get(
+  "/pengabdian/projects",
+  authMiddleware,
+  requireRole([
+    ROLES.ADMIN_LPPM,
+    ROLES.STAFF_LPPM,
+    ROLES.DOSEN,
+    ROLES.REVIEWER,
+    ROLES.REVIEWER_EKSTERNAL,
+  ]),
+  getAllPengabdianProjectsController,
+);
+
+router.patch(
+  "/pengabdian/projects/:projectId/details",
+  authMiddleware,
+  requireRole([ROLES.ADMIN_LPPM, ROLES.STAFF_LPPM]),
+  updateProjectDetailsController,
+);
+
+router.patch(
+  "/pengabdian/projects/:projectId/archive",
+  authMiddleware,
+  requireRole([ROLES.ADMIN_LPPM, ROLES.STAFF_LPPM]),
+  archiveProjectController,
 );
 
 export default router;

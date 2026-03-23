@@ -158,6 +158,84 @@ export const swaggerSpec = swaggerJSDoc({
             },
           },
         },
+        PengabdianProject: {
+          type: "object",
+          properties: {
+            id: { type: "number", example: 1 },
+            proposal_id: { type: "number", example: 12 },
+            project_code: { type: ["string", "null"], example: "PENG-2026-12" },
+            title: {
+              type: ["string", "null"],
+              example: "Analisis Dampak Lingkungan Limbah Pabrik Gula",
+            },
+            summary: {
+              type: ["string", "null"],
+              example:
+                "Fokus pada mitigasi pencemaran sungai melalui kajian lapangan dan intervensi komunitas.",
+            },
+            start_date: {
+              type: ["string", "null"],
+              format: "date-time",
+              example: "2026-04-01T00:00:00.000Z",
+            },
+            end_date: {
+              type: ["string", "null"],
+              format: "date-time",
+              example: "2026-11-30T00:00:00.000Z",
+            },
+            overall_progress: { type: "number", example: 75 },
+            status: {
+              type: "string",
+              enum: ["PENDING", "SEDANG_BERJALAN", "SELESAI"],
+              example: "SEDANG_BERJALAN",
+            },
+            is_archived: { type: "boolean", example: false },
+            created_at: {
+              type: "string",
+              format: "date-time",
+              example: "2026-03-21T10:20:00.000Z",
+            },
+            updated_at: {
+              type: "string",
+              format: "date-time",
+              example: "2026-03-22T12:00:00.000Z",
+            },
+            proposal: {
+              type: "object",
+              properties: {
+                id: { type: "number", example: 12 },
+                title: {
+                  type: "string",
+                  example: "Analisis Dampak Lingkungan Limbah Pabrik Gula",
+                },
+                status: {
+                  type: "string",
+                  enum: [
+                    "DRAFT",
+                    "SUBMITTED",
+                    "ADMIN_VERIFIED",
+                    "UNDER_REVIEW",
+                    "REVISION",
+                    "ACCEPTED",
+                    "REJECTED",
+                  ],
+                  example: "ACCEPTED",
+                },
+                lead_researcher_id: { type: "number", example: 3 },
+                created_at: {
+                  type: ["string", "null"],
+                  format: "date-time",
+                  example: "2026-03-15T09:00:00.000Z",
+                },
+                updated_at: {
+                  type: ["string", "null"],
+                  format: "date-time",
+                  example: "2026-03-20T08:30:00.000Z",
+                },
+              },
+            },
+          },
+        },
       },
     },
     security: [{ bearerAuth: [] }],
@@ -3144,6 +3222,388 @@ Memperbarui profil dosen yang sedang login.
                 },
               },
             },
+          },
+        },
+      },
+
+      /** ================= PENGABDIAN ================= */
+      "/pengabdian/proposals/{proposalId}/project": {
+        post: {
+          tags: ["Pengabdian"],
+          summary: "Buat proyek pengabdian dari proposal",
+          description: `
+Membuat entitas proyek pengabdian dari proposal yang sudah disetujui.
+
+**Role akses:**
+- ADMIN_LPPM
+- STAFF_LPPM
+
+**Catatan:**
+- Proposal harus berstatus \`ACCEPTED\`.
+- Satu proposal hanya boleh memiliki satu proyek pengabdian.
+          `,
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: "proposalId",
+              in: "path",
+              required: true,
+              schema: { type: "integer", minimum: 1, example: 12 },
+              description: "ID proposal yang akan dijadikan proyek pengabdian.",
+            },
+          ],
+          responses: {
+            201: {
+              description: "Proyek pengabdian berhasil dibuat",
+              content: {
+                "application/json": {
+                  example: {
+                    message: "Proyek pengabdian berhasil dibuat.",
+                    data: {
+                      id: 1,
+                      proposal_id: 12,
+                      project_code: "PENG-2026-12",
+                      title: "Analisis Dampak Lingkungan Limbah Pabrik Gula",
+                      status: "PENDING",
+                      is_archived: false,
+                    },
+                  },
+                },
+              },
+            },
+            400: {
+              description: "Validasi gagal atau proposal belum ACCEPTED",
+              content: {
+                "application/json": {
+                  examples: {
+                    invalidParam: {
+                      value: {
+                        message: "Validasi parameter gagal.",
+                        errors: { proposalId: ["ID harus berupa angka."] },
+                      },
+                    },
+                    invalidStatus: {
+                      value: {
+                        message:
+                          "Proyek pengabdian hanya dapat dibuat untuk proposal berstatus ACCEPTED.",
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            401: {
+              description: "Unauthorized",
+              content: {
+                "application/json": { example: { message: "Unauthorized" } },
+              },
+            },
+            403: {
+              description: "Forbidden — role tidak memiliki akses",
+            },
+            404: {
+              description: "Proposal tidak ditemukan",
+              content: {
+                "application/json": {
+                  example: { message: "Proposal tidak ditemukan." },
+                },
+              },
+            },
+            409: {
+              description: "Proyek untuk proposal tersebut sudah ada",
+              content: {
+                "application/json": {
+                  example: {
+                    message: "Proyek pengabdian untuk proposal ini sudah ada.",
+                  },
+                },
+              },
+            },
+          },
+        },
+        get: {
+          tags: ["Pengabdian"],
+          summary: "Ambil proyek pengabdian berdasarkan proposal",
+          description: `
+Mengambil detail proyek pengabdian dari ID proposal tertentu.
+
+**Role akses:**
+- ADMIN_LPPM
+- STAFF_LPPM
+- DOSEN
+- REVIEWER
+- REVIEWER_EKSTERNAL
+          `,
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: "proposalId",
+              in: "path",
+              required: true,
+              schema: { type: "integer", minimum: 1, example: 12 },
+            },
+          ],
+          responses: {
+            200: {
+              description: "Data proyek berhasil diambil",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    properties: {
+                      message: { type: "string" },
+                      data: { $ref: "#/components/schemas/PengabdianProject" },
+                    },
+                  },
+                },
+              },
+            },
+            400: { description: "Validasi parameter gagal" },
+            401: { description: "Unauthorized" },
+            403: { description: "Forbidden" },
+            404: {
+              description: "Proyek pengabdian belum tersedia",
+              content: {
+                "application/json": {
+                  example: {
+                    message:
+                      "Proyek pengabdian untuk proposal ini belum tersedia.",
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+
+      "/pengabdian/projects": {
+        get: {
+          tags: ["Pengabdian"],
+          summary: "Ambil semua proyek pengabdian aktif",
+          description: `
+Mengambil semua proyek pengabdian dengan filter \`is_archived = false\`.
+
+**Role akses:**
+- ADMIN_LPPM
+- STAFF_LPPM
+- DOSEN
+- REVIEWER
+- REVIEWER_EKSTERNAL
+          `,
+          security: [{ bearerAuth: [] }],
+          responses: {
+            200: {
+              description: "Berhasil mengambil proyek pengabdian aktif",
+              content: {
+                "application/json": {
+                  example: {
+                    message:
+                      "Berhasil mengambil semua proyek pengabdian aktif.",
+                    data: [
+                      {
+                        id: 1,
+                        proposal_id: 12,
+                        project_code: "PENG-2026-12",
+                        title: "Analisis Dampak Lingkungan Limbah Pabrik Gula",
+                        status: "SEDANG_BERJALAN",
+                        is_archived: false,
+                        proposal: {
+                          id: 12,
+                          status: "ACCEPTED",
+                          lead_researcher_id: 3,
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+            401: { description: "Unauthorized" },
+            403: { description: "Forbidden" },
+          },
+        },
+      },
+
+      "/pengabdian/projects/{projectId}/status": {
+        patch: {
+          tags: ["Pengabdian"],
+          summary: "Update status proyek pengabdian",
+          description: `
+Memperbarui status proyek pengabdian sesuai aturan transisi workflow.
+
+**Role akses:**
+- ADMIN_LPPM
+- STAFF_LPPM
+
+**Aturan transisi:**
+- \`PENDING -> SEDANG_BERJALAN\`
+- \`SEDANG_BERJALAN -> SELESAI\`
+          `,
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: "projectId",
+              in: "path",
+              required: true,
+              schema: { type: "integer", minimum: 1, example: 1 },
+            },
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["status"],
+                  properties: {
+                    status: {
+                      type: "string",
+                      enum: ["PENDING", "SEDANG_BERJALAN", "SELESAI"],
+                      example: "SEDANG_BERJALAN",
+                    },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            200: {
+              description: "Status proyek berhasil diperbarui",
+              content: {
+                "application/json": {
+                  example: {
+                    message:
+                      "Status proyek pengabdian berhasil diubah dari PENDING ke SEDANG_BERJALAN.",
+                    data: {
+                      id: 1,
+                      status: "SEDANG_BERJALAN",
+                    },
+                  },
+                },
+              },
+            },
+            400: {
+              description: "Validasi gagal atau transisi status tidak valid",
+            },
+            401: { description: "Unauthorized" },
+            403: { description: "Forbidden" },
+            404: { description: "Proyek pengabdian tidak ditemukan" },
+          },
+        },
+      },
+
+      "/pengabdian/projects/{projectId}/details": {
+        patch: {
+          tags: ["Pengabdian"],
+          summary: "Update detail proyek pengabdian",
+          description: `
+Memperbarui detail proyek pengabdian (ringkasan dan periode pelaksanaan).
+
+**Role akses:**
+- ADMIN_LPPM
+- STAFF_LPPM
+          `,
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: "projectId",
+              in: "path",
+              required: true,
+              schema: { type: "integer", minimum: 1, example: 1 },
+            },
+          ],
+          requestBody: {
+            required: false,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    summary: {
+                      type: "string",
+                      example:
+                        "Program pengabdian difokuskan pada peningkatan kualitas lingkungan sungai.",
+                    },
+                    start_date: {
+                      type: "string",
+                      format: "date-time",
+                      example: "2026-04-01T00:00:00.000Z",
+                    },
+                    end_date: {
+                      type: "string",
+                      format: "date-time",
+                      example: "2026-11-30T00:00:00.000Z",
+                    },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            200: {
+              description: "Detail proyek berhasil diperbarui",
+              content: {
+                "application/json": {
+                  example: {
+                    message: "Detail proyek pengabdian berhasil diperbarui.",
+                    data: {
+                      id: 1,
+                      summary:
+                        "Program pengabdian difokuskan pada peningkatan kualitas lingkungan sungai.",
+                      start_date: "2026-04-01T00:00:00.000Z",
+                      end_date: "2026-11-30T00:00:00.000Z",
+                    },
+                  },
+                },
+              },
+            },
+            400: { description: "ID proyek atau format tanggal tidak valid" },
+            401: { description: "Unauthorized" },
+            403: { description: "Forbidden" },
+            404: { description: "Proyek pengabdian tidak ditemukan" },
+          },
+        },
+      },
+
+      "/pengabdian/projects/{projectId}/archive": {
+        patch: {
+          tags: ["Pengabdian"],
+          summary: "Arsipkan proyek pengabdian",
+          description: `
+Mengarsipkan proyek pengabdian dengan mengubah flag \`is_archived\` menjadi \`true\`.
+
+**Role akses:**
+- ADMIN_LPPM
+- STAFF_LPPM
+          `,
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: "projectId",
+              in: "path",
+              required: true,
+              schema: { type: "integer", minimum: 1, example: 1 },
+            },
+          ],
+          responses: {
+            200: {
+              description: "Proyek berhasil diarsipkan",
+              content: {
+                "application/json": {
+                  example: {
+                    message: "Proyek pengabdian berhasil diarsipkan.",
+                    data: {
+                      id: 1,
+                      is_archived: true,
+                    },
+                  },
+                },
+              },
+            },
+            400: { description: "ID proyek tidak valid" },
+            401: { description: "Unauthorized" },
+            403: { description: "Forbidden" },
+            404: { description: "Proyek pengabdian tidak ditemukan" },
           },
         },
       },
