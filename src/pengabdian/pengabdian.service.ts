@@ -1,6 +1,7 @@
 import { PengabdianStatus, ProposalStatus } from "../generated/prisma/enums";
 import { HttpError } from "../common/errors/http-error";
 import { prisma } from "../prisma";
+import type { UpdateProjectDetailsInput } from "./pengabdian.types";
 
 const PENGABDIAN_STATUS_TRANSITIONS: Record<
   PengabdianStatus,
@@ -43,8 +44,8 @@ export const createPengabdianProject = async (proposalId: number) => {
     data: {
       proposal_id: proposalId,
       status: PengabdianStatus.PENDING,
-      title: proposal.title,            
-      project_code: generatedProjectCode, 
+      title: proposal.title,
+      project_code: generatedProjectCode,
     },
   });
 
@@ -137,5 +138,107 @@ export const updatePengabdianStatus = async (
   return {
     message: `Status proyek pengabdian berhasil diubah dari ${currentStatus} ke ${newStatus}.`,
     data: updatedProject,
+  };
+};
+
+export const getAllPengabdianProjects = async () => {
+  const projects = await prisma.pengabdianProjects.findMany({
+    where: {
+      is_archived: false,
+    },
+    include: {
+      proposal: {
+        select: {
+          id: true,
+          status: true,
+          lead_researcher_id: true,
+        },
+      },
+    },
+    orderBy: {
+      created_at: "desc",
+    },
+  });
+
+  return projects;
+};
+
+const toValidDate = (value: string | Date, fieldName: string): Date => {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    throw new HttpError(`${fieldName} tidak valid.`, 400);
+  }
+  return parsed;
+};
+
+export const updateProjectDetails = async (
+  projectId: number,
+  data: UpdateProjectDetailsInput,
+) => {
+  const project = await prisma.pengabdianProjects.findUnique({
+    where: { id: projectId },
+  });
+
+  if (!project) {
+    throw new HttpError("Proyek pengabdian tidak ditemukan.", 404);
+  }
+
+  const updateData: {
+    summary?: string;
+    start_date?: Date;
+    end_date?: Date;
+  } = {};
+
+  if (data.summary !== undefined) {
+    updateData.summary = data.summary;
+  }
+
+  if (data.start_date !== undefined) {
+    updateData.start_date = toValidDate(data.start_date, "start_date");
+  }
+
+  if (data.end_date !== undefined) {
+    updateData.end_date = toValidDate(data.end_date, "end_date");
+  }
+
+  const updatedProject = await prisma.pengabdianProjects.update({
+    where: { id: projectId },
+    data: updateData,
+    include: {
+      proposal: {
+        select: {
+          id: true,
+          status: true,
+          lead_researcher_id: true,
+        },
+      },
+    },
+  });
+
+  return {
+    message: "Detail proyek pengabdian berhasil diperbarui.",
+    data: updatedProject,
+  };
+};
+
+export const archiveProject = async (projectId: number) => {
+  const project = await prisma.pengabdianProjects.findUnique({
+    where: { id: projectId },
+  });
+
+  if (!project) {
+    throw new HttpError("Proyek pengabdian tidak ditemukan.", 404);
+  }
+
+  const archivedProject = await prisma.pengabdianProjects.update({
+    where: { id: projectId },
+    data: {
+      is_archived: true,
+    },
+  });
+
+  return {
+    message: "Proyek pengabdian berhasil diarsipkan.",
+    data: archivedProject,
   };
 };

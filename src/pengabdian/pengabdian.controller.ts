@@ -3,8 +3,11 @@ import { AuthenticatedRequest } from "../auth/types/auth.jwt.types";
 import { HttpError } from "../common/errors/http-error";
 import { PengabdianStatus } from "../generated/prisma/enums";
 import {
+  archiveProject,
   createPengabdianProject,
+  getAllPengabdianProjects,
   getPengabdianProjectByProposalId,
+  updateProjectDetails,
   updatePengabdianStatus,
 } from "./pengabdian.service";
 import {
@@ -13,6 +16,7 @@ import {
   updatePengabdianStatusSchema,
   projectIdParamSchema,
 } from "./pengabdian.validation";
+import type { UpdateProjectDetailsInput } from "./pengabdian.types";
 
 export const createPengabdianProjectController = async (
   req: AuthenticatedRequest,
@@ -133,6 +137,103 @@ export const updatePengabdianStatusController = async (
     return res.status(500).json({
       message:
         "Terjadi kesalahan pada server saat memperbarui status proyek pengabdian.",
+    });
+  }
+};
+
+export const getAllPengabdianProjectsController = async (
+  req: AuthenticatedRequest,
+  res: Response,
+): Promise<Response> => {
+  try {
+    if (!req.user?.sub) {
+      throw new HttpError("Unauthorized", 401);
+    }
+
+    const projects = await getAllPengabdianProjects();
+
+    return res.status(200).json({
+      message: "Berhasil mengambil semua proyek pengabdian aktif.",
+      data: projects,
+    });
+  } catch (error) {
+    if (error instanceof HttpError) {
+      return res.status(error.statusCode).json({ message: error.message });
+    }
+
+    console.error("[GET_ALL_PENGABDIAN_PROJECTS_ERROR]", error);
+    return res.status(500).json({
+      message:
+        "Terjadi kesalahan pada server saat mengambil data proyek pengabdian.",
+    });
+  }
+};
+
+export const updateProjectDetailsController = async (
+  req: AuthenticatedRequest,
+  res: Response,
+): Promise<Response> => {
+  try {
+    if (!req.user?.sub) {
+      throw new HttpError("Unauthorized", 401);
+    }
+
+    const projectId = Number(req.params.projectId ?? req.params.id);
+    if (Number.isNaN(projectId)) {
+      return res.status(400).json({
+        message: "ID proyek pengabdian tidak valid.",
+      });
+    }
+
+    const body = req.body as UpdateProjectDetailsInput;
+
+    const result = await updateProjectDetails(projectId, {
+      summary: body.summary,
+      start_date: body.start_date,
+      end_date: body.end_date,
+    });
+
+    return res.status(200).json(result);
+  } catch (error) {
+    if (error instanceof HttpError) {
+      return res.status(error.statusCode).json({ message: error.message });
+    }
+
+    console.error("[UPDATE_PROJECT_DETAILS_ERROR]", error);
+    return res.status(500).json({
+      message:
+        "Terjadi kesalahan pada server saat memperbarui detail proyek pengabdian.",
+    });
+  }
+};
+
+export const archiveProjectController = async (
+  req: AuthenticatedRequest,
+  res: Response,
+): Promise<Response> => {
+  try {
+    if (!req.user?.sub) {
+      throw new HttpError("Unauthorized", 401);
+    }
+
+    const projectId = Number(req.params.projectId ?? req.params.id);
+    if (Number.isNaN(projectId)) {
+      return res.status(400).json({
+        message: "ID proyek pengabdian tidak valid.",
+      });
+    }
+
+    const result = await archiveProject(projectId);
+
+    return res.status(200).json(result);
+  } catch (error) {
+    if (error instanceof HttpError) {
+      return res.status(error.statusCode).json({ message: error.message });
+    }
+
+    console.error("[ARCHIVE_PROJECT_ERROR]", error);
+    return res.status(500).json({
+      message: "Terjadi kesalahan pada server saat mengarsipkan proyek.",
     });
   }
 };
