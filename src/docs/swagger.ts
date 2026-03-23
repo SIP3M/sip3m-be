@@ -275,13 +275,15 @@ export const swaggerSpec = swaggerJSDoc({
                 "LAPORAN_KEMAJUAN_1",
                 "LAPORAN_KEMAJUAN_2",
                 "LAPORAN_AKHIR",
+                "LOGBOOK_KEGIATAN",
+                "BUKTI_PENGGUNAAN_ANGGARAN",
                 "LAINNYA",
               ],
               example: "LAPORAN_KEMAJUAN_1",
             },
             verification_status: {
               type: "string",
-              enum: ["PENDING", "APPROVED", "REJECTED"],
+              enum: ["DRAFT", "PENDING", "APPROVED", "REJECTED"],
               example: "PENDING",
             },
             verification_notes: {
@@ -3674,21 +3676,39 @@ Mengarsipkan proyek pengabdian dengan mengubah flag \`is_archived\` menjadi \`tr
       "/pengabdian-documents/upload": {
         post: {
           tags: ["Pengabdian Documents"],
-          summary: "Upload dokumen laporan pengabdian (PDF)",
+          summary: "Upload dokumen milestone (context-aware, multi-file)",
           description: `
-Upload dokumen laporan pengabdian menggunakan **multipart/form-data**.
+Upload dokumen pengabdian berbasis **milestone** menggunakan **multipart/form-data**.
 
 **Role akses:**
 - Semua role terautentikasi (wajib login)
 
+**Konsep context-aware upload:**
+- Frontend mengirim \`projectId\`, \`milestoneId\`, \`isDraft\`, dan file per field.
+- Sistem menentukan \`document_type\` otomatis berdasarkan field upload:
+  - \`laporan\` => mengikuti konteks milestone (kemajuan 1 / kemajuan 2 / akhir)
+  - \`logbook\` => \`LOGBOOK_KEGIATAN\`
+  - \`anggaran\` => \`BUKTI_PENGGUNAAN_ANGGARAN\`
+
+**Field file yang didukung (max 1/file tiap field):**
+- \`laporan\`
+- \`logbook\`
+- \`anggaran\`
+
 **Ketentuan file:**
-- Hanya file **PDF**
-- MIME type harus **application/pdf**
-- Ukuran maksimal **5 MB**
+- Format: PDF, DOCX, XLSX, ZIP
+- MIME type: 
+  - \`application/pdf\`
+  - \`application/vnd.openxmlformats-officedocument.wordprocessingml.document\`
+  - \`application/vnd.openxmlformats-officedocument.spreadsheetml.sheet\`
+  - \`application/zip\`
+  - \`application/x-zip-compressed\`
+- Ukuran maksimal **10 MB** per file
 
 **Catatan implementasi:**
 - File disimpan ke Supabase Storage bucket \`lppm_documents\`.
 - Metadata disimpan ke tabel \`PengabdianDocuments\`.
+- Path upload: \`pengabdian/{projectId}/milestone_{milestoneId}/{timestamp}-{filename}\`
           `,
           security: [{ bearerAuth: [] }],
           requestBody: {
@@ -3697,28 +3717,41 @@ Upload dokumen laporan pengabdian menggunakan **multipart/form-data**.
               "multipart/form-data": {
                 schema: {
                   type: "object",
-                  required: ["projectId", "documentType", "document"],
+                  required: ["projectId", "milestoneId"],
                   properties: {
                     projectId: {
                       type: "integer",
                       minimum: 1,
                       example: 1,
                     },
-                    documentType: {
-                      type: "string",
-                      enum: [
-                        "DOKUMEN_KONTRAK",
-                        "LAPORAN_KEMAJUAN_1",
-                        "LAPORAN_KEMAJUAN_2",
-                        "LAPORAN_AKHIR",
-                        "LAINNYA",
-                      ],
-                      example: "LAPORAN_KEMAJUAN_1",
+                    milestoneId: {
+                      type: "integer",
+                      minimum: 1,
+                      example: 2,
                     },
-                    document: {
+                    isDraft: {
+                      type: "boolean",
+                      example: true,
+                      description:
+                        "Jika true, dokumen disimpan dengan status DRAFT. Jika false/omit, status awal PENDING.",
+                    },
+                    laporan: {
                       type: "string",
                       format: "binary",
-                      description: "File dokumen PDF (maksimal 5 MB).",
+                      description:
+                        "File laporan utama milestone (opsional, max 1 file).",
+                    },
+                    logbook: {
+                      type: "string",
+                      format: "binary",
+                      description:
+                        "File logbook kegiatan (opsional, max 1 file).",
+                    },
+                    anggaran: {
+                      type: "string",
+                      format: "binary",
+                      description:
+                        "File bukti penggunaan anggaran (opsional, max 1 file).",
                     },
                   },
                 },
@@ -3727,21 +3760,50 @@ Upload dokumen laporan pengabdian menggunakan **multipart/form-data**.
           },
           responses: {
             201: {
-              description: "Dokumen berhasil diunggah",
+              description: "Dokumen milestone berhasil diunggah",
               content: {
                 "application/json": {
                   example: {
-                    message: "Dokumen berhasil diunggah.",
-                    data: {
-                      id: 10,
-                      project_id: 1,
-                      file_path:
-                        "pengabdian/1/1711234567890-Laporan_Kemajuan_Tahap_1.pdf",
-                      title: "Laporan Kemajuan Tahap 1.pdf",
-                      document_type: "LAPORAN_KEMAJUAN_1",
-                      verification_status: "PENDING",
-                      uploaded_at: "2026-03-23T09:12:00.000Z",
-                    },
+                    message: "Dokumen milestone berhasil diunggah.",
+                    data: [
+                      {
+                        id: 101,
+                        project_id: 1,
+                        milestone_id: 2,
+                        document_type: "LAPORAN_KEMAJUAN_2",
+                        title: "Laporan Tahap 2.docx",
+                        file_path:
+                          "pengabdian/1/milestone_2/1711234567000-Laporan_Tahap_2.docx",
+                        file_size: 845321,
+                        mime_type:
+                          "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                        verification_status: "DRAFT",
+                        verification_notes: null,
+                        uploaded_by: 3,
+                        uploaded_at: "2026-03-23T09:12:00.000Z",
+                        public_url:
+                          "https://<supabase>/storage/v1/object/public/lppm_documents/pengabdian/1/milestone_2/1711234567000-Laporan_Tahap_2.docx",
+                        upload_field: "laporan",
+                      },
+                      {
+                        id: 102,
+                        project_id: 1,
+                        milestone_id: 2,
+                        document_type: "LOGBOOK_KEGIATAN",
+                        title: "Logbook Minggu 3.pdf",
+                        file_path:
+                          "pengabdian/1/milestone_2/1711234568000-Logbook_Minggu_3.pdf",
+                        file_size: 221003,
+                        mime_type: "application/pdf",
+                        verification_status: "DRAFT",
+                        verification_notes: null,
+                        uploaded_by: 3,
+                        uploaded_at: "2026-03-23T09:12:00.000Z",
+                        public_url:
+                          "https://<supabase>/storage/v1/object/public/lppm_documents/pengabdian/1/milestone_2/1711234568000-Logbook_Minggu_3.pdf",
+                        upload_field: "logbook",
+                      },
+                    ],
                   },
                 },
               },
@@ -3753,24 +3815,24 @@ Upload dokumen laporan pengabdian menggunakan **multipart/form-data**.
                   examples: {
                     invalidPayload: {
                       value: {
-                        message: "Validation failed.",
-                        errors: [
-                          {
-                            field: "projectId",
-                            message: "ID harus lebih dari 0.",
-                          },
-                        ],
+                        message: "milestoneId wajib diisi.",
+                      },
+                    },
+                    noFiles: {
+                      value: {
+                        message:
+                          "Minimal satu file wajib diunggah (laporan, logbook, atau anggaran).",
                       },
                     },
                     invalidFileType: {
                       value: {
                         message:
-                          "File type tidak didukung. Hanya file PDF yang diperbolehkan. Anda mengunggah: image/png",
+                          "File type tidak didukung. Format yang diperbolehkan: PDF, DOCX, XLSX, ZIP. Anda mengunggah: image/png",
                       },
                     },
                     fileTooLarge: {
                       value: {
-                        message: "Ukuran file terlalu besar. Maksimal 5 MB.",
+                        message: "Ukuran file terlalu besar. Maksimal 10 MB.",
                       },
                     },
                   },
@@ -3879,6 +3941,7 @@ Memperbarui status verifikasi dokumen dan catatan verifikator.
 - STAFF_LPPM
 
 **Status yang tersedia saat ini:**
+- DRAFT
 - PENDING
 - APPROVED
 - REJECTED
@@ -3903,7 +3966,7 @@ Memperbarui status verifikasi dokumen dan catatan verifikator.
                   properties: {
                     status: {
                       type: "string",
-                      enum: ["PENDING", "APPROVED", "REJECTED"],
+                      enum: ["DRAFT", "PENDING", "APPROVED", "REJECTED"],
                       example: "APPROVED",
                     },
                     notes: {
@@ -3940,7 +4003,7 @@ Memperbarui status verifikasi dokumen dan catatan verifikator.
                 "application/json": {
                   example: {
                     message:
-                      "Status tidak valid. Status yang diperbolehkan: PENDING, APPROVED, REJECTED.",
+                      "Status tidak valid. Status yang diperbolehkan: DRAFT, PENDING, APPROVED, REJECTED.",
                   },
                 },
               },
