@@ -1,4 +1,8 @@
-import { PengabdianStatus, ProposalStatus } from "../generated/prisma/enums";
+import {
+  PengabdianMilestoneStatus,
+  PengabdianStatus,
+  ProposalStatus,
+} from "../generated/prisma/enums";
 import { HttpError } from "../common/errors/http-error";
 import { prisma } from "../prisma";
 import type { UpdateProjectDetailsInput } from "./pengabdian.types";
@@ -10,6 +14,49 @@ const PENGABDIAN_STATUS_TRANSITIONS: Record<
   [PengabdianStatus.PENDING]: [PengabdianStatus.SEDANG_BERJALAN],
   [PengabdianStatus.SEDANG_BERJALAN]: [PengabdianStatus.SELESAI],
   [PengabdianStatus.SELESAI]: [],
+};
+
+const generateStandardMilestones = async (projectId: number): Promise<void> => {
+  const milestoneCount = await prisma.pengabdianMilestones.count({
+    where: { project_id: projectId },
+  });
+
+  if (milestoneCount > 0) {
+    return;
+  }
+
+  await prisma.pengabdianMilestones.createMany({
+    data: [
+      {
+        project_id: projectId,
+        title: "Tanda Tangan kontrak",
+        sequence: 1,
+        target_percentage: 0,
+        status: PengabdianMilestoneStatus.PENDING,
+      },
+      {
+        project_id: projectId,
+        title: "Laporan Kemajuan 1",
+        sequence: 2,
+        target_percentage: 30,
+        status: PengabdianMilestoneStatus.PENDING,
+      },
+      {
+        project_id: projectId,
+        title: "Laporan Kemajuan 2",
+        sequence: 3,
+        target_percentage: 70,
+        status: PengabdianMilestoneStatus.PENDING,
+      },
+      {
+        project_id: projectId,
+        title: "Laporan Akhir",
+        sequence: 4,
+        target_percentage: 100,
+        status: PengabdianMilestoneStatus.PENDING,
+      },
+    ],
+  });
 };
 
 export const createPengabdianProject = async (proposalId: number) => {
@@ -134,6 +181,10 @@ export const updatePengabdianStatus = async (
       },
     },
   });
+
+  if (newStatus === PengabdianStatus.SEDANG_BERJALAN) {
+    await generateStandardMilestones(projectId);
+  }
 
   return {
     message: `Status proyek pengabdian berhasil diubah dari ${currentStatus} ke ${newStatus}.`,
