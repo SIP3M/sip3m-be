@@ -4,9 +4,9 @@ import { prisma } from "../prisma";
 import { HttpError } from "../common/errors/http-error";
 import { Prisma } from "../generated/prisma/client";
 
-const getUniqueConstraintMessage = (
+const getUniqueConstraintInfo = (
   error: Prisma.PrismaClientKnownRequestError,
-): string => {
+): { message: string; field: "email" | "username" | "nidn_nip" | null } => {
   const target = error.meta?.target;
   const fields = Array.isArray(target)
     ? target.map(String)
@@ -15,18 +15,18 @@ const getUniqueConstraintMessage = (
       : [];
 
   if (fields.some((field) => field.includes("email"))) {
-    return "Email sudah digunakan.";
+    return { message: "Email sudah digunakan.", field: "email" };
   }
 
   if (fields.some((field) => field.includes("username"))) {
-    return "Username sudah digunakan.";
+    return { message: "Username sudah digunakan.", field: "username" };
   }
 
   if (fields.some((field) => field.includes("nidn_nip"))) {
-    return "NIDN/NIP sudah digunakan.";
+    return { message: "NIDN/NIP sudah digunakan.", field: "nidn_nip" };
   }
 
-  return "Data unik sudah digunakan.";
+  return { message: "Data unik sudah digunakan.", field: null };
 };
 
 export const getReviewers = async (
@@ -370,11 +370,29 @@ export const createUser = async (
 
     if (existing) {
       if (existing.email === body.email)
-        throw new HttpError("Email sudah digunakan.", 400);
+        return res.status(409).json({
+          message: "Email sudah digunakan.",
+          error: {
+            code: "UNIQUE_CONSTRAINT",
+            field: "email",
+          },
+        });
       if (body.username && existing.username === body.username)
-        throw new HttpError("Username sudah digunakan.", 400);
+        return res.status(409).json({
+          message: "Username sudah digunakan.",
+          error: {
+            code: "UNIQUE_CONSTRAINT",
+            field: "username",
+          },
+        });
       if (body.nidn_nip && existing.nidn_nip === body.nidn_nip)
-        throw new HttpError("NIDN/NIP sudah digunakan.", 400);
+        return res.status(409).json({
+          message: "NIDN/NIP sudah digunakan.",
+          error: {
+            code: "UNIQUE_CONSTRAINT",
+            field: "nidn_nip",
+          },
+        });
     }
 
     const passwordHash = await bcrypt.hash(body.password, 10);
@@ -432,7 +450,14 @@ export const createUser = async (
       error instanceof Prisma.PrismaClientKnownRequestError &&
       error.code === "P2002"
     ) {
-      throw new HttpError(getUniqueConstraintMessage(error), 409);
+      const uniqueError = getUniqueConstraintInfo(error);
+      return res.status(409).json({
+        message: uniqueError.message,
+        error: {
+          code: "UNIQUE_CONSTRAINT",
+          field: uniqueError.field,
+        },
+      });
     }
 
     throw error;
@@ -495,11 +520,29 @@ export const updateUser = async (
 
       if (duplicate) {
         if (body.email && duplicate.email === body.email)
-          throw new HttpError("Email sudah digunakan.", 400);
+          return res.status(409).json({
+            message: "Email sudah digunakan.",
+            error: {
+              code: "UNIQUE_CONSTRAINT",
+              field: "email",
+            },
+          });
         if (body.username && duplicate.username === body.username)
-          throw new HttpError("Username sudah digunakan.", 400);
+          return res.status(409).json({
+            message: "Username sudah digunakan.",
+            error: {
+              code: "UNIQUE_CONSTRAINT",
+              field: "username",
+            },
+          });
         if (body.nidn_nip && duplicate.nidn_nip === body.nidn_nip)
-          throw new HttpError("NIDN/NIP sudah digunakan.", 400);
+          return res.status(409).json({
+            message: "NIDN/NIP sudah digunakan.",
+            error: {
+              code: "UNIQUE_CONSTRAINT",
+              field: "nidn_nip",
+            },
+          });
       }
     }
 
@@ -567,7 +610,14 @@ export const updateUser = async (
       error instanceof Prisma.PrismaClientKnownRequestError &&
       error.code === "P2002"
     ) {
-      throw new HttpError(getUniqueConstraintMessage(error), 409);
+      const uniqueError = getUniqueConstraintInfo(error);
+      return res.status(409).json({
+        message: uniqueError.message,
+        error: {
+          code: "UNIQUE_CONSTRAINT",
+          field: uniqueError.field,
+        },
+      });
     }
 
     throw error;

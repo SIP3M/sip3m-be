@@ -984,15 +984,33 @@ Membuat user baru dengan role apapun.
                   examples: {
                     emailDup: {
                       summary: "Email duplikat",
-                      value: { message: "Email sudah digunakan." },
+                      value: {
+                        message: "Email sudah digunakan.",
+                        error: {
+                          code: "UNIQUE_CONSTRAINT",
+                          field: "email",
+                        },
+                      },
                     },
                     usernameDup: {
                       summary: "Username duplikat",
-                      value: { message: "Username sudah digunakan." },
+                      value: {
+                        message: "Username sudah digunakan.",
+                        error: {
+                          code: "UNIQUE_CONSTRAINT",
+                          field: "username",
+                        },
+                      },
                     },
                     nidnDup: {
                       summary: "NIDN/NIP duplikat",
-                      value: { message: "NIDN/NIP sudah digunakan." },
+                      value: {
+                        message: "NIDN/NIP sudah digunakan.",
+                        error: {
+                          code: "UNIQUE_CONSTRAINT",
+                          field: "nidn_nip",
+                        },
+                      },
                     },
                   },
                 },
@@ -1539,15 +1557,33 @@ Memperbarui data user berdasarkan ID.
                   examples: {
                     emailDup: {
                       summary: "Email duplikat",
-                      value: { message: "Email sudah digunakan." },
+                      value: {
+                        message: "Email sudah digunakan.",
+                        error: {
+                          code: "UNIQUE_CONSTRAINT",
+                          field: "email",
+                        },
+                      },
                     },
                     usernameDup: {
                       summary: "Username duplikat",
-                      value: { message: "Username sudah digunakan." },
+                      value: {
+                        message: "Username sudah digunakan.",
+                        error: {
+                          code: "UNIQUE_CONSTRAINT",
+                          field: "username",
+                        },
+                      },
                     },
                     nidnDup: {
                       summary: "NIDN/NIP duplikat",
-                      value: { message: "NIDN/NIP sudah digunakan." },
+                      value: {
+                        message: "NIDN/NIP sudah digunakan.",
+                        error: {
+                          code: "UNIQUE_CONSTRAINT",
+                          field: "nidn_nip",
+                        },
+                      },
                     },
                   },
                 },
