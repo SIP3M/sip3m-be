@@ -39,7 +39,15 @@ export const getUsers = async (
   res: Response,
 ): Promise<Response> => {
   try {
-    const { status, roles, search } = req.query;
+    const { status, roles, search, page } = req.query;
+    const perPage = 5;
+
+    const parsedPage = Number(page ?? 1);
+    if (!Number.isInteger(parsedPage) || parsedPage < 1) {
+      throw new HttpError("Parameter page harus berupa angka bulat >= 1.", 400);
+    }
+
+    const skip = (parsedPage - 1) * perPage;
 
     const whereClause: Prisma.usersWhereInput = {};
 
@@ -62,27 +70,34 @@ export const getUsers = async (
       ];
     }
 
-    const users = await prisma.users.findMany({
-      where: whereClause,
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        nidn_nip: true,
-        fakultas: true,
-        is_active: true,
-        created_at: true,
-        roles: {
-          select: {
-            id: true,
-            roles: true,
+    const [users, totalItems] = await Promise.all([
+      prisma.users.findMany({
+        where: whereClause,
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          nidn_nip: true,
+          fakultas: true,
+          is_active: true,
+          created_at: true,
+          roles: {
+            select: {
+              id: true,
+              roles: true,
+            },
           },
         },
-      },
-      orderBy: {
-        created_at: "desc",
-      },
-    });
+        orderBy: {
+          created_at: "desc",
+        },
+        skip,
+        take: perPage,
+      }),
+      prisma.users.count({ where: whereClause }),
+    ]);
+
+    const totalPages = Math.max(1, Math.ceil(totalItems / perPage));
 
     return res.status(200).json({
       data: users.map((user) => ({
@@ -98,6 +113,12 @@ export const getUsers = async (
           roles: user.roles.roles,
         },
       })),
+      pagination: {
+        page: parsedPage,
+        per_page: perPage,
+        total_items: totalItems,
+        total_pages: totalPages,
+      },
     });
   } catch (error) {
     console.error("[GET_USERS_ERROR]", error);

@@ -1007,15 +1007,17 @@ Membuat user baru dengan role apapun.
           tags: ["Users"],
           summary: "Get all users",
           description: `
-Mengambil daftar seluruh user dalam sistem dengan dukungan filter dan pencarian.
+      Mengambil daftar seluruh user dalam sistem dengan dukungan filter, pencarian, dan pagination.
 
 **Role akses:**
 - ADMIN_LPPM
 
 **Catatan:**
 - Parameter \`status\` memfilter berdasarkan status verifikasi akun.
-- Parameter \`role\` dikonversi ke UPPERCASE sebelum query (case-insensitive).
+      - Parameter \`roles\` dikonversi ke UPPERCASE sebelum query (case-insensitive).
 - Parameter \`search\` mencari di field \`name\` dan \`email\` secara case-insensitive.
+      - Parameter \`page\` default ke \`1\`.
+      - Jumlah data per halaman selalu \`5\`.
 - Hasil diurutkan berdasarkan \`created_at\` terbaru (descending).
     `,
           security: [{ bearerAuth: [] }],
@@ -1033,7 +1035,7 @@ Mengambil daftar seluruh user dalam sistem dengan dukungan filter dan pencarian.
               },
             },
             {
-              name: "role",
+              name: "roles",
               in: "query",
               required: false,
               description:
@@ -1041,6 +1043,18 @@ Mengambil daftar seluruh user dalam sistem dengan dukungan filter dan pencarian.
               schema: {
                 type: "string",
                 example: "DOSEN",
+              },
+            },
+            {
+              name: "page",
+              in: "query",
+              required: false,
+              description:
+                "Nomor halaman. Harus bilangan bulat >= 1. Default: 1.",
+              schema: {
+                type: "integer",
+                minimum: 1,
+                example: 1,
               },
             },
             {
@@ -1085,6 +1099,12 @@ Mengambil daftar seluruh user dalam sistem dengan dukungan filter dan pencarian.
                             roles: { id: 3, roles: "DOSEN" },
                           },
                         ],
+                        pagination: {
+                          page: 1,
+                          per_page: 5,
+                          total_items: 12,
+                          total_pages: 3,
+                        },
                       },
                     },
                     filteredByPending: {
@@ -1102,10 +1122,16 @@ Mengambil daftar seluruh user dalam sistem dengan dukungan filter dan pencarian.
                             roles: { id: 3, roles: "DOSEN" },
                           },
                         ],
+                        pagination: {
+                          page: 1,
+                          per_page: 5,
+                          total_items: 1,
+                          total_pages: 1,
+                        },
                       },
                     },
                     filteredByRole: {
-                      summary: "Filter role=DOSEN",
+                      summary: "Filter roles=DOSEN",
                       value: {
                         data: [
                           {
@@ -1119,6 +1145,12 @@ Mengambil daftar seluruh user dalam sistem dengan dukungan filter dan pencarian.
                             roles: { id: 3, roles: "DOSEN" },
                           },
                         ],
+                        pagination: {
+                          page: 1,
+                          per_page: 5,
+                          total_items: 1,
+                          total_pages: 1,
+                        },
                       },
                     },
                     searchResult: {
@@ -1136,8 +1168,24 @@ Mengambil daftar seluruh user dalam sistem dengan dukungan filter dan pencarian.
                             roles: { id: 3, roles: "DOSEN" },
                           },
                         ],
+                        pagination: {
+                          page: 1,
+                          per_page: 5,
+                          total_items: 1,
+                          total_pages: 1,
+                        },
                       },
                     },
+                  },
+                },
+              },
+            },
+            400: {
+              description: "Query parameter tidak valid",
+              content: {
+                "application/json": {
+                  example: {
+                    message: "Parameter page harus berupa angka bulat >= 1.",
                   },
                 },
               },
