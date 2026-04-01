@@ -885,7 +885,7 @@ Membuat user baru dengan role apapun.
                         "STAFF_LPPM",
                         "DOSEN",
                         "REVIEWER",
-                        "PIHAK EKSTERNAL",
+                        "REVIEWER_EKSTERNAL",
                       ],
                       example: "DOSEN",
                     },
@@ -964,7 +964,7 @@ Membuat user baru dengan role apapun.
               },
             },
             400: {
-              description: "Validasi gagal atau data duplikat",
+              description: "Validasi gagal atau role tidak ditemukan",
               content: {
                 "application/json": {
                   examples: {
@@ -972,6 +972,16 @@ Membuat user baru dengan role apapun.
                       summary: "Role tidak ditemukan",
                       value: { message: "Role tidak ditemukan." },
                     },
+                  },
+                },
+              },
+            },
+            409: {
+              description:
+                "Conflict — data unik sudah digunakan (hasil pengecekan DB)",
+              content: {
+                "application/json": {
+                  examples: {
                     emailDup: {
                       summary: "Email duplikat",
                       value: { message: "Email sudah digunakan." },
@@ -1424,7 +1434,7 @@ Memperbarui data user berdasarkan ID.
                         "STAFF_LPPM",
                         "DOSEN",
                         "REVIEWER",
-                        "PIHAK EKSTERNAL",
+                        "REVIEWER_EKSTERNAL",
                       ],
                       example: "STAFF_LPPM",
                       description: "Opsional. Ganti role user.",
@@ -1505,8 +1515,7 @@ Memperbarui data user berdasarkan ID.
               },
             },
             400: {
-              description:
-                "ID tidak valid, role tidak ditemukan, atau data duplikat",
+              description: "ID tidak valid atau role tidak ditemukan",
               content: {
                 "application/json": {
                   examples: {
@@ -1518,6 +1527,16 @@ Memperbarui data user berdasarkan ID.
                       summary: "Role tidak ada",
                       value: { message: "Role tidak ditemukan." },
                     },
+                  },
+                },
+              },
+            },
+            409: {
+              description:
+                "Conflict — data unik sudah digunakan (hasil pengecekan DB)",
+              content: {
+                "application/json": {
+                  examples: {
                     emailDup: {
                       summary: "Email duplikat",
                       value: { message: "Email sudah digunakan." },
@@ -1525,6 +1544,10 @@ Memperbarui data user berdasarkan ID.
                     usernameDup: {
                       summary: "Username duplikat",
                       value: { message: "Username sudah digunakan." },
+                    },
+                    nidnDup: {
+                      summary: "NIDN/NIP duplikat",
+                      value: { message: "NIDN/NIP sudah digunakan." },
                     },
                   },
                 },

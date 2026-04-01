@@ -20,7 +20,13 @@ export const createUserSchema = z.object({
   email: z.string().email().max(100),
   username: z.string().min(3).max(50).optional(),
   password: z.string().min(6).max(100),
-  roles: z.string(),
+  roles: z.enum([
+    ROLES.ADMIN_LPPM,
+    ROLES.STAFF_LPPM,
+    ROLES.DOSEN,
+    ROLES.REVIEWER,
+    ROLES.REVIEWER_EKSTERNAL,
+  ]),
   nidn_nip: z.string().max(30).optional(),
   fakultas: z.string().max(100).optional(),
   program_studi: z.string().max(100).optional(),
@@ -37,7 +43,15 @@ export const updateUserSchema = z.object({
   email: z.string().email().max(100).optional(),
   username: z.string().min(3).max(50).optional(),
   password: z.string().min(6).max(100).optional(),
-  roles: z.string().optional(),
+  roles: z
+    .enum([
+      ROLES.ADMIN_LPPM,
+      ROLES.STAFF_LPPM,
+      ROLES.DOSEN,
+      ROLES.REVIEWER,
+      ROLES.REVIEWER_EKSTERNAL,
+    ])
+    .optional(),
   nidn_nip: z.string().max(30).optional(),
   fakultas: z.string().max(100).optional(),
   program_studi: z.string().max(100).optional(),
