@@ -9,6 +9,13 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+enum StatusPencairanDana {
+  DISETUJUI
+  MENUNGGU_PERSETUJUAN
+  TERCAIRKAN
+  DITOLAK
+}
+
 enum ProposalStatus {
   DRAFT
   SUBMITTED
@@ -54,7 +61,7 @@ model proposals {
   title                  String         @db.VarChar(255)
   lead_researcher_id     Int            @db.Integer
   faculty                String?        @db.VarChar(100)
-  funding_request_amount Float?
+  funding_request_amount Int            @db.Integer
   status                 ProposalStatus @default(DRAFT)
 
   skema              String? @db.VarChar(100)
@@ -170,6 +177,10 @@ model PengabdianProjects {
   is_archived      Boolean          @default(false)
   created_at       DateTime         @default(now())
   updated_at       DateTime         @updatedAt
+
+  disbursement_status StatusPencairanDana @default(MENUNGGU_PERSETUJUAN)
+  realized_amount     Int?               @default(0) 
+  disbursed_at        DateTime?          
 
   proposal proposals @relation(fields: [proposal_id], references: [id])
 
