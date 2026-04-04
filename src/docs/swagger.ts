@@ -4208,6 +4208,221 @@ Menghapus dokumen dari Supabase Storage dan metadata di database.
         },
       },
 
+      /** ================= FINANCE ================= */
+      "/finances/summary": {
+        get: {
+          tags: ["Finance"],
+          summary: "Ambil ringkasan anggaran hibah",
+          description: `
+Mengambil ringkasan keuangan global dari sistem pengabdian.
+
+**Perhitungan:**
+- \`total_anggaran_hibah\` = total \`funding_request_amount\` proposal yang sudah memiliki project pengabdian.
+- \`dana_terserap\` = total \`realized_amount\` pada project dengan status pencairan \`TERCAIRKAN\`.
+- \`sisa_anggaran\` = \`total_anggaran_hibah - dana_terserap\`.
+
+**Role akses:**
+- ADMIN_LPPM
+- STAFF_LPPM
+          `,
+          security: [{ bearerAuth: [] }],
+          responses: {
+            200: {
+              description: "Ringkasan anggaran berhasil diambil",
+              content: {
+                "application/json": {
+                  example: {
+                    message: "Ringkasan anggaran berhasil diambil.",
+                    data: {
+                      total_anggaran_hibah: 250000000,
+                      dana_terserap: 120000000,
+                      sisa_anggaran: 130000000,
+                    },
+                  },
+                },
+              },
+            },
+            401: { description: "Unauthorized" },
+            403: {
+              description: "Forbidden — hanya ADMIN_LPPM atau STAFF_LPPM",
+            },
+            500: { description: "Internal server error" },
+          },
+        },
+      },
+
+      "/finances/projects": {
+        get: {
+          tags: ["Finance"],
+          summary: "Ambil daftar proyek keuangan",
+          description: `
+Mengambil daftar proyek pengabdian beserta data keuangan dan relasi proposal/peneliti.
+
+**Role akses:**
+- ADMIN_LPPM
+- STAFF_LPPM
+          `,
+          security: [{ bearerAuth: [] }],
+          responses: {
+            200: {
+              description: "Daftar proyek keuangan berhasil diambil",
+              content: {
+                "application/json": {
+                  example: {
+                    message: "Daftar proyek keuangan berhasil diambil.",
+                    data: [
+                      {
+                        id: 7,
+                        proposal_id: 12,
+                        project_code: "PENG-2026-12",
+                        title: "Pemberdayaan UMKM Berbasis Digital",
+                        disbursement_status: "MENUNGGU_PERSETUJUAN",
+                        realized_amount: 0,
+                        disbursed_at: null,
+                        status: "SEDANG_BERJALAN",
+                        created_at: "2026-04-01T08:00:00.000Z",
+                        updated_at: "2026-04-01T08:00:00.000Z",
+                        proposal: {
+                          id: 12,
+                          title: "Pemberdayaan UMKM Berbasis Digital",
+                          funding_request_amount: 75000000,
+                          user: {
+                            id: 3,
+                            name: "Budi Santoso",
+                            email: "budi@kampus.ac.id",
+                          },
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+            401: { description: "Unauthorized" },
+            403: {
+              description: "Forbidden — hanya ADMIN_LPPM atau STAFF_LPPM",
+            },
+            500: { description: "Internal server error" },
+          },
+        },
+      },
+
+      "/finances/projects/{id}/disburse": {
+        patch: {
+          tags: ["Finance"],
+          summary: "Cairkan dana proyek",
+          description: `
+Mencairkan dana proyek pengabdian.
+
+**Role akses:**
+- ADMIN_LPPM
+
+**Aksi yang dilakukan:**
+- set \`disbursement_status\` menjadi \`TERCAIRKAN\`
+- set \`realized_amount\` dari input admin
+- set \`disbursed_at\` otomatis ke waktu saat ini
+          `,
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: "id",
+              in: "path",
+              required: true,
+              schema: { type: "integer", minimum: 1, example: 7 },
+              description: "ID project pengabdian.",
+            },
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["realized_amount"],
+                  properties: {
+                    realized_amount: {
+                      type: "number",
+                      minimum: 1,
+                      example: 50000000,
+                    },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            200: {
+              description: "Dana proyek berhasil dicairkan",
+              content: {
+                "application/json": {
+                  example: {
+                    message: "Dana proyek berhasil dicairkan.",
+                    data: {
+                      id: 7,
+                      disbursement_status: "TERCAIRKAN",
+                      realized_amount: 50000000,
+                      disbursed_at: "2026-04-04T09:00:00.000Z",
+                      proposal: {
+                        id: 12,
+                        title: "Pemberdayaan UMKM Berbasis Digital",
+                        funding_request_amount: 75000000,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            400: {
+              description: "Validasi gagal atau nominal melebihi pagu",
+              content: {
+                "application/json": {
+                  examples: {
+                    invalidId: {
+                      summary: "ID path tidak valid",
+                      value: {
+                        message: "id harus berupa angka bulat positif.",
+                      },
+                    },
+                    zodValidation: {
+                      summary: "Body tidak valid",
+                      value: {
+                        message: "Validation failed.",
+                        errors: [
+                          {
+                            field: "realized_amount",
+                            message: "realized_amount harus lebih dari 0.",
+                          },
+                        ],
+                      },
+                    },
+                    overBudget: {
+                      summary: "Nominal melebihi pagu proposal",
+                      value: {
+                        message:
+                          "realized_amount melebihi funding_request_amount.",
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            401: { description: "Unauthorized" },
+            403: {
+              description: "Forbidden — hanya ADMIN_LPPM",
+            },
+            404: {
+              description: "Proyek tidak ditemukan",
+              content: {
+                "application/json": {
+                  example: { message: "Proyek pengabdian tidak ditemukan." },
+                },
+              },
+            },
+            500: { description: "Internal server error" },
+          },
+        },
+      },
+
       /** ================= NOTIFICATIONS ================= */
       "/notifications": {
         get: {
