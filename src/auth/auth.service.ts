@@ -138,11 +138,26 @@ export const registerReviewer = async (
 };
 
 export const loginUser = async (data: LoginInput): Promise<LoginResult> => {
-  const user = await prisma.users.findFirst({
-    where: {
-      OR: [{ email: data.identifier }, { nidn_nip: data.identifier }],
+  const identifier = data.identifier.trim();
+  const isEmailIdentifier = identifier.includes("@");
+
+  const user = await prisma.users.findUnique({
+    where: isEmailIdentifier ? { email: identifier } : { nidn_nip: identifier },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      nidn_nip: true,
+      fakultas: true,
+      password_hash: true,
+      is_active: true,
+      roles: {
+        select: {
+          id: true,
+          roles: true,
+        },
+      },
     },
-    include: { roles: true },
   });
 
   if (!user) {
@@ -156,14 +171,14 @@ export const loginUser = async (data: LoginInput): Promise<LoginResult> => {
     throw new HttpError("Password tidak ditemukan.", 500);
   }
 
+  if (!user.is_active) {
+    throw new HttpError("Akun Anda belum diverifikasi oleh Admin LPPM.", 403);
+  }
+
   const passwordMatch = await bcrypt.compare(data.password, user.password_hash);
 
   if (!passwordMatch) {
     throw new HttpError("Invalid Credentials.", 401);
-  }
-
-  if (!user.is_active) {
-    throw new HttpError("Akun Anda belum diverifikasi oleh Admin LPPM.", 403);
   }
 
   const expiresIn = data.remember_me ? "7d" : "1d";

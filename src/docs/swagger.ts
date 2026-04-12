@@ -679,7 +679,7 @@ Endpoint untuk autentikasi user.
               content: {
                 "application/json": {
                   example: {
-                    message: "Password salah. Silahkan coba lagi.",
+                    message: "Invalid Credentials.",
                   },
                 },
               },
@@ -3554,12 +3554,12 @@ Mengambil detail proyek pengabdian dari ID proposal tertentu.
         },
       },
 
-      "/pengabdian/projects": {
+      "/pengabdian": {
         get: {
           tags: ["Pengabdian"],
-          summary: "Ambil semua proyek pengabdian aktif",
+          summary: "Ambil daftar proyek pengabdian (paginated)",
           description: `
-Mengambil semua proyek pengabdian dengan filter \`is_archived = false\`.
+Mengambil daftar proyek pengabdian dengan dukungan pagination dan filter.
 
 **Role akses:**
 - ADMIN_LPPM
@@ -3567,31 +3567,83 @@ Mengambil semua proyek pengabdian dengan filter \`is_archived = false\`.
 - DOSEN
 - REVIEWER
 - REVIEWER_EKSTERNAL
+
+**Catatan performa & akses data:**
+- Data list hanya mengambil field penting (tanpa over-fetching field teks panjang).
+- Untuk role DOSEN, data otomatis difilter hanya proyek miliknya (berdasarkan \`proposal.lead_researcher_id\`).
           `,
           security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: "page",
+              in: "query",
+              required: false,
+              schema: { type: "integer", minimum: 1, default: 1, example: 1 },
+              description: "Nomor halaman.",
+            },
+            {
+              name: "limit",
+              in: "query",
+              required: false,
+              schema: { type: "integer", minimum: 1, default: 5, example: 5 },
+              description: "Jumlah data per halaman.",
+            },
+            {
+              name: "search",
+              in: "query",
+              required: false,
+              schema: { type: "string", example: "PENG-2026" },
+              description: "Pencarian berdasarkan title atau project_code.",
+            },
+            {
+              name: "is_archived",
+              in: "query",
+              required: false,
+              schema: { type: "boolean", default: false, example: false },
+              description: "Filter status arsip proyek.",
+            },
+          ],
           responses: {
             200: {
-              description: "Berhasil mengambil proyek pengabdian aktif",
+              description: "Berhasil mengambil daftar proyek pengabdian",
               content: {
                 "application/json": {
                   example: {
-                    message:
-                      "Berhasil mengambil semua proyek pengabdian aktif.",
+                    message: "Berhasil mengambil daftar proyek pengabdian.",
                     data: [
                       {
                         id: 1,
-                        proposal_id: 12,
                         project_code: "PENG-2026-12",
                         title: "Analisis Dampak Lingkungan Limbah Pabrik Gula",
                         status: "SEDANG_BERJALAN",
                         is_archived: false,
+                        realized_amount: 0,
+                        created_at: "2026-04-01T00:00:00.000Z",
                         proposal: {
                           id: 12,
-                          status: "ACCEPTED",
                           lead_researcher_id: 3,
                         },
                       },
                     ],
+                    meta: {
+                      totalData: 17,
+                      totalPages: 4,
+                      currentPage: 1,
+                      limit: 5,
+                    },
+                  },
+                },
+              },
+            },
+            400: {
+              description: "Validasi query gagal",
+              content: {
+                "application/json": {
+                  example: {
+                    message: "Validasi query gagal.",
+                    errors: {
+                      page: ["page minimal 1."],
+                    },
                   },
                 },
               },
@@ -3743,7 +3795,7 @@ Memperbarui detail proyek pengabdian (ringkasan dan periode pelaksanaan).
         },
       },
 
-      "/pengabdian/projects/{projectId}/archive": {
+      "/pengabdian/{id}/archive": {
         patch: {
           tags: ["Pengabdian"],
           summary: "Arsipkan proyek pengabdian",
@@ -3757,7 +3809,7 @@ Mengarsipkan proyek pengabdian dengan mengubah flag \`is_archived\` menjadi \`tr
           security: [{ bearerAuth: [] }],
           parameters: [
             {
-              name: "projectId",
+              name: "id",
               in: "path",
               required: true,
               schema: { type: "integer", minimum: 1, example: 1 },

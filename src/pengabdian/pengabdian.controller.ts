@@ -12,6 +12,7 @@ import {
 } from "./pengabdian.service";
 import {
   createPengabdianProjectParamSchema,
+  getAllPengabdianProjectsQuerySchema,
   getPengabdianProjectByProposalIdParamSchema,
   updatePengabdianStatusSchema,
   projectIdParamSchema,
@@ -146,15 +147,41 @@ export const getAllPengabdianProjectsController = async (
   res: Response,
 ): Promise<Response> => {
   try {
-    if (!req.user?.sub) {
+    if (!req.user) {
       throw new HttpError("Unauthorized", 401);
     }
 
-    const projects = await getAllPengabdianProjects();
+    const userId = Number(req.user.userId ?? req.user.sub);
+    if (Number.isNaN(userId) || userId <= 0) {
+      throw new HttpError("Unauthorized", 401);
+    }
+
+    const userRole = String(
+      req.user.role ?? req.user.roles ?? "",
+    ).toUpperCase();
+    if (!userRole) {
+      throw new HttpError("Unauthorized", 401);
+    }
+
+    const queryValidation = getAllPengabdianProjectsQuerySchema.safeParse(
+      req.query,
+    );
+    if (!queryValidation.success) {
+      return res.status(400).json({
+        message: "Validasi query gagal.",
+        errors: queryValidation.error.flatten().fieldErrors,
+      });
+    }
+
+    const projects = await getAllPengabdianProjects({
+      ...queryValidation.data,
+      userId,
+      userRole,
+    });
 
     return res.status(200).json({
-      message: "Berhasil mengambil semua proyek pengabdian aktif.",
-      data: projects,
+      message: "Berhasil mengambil daftar proyek pengabdian.",
+      ...projects,
     });
   } catch (error) {
     if (error instanceof HttpError) {
@@ -216,14 +243,18 @@ export const archiveProjectController = async (
       throw new HttpError("Unauthorized", 401);
     }
 
-    const projectId = Number(req.params.projectId ?? req.params.id);
-    if (Number.isNaN(projectId)) {
+    const paramValidation = projectIdParamSchema.safeParse({
+      projectId: req.params.id,
+    });
+
+    if (!paramValidation.success) {
       return res.status(400).json({
-        message: "ID proyek pengabdian tidak valid.",
+        message: "Validasi parameter gagal.",
+        errors: paramValidation.error.flatten().fieldErrors,
       });
     }
 
-    const result = await archiveProject(projectId);
+    const result = await archiveProject(paramValidation.data.projectId);
 
     return res.status(200).json(result);
   } catch (error) {

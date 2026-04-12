@@ -3,9 +3,19 @@ import {
   PengabdianStatus,
   ProposalStatus,
 } from "../generated/prisma/enums";
+import { Prisma } from "../generated/prisma/client";
 import { HttpError } from "../common/errors/http-error";
 import { prisma } from "../prisma";
 import type { UpdateProjectDetailsInput } from "./pengabdian.types";
+
+type GetAllPengabdianProjectsParams = {
+  page: number;
+  limit: number;
+  search?: string;
+  is_archived?: boolean;
+  userId: number;
+  userRole: string;
+};
 
 const PENGABDIAN_STATUS_TRANSITIONS: Record<
   PengabdianStatus,
@@ -192,26 +202,73 @@ export const updatePengabdianStatus = async (
   };
 };
 
-export const getAllPengabdianProjects = async () => {
-  const projects = await prisma.pengabdianProjects.findMany({
-    where: {
-      is_archived: false,
-    },
-    include: {
-      proposal: {
-        select: {
-          id: true,
-          status: true,
-          lead_researcher_id: true,
+export const getAllPengabdianProjects = async ({
+  page,
+  limit,
+  search,
+  is_archived,
+  userId,
+  userRole,
+}: GetAllPengabdianProjectsParams) => {
+  const skip = (page - 1) * limit;
+
+  const whereClause: Prisma.PengabdianProjectsWhereInput = {
+    ...(is_archived !== undefined ? { is_archived } : {}),
+    ...(search
+      ? {
+          OR: [
+            { title: { contains: search, mode: "insensitive" } },
+            { project_code: { contains: search, mode: "insensitive" } },
+          ],
+        }
+      : {}),
+    ...(userRole === "DOSEN"
+      ? {
+          proposal: {
+            lead_researcher_id: userId,
+          },
+        }
+      : {}),
+  };
+
+  const [totalData, projects] = await prisma.$transaction([
+    prisma.pengabdianProjects.count({
+      where: whereClause,
+    }),
+    prisma.pengabdianProjects.findMany({
+      where: whereClause,
+      select: {
+        id: true,
+        project_code: true,
+        title: true,
+        status: true,
+        is_archived: true,
+        realized_amount: true,
+        created_at: true,
+        proposal: {
+          select: {
+            id: true,
+            lead_researcher_id: true,
+          },
         },
       },
-    },
-    orderBy: {
-      created_at: "desc",
-    },
-  });
+      orderBy: {
+        created_at: "desc",
+      },
+      skip,
+      take: limit,
+    }),
+  ]);
 
-  return projects;
+  return {
+    data: projects,
+    meta: {
+      totalData,
+      totalPages: Math.max(1, Math.ceil(totalData / limit)),
+      currentPage: page,
+      limit,
+    },
+  };
 };
 
 const toValidDate = (value: string | Date, fieldName: string): Date => {

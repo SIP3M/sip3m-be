@@ -44,7 +44,7 @@ router.patch(
 );
 
 router.get(
-  "/pengabdian/projects",
+  "/pengabdian",
   authMiddleware,
   requireRole([
     ROLES.ADMIN_LPPM,
@@ -64,7 +64,7 @@ router.patch(
 );
 
 router.patch(
-  "/pengabdian/projects/:projectId/archive",
+  "/pengabdian/:id/archive",
   authMiddleware,
   requireRole([ROLES.ADMIN_LPPM, ROLES.STAFF_LPPM]),
   archiveProjectController,
