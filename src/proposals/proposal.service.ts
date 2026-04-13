@@ -1,4 +1,5 @@
 import { supabase } from "../config/storage";
+import { Prisma } from "../generated/prisma/client";
 import { prisma } from "../prisma";
 import { HttpError } from "../common/errors/http-error";
 import { ProposalStatus } from "../generated/prisma/enums";
@@ -99,12 +100,64 @@ export const createProposal = async (
   };
 };
 
-export const getAllProposals = async ({ page }: { page: number }) => {
+export const getAllProposals = async ({
+  page,
+  search,
+}: {
+  page: number;
+  search?: string;
+}) => {
   const skip = (page - 1) * PROPOSALS_PER_PAGE;
 
+  const whereClause: Prisma.proposalsWhereInput = search
+    ? {
+        OR: [
+          {
+            title: {
+              contains: search,
+              mode: "insensitive",
+            },
+          },
+          {
+            skema: {
+              contains: search,
+              mode: "insensitive",
+            },
+          },
+          {
+            faculty: {
+              contains: search,
+              mode: "insensitive",
+            },
+          },
+          {
+            user: {
+              is: {
+                name: {
+                  contains: search,
+                  mode: "insensitive",
+                },
+              },
+            },
+          },
+          {
+            user: {
+              is: {
+                nidn_nip: {
+                  contains: search,
+                  mode: "insensitive",
+                },
+              },
+            },
+          },
+        ],
+      }
+    : {};
+
   const [totalData, data] = await prisma.$transaction([
-    prisma.proposals.count(),
+    prisma.proposals.count({ where: whereClause }),
     prisma.proposals.findMany({
+      where: whereClause,
       select: {
         id: true,
         title: true,

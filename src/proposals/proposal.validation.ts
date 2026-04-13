@@ -65,6 +65,7 @@ export const getAllProposalsQuerySchema = z.object({
     .int("page harus berupa bilangan bulat.")
     .min(1, "page minimal 1.")
     .default(1),
+  search: z.string().trim().optional(),
 });
 
 export type CreateProposalInput = z.infer<typeof createProposalSchema>;

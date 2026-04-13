@@ -2110,6 +2110,7 @@ Endpoint untuk mengambil daftar proposal dengan pagination.
 **Catatan:**
 - Jumlah data per halaman tetap **5 data**.
 - Gunakan query \`page\` untuk berpindah halaman.
+- Gunakan query \`search\` untuk mencari berdasarkan judul, skema, fakultas, nama dosen, atau NIDN/NIP.
 - Membutuhkan autentikasi JWT.
           `,
           security: [{ bearerAuth: [] }],
@@ -2124,6 +2125,17 @@ Endpoint untuk mengambil daftar proposal dengan pagination.
                 default: 1,
               },
               description: "Nomor halaman (default 1).",
+            },
+            {
+              name: "search",
+              in: "query",
+              required: false,
+              schema: {
+                type: "string",
+                example: "dosen a",
+              },
+              description:
+                "Kata kunci pencarian untuk judul, skema, fakultas, nama dosen, atau NIDN/NIP.",
             },
           ],
           responses: {
