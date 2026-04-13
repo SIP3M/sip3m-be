@@ -4475,6 +4475,113 @@ Mencairkan dana proyek pengabdian.
         },
       },
 
+      /** ================= PUBLIC REPOSITORY ================= */
+      "/public/repository/pengabdian": {
+        get: {
+          tags: ["Public Repository"],
+          summary: "Ambil repository pengabdian publik",
+          description: `
+Endpoint publik untuk mengambil daftar project pengabdian yang:
+- status project sudah \`SELESAI\`
+- memiliki dokumen \`LAPORAN_AKHIR\` dengan verifikasi \`APPROVED\`
+
+Endpoint ini **tidak memerlukan autentikasi**.
+          `,
+          parameters: [
+            {
+              name: "page",
+              in: "query",
+              required: false,
+              schema: {
+                type: "integer",
+                minimum: 1,
+                default: 1,
+              },
+              description: "Nomor halaman (default 1).",
+            },
+            {
+              name: "limit",
+              in: "query",
+              required: false,
+              schema: {
+                type: "integer",
+                minimum: 1,
+                default: 5,
+              },
+              description: "Jumlah data per halaman (default 5).",
+            },
+            {
+              name: "search",
+              in: "query",
+              required: false,
+              schema: {
+                type: "string",
+              },
+              description: "Pencarian berdasarkan judul project.",
+            },
+          ],
+          responses: {
+            200: {
+              description: "Repository pengabdian publik berhasil diambil",
+              content: {
+                "application/json": {
+                  example: {
+                    message: "Berhasil mengambil repository pengabdian publik.",
+                    data: [
+                      {
+                        id: 10,
+                        title: "Pemberdayaan UMKM Berbasis Digital",
+                        project_code: "PENG-2026-10",
+                        created_at: "2026-04-01T08:00:00.000Z",
+                        proposal: {
+                          id: 25,
+                          lead_researcher_id: 7,
+                          user: {
+                            id: 7,
+                            name: "Dosen Pengabdi",
+                            email: "dosen@kampus.ac.id",
+                          },
+                        },
+                        documents: [
+                          {
+                            id: 77,
+                            file_path:
+                              "pengabdian/10/milestone_5/laporan-akhir.pdf",
+                            uploaded_at: "2026-10-01T09:00:00.000Z",
+                            public_url:
+                              "https://<supabase>/storage/v1/object/public/lppm_documents/pengabdian/10/milestone_5/laporan-akhir.pdf",
+                          },
+                        ],
+                      },
+                    ],
+                    meta: {
+                      totalData: 18,
+                      totalPages: 4,
+                      currentPage: 1,
+                      limit: 5,
+                    },
+                  },
+                },
+              },
+            },
+            400: {
+              description: "Validasi query gagal",
+              content: {
+                "application/json": {
+                  example: {
+                    message: "Validasi query gagal.",
+                    errors: {
+                      page: ["page minimal 1."],
+                    },
+                  },
+                },
+              },
+            },
+            500: { description: "Internal server error" },
+          },
+        },
+      },
+
       /** ================= NOTIFICATIONS ================= */
       "/notifications": {
         get: {

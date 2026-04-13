@@ -10,6 +10,7 @@ import financeRoute from "./finance/finance.routes";
 import pengabdianDocumentsRoute from "./pengabdian-documents/pengabdian-document.routes";
 import proposalRoute from "./proposals/proposal.routes";
 import notificationRoute from "./notifications/notification.routes";
+import publicRepositoryRoute from "./publikasi_dan_repository/repository.routes";
 import swaggerUiDist from "swagger-ui-dist";
 import { swaggerSpec } from "./docs/swagger";
 
@@ -76,6 +77,7 @@ app.use("/api", financeRoute);
 app.use("/api", pengabdianDocumentsRoute);
 app.use("/api", proposalRoute);
 app.use("/api", notificationRoute);
+app.use("/api", publicRepositoryRoute);
 
 // health check (penting buat test)
 app.get("/health", (_req, res) => {
