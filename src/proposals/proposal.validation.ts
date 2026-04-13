@@ -59,9 +59,20 @@ export const assignReviewerSchema = z.object({
     ),
 });
 
+export const getAllProposalsQuerySchema = z.object({
+  page: z.coerce
+    .number({ message: "page harus berupa angka." })
+    .int("page harus berupa bilangan bulat.")
+    .min(1, "page minimal 1.")
+    .default(1),
+});
+
 export type CreateProposalInput = z.infer<typeof createProposalSchema>;
 export type EditProposalInput = z.infer<typeof editProposalSchema>;
 export type UpdateProposalStatusInput = z.infer<
   typeof updateProposalStatusSchema
 >;
 export type AssignReviewerInput = z.infer<typeof assignReviewerSchema>;
+export type GetAllProposalsQueryInput = z.infer<
+  typeof getAllProposalsQuerySchema
+>;

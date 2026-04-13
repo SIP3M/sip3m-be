@@ -2097,9 +2097,9 @@ Endpoint untuk membuat proposal penelitian baru.
       "/getAllProposals": {
         get: {
           tags: ["Proposal"],
-          summary: "Ambil semua proposal",
+          summary: "Ambil daftar proposal (pagination)",
           description: `
-Endpoint untuk mengambil seluruh data proposal.
+Endpoint untuk mengambil daftar proposal dengan pagination.
 
 **Role akses:**
 - ADMIN_LPPM
@@ -2108,17 +2108,31 @@ Endpoint untuk mengambil seluruh data proposal.
 - REVIEWER_EKSTERNAL
 
 **Catatan:**
-- Mengembalikan semua proposal yang ada, diurutkan dari yang terbaru.
+- Jumlah data per halaman tetap **5 data**.
+- Gunakan query \`page\` untuk berpindah halaman.
 - Membutuhkan autentikasi JWT.
           `,
           security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: "page",
+              in: "query",
+              required: false,
+              schema: {
+                type: "integer",
+                minimum: 1,
+                default: 1,
+              },
+              description: "Nomor halaman (default 1).",
+            },
+          ],
           responses: {
             200: {
-              description: "Berhasil mengambil semua proposal",
+              description: "Berhasil mengambil daftar proposal",
               content: {
                 "application/json": {
                   example: {
-                    message: "Berhasil mengambil semua proposal.",
+                    message: "Berhasil mengambil daftar proposal.",
                     data: [
                       {
                         id: 1,
@@ -2151,6 +2165,25 @@ Endpoint untuk mengambil seluruh data proposal.
                         updated_at: "2026-03-06T08:00:00.000Z",
                       },
                     ],
+                    meta: {
+                      totalData: 12,
+                      totalPages: 3,
+                      currentPage: 1,
+                      limit: 5,
+                    },
+                  },
+                },
+              },
+            },
+            400: {
+              description: "Validasi query gagal",
+              content: {
+                "application/json": {
+                  example: {
+                    message: "Validasi query gagal.",
+                    errors: {
+                      page: ["page minimal 1."],
+                    },
                   },
                 },
               },

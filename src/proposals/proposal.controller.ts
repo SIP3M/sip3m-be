@@ -6,6 +6,7 @@ import {
   editProposalSchema,
   updateProposalStatusSchema,
   assignReviewerSchema,
+  getAllProposalsQuerySchema,
 } from "./proposal.validation";
 import {
   createProposal as createProposalService,
@@ -65,11 +66,22 @@ export const getAllProposalsController = async (
       throw new HttpError("Unauthorized", 401);
     }
 
-    const proposals = await getAllProposalsService();
+    const queryValidation = getAllProposalsQuerySchema.safeParse(req.query);
+
+    if (!queryValidation.success) {
+      return res.status(400).json({
+        message: "Validasi query gagal.",
+        errors: queryValidation.error.flatten().fieldErrors,
+      });
+    }
+
+    const proposals = await getAllProposalsService({
+      page: queryValidation.data.page,
+    });
 
     return res.status(200).json({
-      message: "Berhasil mengambil semua proposal.",
-      data: proposals,
+      message: "Berhasil mengambil daftar proposal.",
+      ...proposals,
     });
   } catch (error) {
     if (error instanceof HttpError) {

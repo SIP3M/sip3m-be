@@ -10,6 +10,7 @@ import type {
 } from "./proposal.validation";
 
 const BUCKET_NAME = "lppm_documents";
+const PROPOSALS_PER_PAGE = 5;
 
 const uploadToSupabase = async (
   file: Express.Multer.File,
@@ -98,11 +99,27 @@ export const createProposal = async (
   };
 };
 
-export const getAllProposals = async () => {
-  const proposals = await prisma.proposals.findMany({
-    orderBy: { created_at: "desc" },
-  });
-  return proposals;
+export const getAllProposals = async ({ page }: { page: number }) => {
+  const skip = (page - 1) * PROPOSALS_PER_PAGE;
+
+  const [totalData, data] = await prisma.$transaction([
+    prisma.proposals.count(),
+    prisma.proposals.findMany({
+      orderBy: { created_at: "desc" },
+      skip,
+      take: PROPOSALS_PER_PAGE,
+    }),
+  ]);
+
+  return {
+    data,
+    meta: {
+      totalData,
+      totalPages: Math.max(1, Math.ceil(totalData / PROPOSALS_PER_PAGE)),
+      currentPage: page,
+      limit: PROPOSALS_PER_PAGE,
+    },
+  };
 };
 
 export const getProposalById = async (proposalId: number) => {
