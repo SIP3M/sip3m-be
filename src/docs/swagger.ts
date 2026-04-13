@@ -3838,6 +3838,130 @@ Mengarsipkan proyek pengabdian dengan mengubah flag \`is_archived\` menjadi \`tr
         },
       },
 
+      /** ================= PENGABDIAN EXPORT ================= */
+      "/pengabdian/export/excel": {
+        get: {
+          tags: ["Pengabdian Export"],
+          summary: "Export rekapitulasi pengabdian ke Excel",
+          description: `
+Mengunduh file **Excel (.xlsx)** berisi rekapitulasi data pengabdian.
+
+**Kolom file Excel:**
+- No
+- Kode Proyek
+- Judul
+- Ketua Peneliti
+- Dana Disetujui
+- Status
+- Progress (%)
+
+**Sumber data:**
+- \`PengabdianProjects\`
+- relasi \`proposal\` (\`funding_request_amount\`)
+- relasi \`proposal.user\` (nama ketua peneliti)
+
+**Role akses:**
+- ADMIN_LPPM
+          `,
+          security: [{ bearerAuth: [] }],
+          responses: {
+            200: {
+              description: "File Excel berhasil dibuat",
+              content: {
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":
+                  {
+                    schema: {
+                      type: "string",
+                      format: "binary",
+                    },
+                  },
+              },
+              headers: {
+                "Content-Disposition": {
+                  description:
+                    'Header attachment untuk download file (contoh: attachment; filename="Rekap_Pengabdian.xlsx")',
+                  schema: {
+                    type: "string",
+                  },
+                },
+              },
+            },
+            401: { description: "Unauthorized" },
+            403: {
+              description: "Forbidden — hanya ADMIN_LPPM",
+            },
+            500: {
+              description: "Internal server error",
+              content: {
+                "application/json": {
+                  example: {
+                    message: "Terjadi kesalahan pada server saat export Excel.",
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+
+      "/pengabdian/export/pdf": {
+        get: {
+          tags: ["Pengabdian Export"],
+          summary: "Export rekapitulasi pengabdian ke PDF",
+          description: `
+Mengunduh file **PDF** berisi rekapitulasi sederhana data pengabdian.
+
+Format isi PDF berupa daftar per proyek, mencakup:
+- Judul
+- Kode Proyek
+- Ketua Peneliti
+- Dana Disetujui
+- Status
+- Progress
+
+**Role akses:**
+- ADMIN_LPPM
+          `,
+          security: [{ bearerAuth: [] }],
+          responses: {
+            200: {
+              description: "File PDF berhasil dibuat",
+              content: {
+                "application/pdf": {
+                  schema: {
+                    type: "string",
+                    format: "binary",
+                  },
+                },
+              },
+              headers: {
+                "Content-Disposition": {
+                  description:
+                    'Header attachment untuk download file (contoh: attachment; filename="Rekap_Pengabdian.pdf")',
+                  schema: {
+                    type: "string",
+                  },
+                },
+              },
+            },
+            401: { description: "Unauthorized" },
+            403: {
+              description: "Forbidden — hanya ADMIN_LPPM",
+            },
+            500: {
+              description: "Internal server error",
+              content: {
+                "application/json": {
+                  example: {
+                    message: "Terjadi kesalahan pada server saat export PDF.",
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+
       /** ================= PENGABDIAN DOCUMENTS ================= */
       "/pengabdian-documents/upload": {
         post: {
