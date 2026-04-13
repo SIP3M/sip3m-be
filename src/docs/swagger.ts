@@ -2138,6 +2138,10 @@ Endpoint untuk mengambil daftar proposal dengan pagination.
                         id: 1,
                         title: "Penelitian AI untuk Pertanian",
                         lead_researcher_id: 3,
+                        user: {
+                          name: "Dosen A",
+                          nidn_nip: "0123456789",
+                        },
                         faculty: "Teknik",
                         skema: "Penelitian Dasar",
                         funding_request_amount: 15000000,
@@ -2154,6 +2158,10 @@ Endpoint untuk mengambil daftar proposal dengan pagination.
                         id: 2,
                         title: "Pengembangan IoT untuk Smart Campus",
                         lead_researcher_id: 4,
+                        user: {
+                          name: "Dosen B",
+                          nidn_nip: "9876543210",
+                        },
                         faculty: "MIPA",
                         skema: "Penelitian Terapan",
                         funding_request_amount: 20000000,

@@ -105,6 +105,26 @@ export const getAllProposals = async ({ page }: { page: number }) => {
   const [totalData, data] = await prisma.$transaction([
     prisma.proposals.count(),
     prisma.proposals.findMany({
+      select: {
+        id: true,
+        title: true,
+        lead_researcher_id: true,
+        faculty: true,
+        funding_request_amount: true,
+        status: true,
+        skema: true,
+        proposal_file_path: true,
+        rab_file_path: true,
+        submitted_at: true,
+        created_at: true,
+        updated_at: true,
+        user: {
+          select: {
+            name: true,
+            nidn_nip: true,
+          },
+        },
+      },
       orderBy: { created_at: "desc" },
       skip,
       take: PROPOSALS_PER_PAGE,
