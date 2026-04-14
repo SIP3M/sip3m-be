@@ -4652,6 +4652,96 @@ Mencairkan dana proyek pengabdian.
         },
       },
 
+      /** ================= DASHBOARD ================= */
+      "/dashboard/admin": {
+        get: {
+          tags: ["Dashboard"],
+          summary: "Ambil data dashboard Admin LPPM",
+          description: `
+Mengambil data dashboard khusus **ADMIN_LPPM** untuk kebutuhan tampilan ringkasan statistik.
+
+Struktur data mencakup:
+- **summaryCards**: total proposal, dosen aktif, proposal disetujui, menunggu review.
+- **statusChart**: distribusi jumlah proposal berdasarkan status.
+- **kategoriChart**: distribusi jumlah proposal berdasarkan skema.
+- **trendBulanan**: jumlah proposal per bulan dalam 6 bulan terakhir.
+          `,
+          security: [{ bearerAuth: [] }],
+          responses: {
+            200: {
+              description: "Data dashboard berhasil diambil",
+              content: {
+                "application/json": {
+                  example: {
+                    message: "Success",
+                    data: {
+                      summaryCards: {
+                        totalProposal: 42,
+                        dosenAktif: 18,
+                        proposalDisetujui: 11,
+                        menungguReview: 9,
+                      },
+                      statusChart: [
+                        { status: "DRAFT", jumlah: 6 },
+                        { status: "SUBMITTED", jumlah: 8 },
+                        { status: "ADMIN_VERIFIED", jumlah: 5 },
+                        { status: "UNDER_REVIEW", jumlah: 4 },
+                        { status: "REVISION", jumlah: 3 },
+                        { status: "ACCEPTED", jumlah: 11 },
+                        { status: "REJECTED", jumlah: 5 },
+                      ],
+                      kategoriChart: [
+                        { skema: "Penelitian Dasar", jumlah: 17 },
+                        { skema: "Penelitian Terapan", jumlah: 14 },
+                        { skema: "Tanpa Skema", jumlah: 11 },
+                      ],
+                      trendBulanan: [
+                        { bulan: "Nov", jumlah: 3 },
+                        { bulan: "Des", jumlah: 5 },
+                        { bulan: "Jan", jumlah: 7 },
+                        { bulan: "Feb", jumlah: 6 },
+                        { bulan: "Mar", jumlah: 9 },
+                        { bulan: "Apr", jumlah: 4 },
+                      ],
+                    },
+                  },
+                },
+              },
+            },
+            401: {
+              description: "Unauthorized",
+              content: {
+                "application/json": {
+                  example: { message: "Unauthorized." },
+                },
+              },
+            },
+            403: {
+              description: "Forbidden — hanya ADMIN_LPPM",
+              content: {
+                "application/json": {
+                  example: {
+                    message:
+                      "You do not have permission to access this resource.",
+                  },
+                },
+              },
+            },
+            500: {
+              description: "Internal server error",
+              content: {
+                "application/json": {
+                  example: {
+                    message:
+                      "Terjadi kesalahan pada server saat mengambil data dashboard.",
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+
       /** ================= PUBLIC REPOSITORY ================= */
       "/public/repository/pengabdian": {
         get: {

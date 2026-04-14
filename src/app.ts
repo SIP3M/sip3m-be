@@ -12,6 +12,7 @@ import proposalRoute from "./proposals/proposal.routes";
 import notificationRoute from "./notifications/notification.routes";
 import publicRepositoryRoute from "./publikasi_dan_repository/repository.routes";
 import exportRoute from "./export/export.routes";
+import dashboardRoute from "./dashboard/dashboard.routes";
 import swaggerUiDist from "swagger-ui-dist";
 import { swaggerSpec } from "./docs/swagger";
 
@@ -80,6 +81,7 @@ app.use("/api", proposalRoute);
 app.use("/api", notificationRoute);
 app.use("/api", publicRepositoryRoute);
 app.use("/api", exportRoute);
+app.use("/api", dashboardRoute);
 
 // health check (penting buat test)
 app.get("/health", (_req, res) => {

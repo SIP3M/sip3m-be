@@ -6,16 +6,10 @@ import {
 import { Prisma } from "../generated/prisma/client";
 import { HttpError } from "../common/errors/http-error";
 import { prisma } from "../prisma";
-import type { UpdateProjectDetailsInput } from "./pengabdian.types";
-
-type GetAllPengabdianProjectsParams = {
-  page: number;
-  limit: number;
-  search?: string;
-  is_archived?: boolean;
-  userId: number;
-  userRole: string;
-};
+import type {
+  UpdateProjectDetailsInput,
+  GetAllPengabdianProjectsParams,
+} from "./pengabdian.types";
 
 const PENGABDIAN_STATUS_TRANSITIONS: Record<
   PengabdianStatus,
