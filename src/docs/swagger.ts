@@ -2279,6 +2279,10 @@ Endpoint untuk mengambil detail satu proposal berdasarkan ID.
                       id: 1,
                       title: "Penelitian AI untuk Pertanian",
                       lead_researcher_id: 3,
+                      user: {
+                        name: "Dosen A",
+                        nidn_nip: "0123456789",
+                      },
                       faculty: "Teknik",
                       skema: "Penelitian Dasar",
                       funding_request_amount: 15000000,

@@ -198,6 +198,26 @@ export const getAllProposals = async ({
 export const getProposalById = async (proposalId: number) => {
   const proposal = await prisma.proposals.findUnique({
     where: { id: proposalId },
+    select: {
+      id: true,
+      title: true,
+      lead_researcher_id: true,
+      faculty: true,
+      funding_request_amount: true,
+      status: true,
+      skema: true,
+      proposal_file_path: true,
+      rab_file_path: true,
+      submitted_at: true,
+      created_at: true,
+      updated_at: true,
+      user: {
+        select: {
+          name: true,
+          nidn_nip: true,
+        },
+      },
+    },
   });
 
   if (!proposal) {
