@@ -13,6 +13,7 @@ import notificationRoute from "./notifications/notification.routes";
 import publicRepositoryRoute from "./publikasi_dan_repository/repository.routes";
 import exportRoute from "./export/export.routes";
 import dashboardRoute from "./dashboard/dashboard.routes";
+import monitoringRoute from "./monitoring/monitoring.routes";
 import swaggerUiDist from "swagger-ui-dist";
 import { swaggerSpec } from "./docs/swagger";
 
@@ -82,6 +83,7 @@ app.use("/api", notificationRoute);
 app.use("/api", publicRepositoryRoute);
 app.use("/api", exportRoute);
 app.use("/api", dashboardRoute);
+app.use("/api", monitoringRoute);
 
 // health check (penting buat test)
 app.get("/health", (_req, res) => {

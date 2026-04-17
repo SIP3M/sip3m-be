@@ -4746,6 +4746,324 @@ Struktur data mencakup:
         },
       },
 
+      /** ================= MONITORING PROYEK ================= */
+      "/monitoring/projects": {
+        get: {
+          tags: ["Monitoring"],
+          summary: "Ambil daftar monitoring proyek + summary",
+          description: `
+Mengambil data monitoring proyek untuk dashboard admin, meliputi:
+- Ringkasan total proyek aktif, selesai, dan terlambat.
+- Daftar proyek terpaginated dengan progress dan status kalkulasi.
+
+**Role akses:**
+- ADMIN_LPPM
+
+**Catatan:**
+- Jumlah data per halaman tetap **5**.
+- Parameter \`search\` mencari berdasarkan judul proyek atau nama peneliti.
+- Parameter \`statusFilter\` memfilter status proyek pengabdian.
+          `,
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: "page",
+              in: "query",
+              required: false,
+              schema: {
+                type: "integer",
+                minimum: 1,
+                default: 1,
+              },
+              description: "Nomor halaman (default: 1).",
+            },
+            {
+              name: "search",
+              in: "query",
+              required: false,
+              schema: {
+                type: "string",
+                example: "budi",
+              },
+              description: "Pencarian judul proyek atau nama peneliti.",
+            },
+            {
+              name: "statusFilter",
+              in: "query",
+              required: false,
+              schema: {
+                type: "string",
+                enum: ["PENDING", "SEDANG_BERJALAN", "SELESAI"],
+                example: "SEDANG_BERJALAN",
+              },
+              description: "Filter berdasarkan status proyek pengabdian.",
+            },
+          ],
+          responses: {
+            200: {
+              description: "Data monitoring proyek berhasil diambil",
+              content: {
+                "application/json": {
+                  example: {
+                    message: "Success",
+                    data: {
+                      summary: {
+                        total_aktif: 12,
+                        total_selesai: 5,
+                        total_terlambat: 3,
+                      },
+                      data: [
+                        {
+                          id: 7,
+                          project_code: "PENG-2026-07",
+                          title: "Pemberdayaan UMKM Berbasis Digital",
+                          status: "SEDANG_BERJALAN",
+                          created_at: "2026-04-01T08:00:00.000Z",
+                          user: {
+                            name: "Budi Santoso",
+                          },
+                          progress_percentage: 50,
+                          milestone_berikutnya: "Laporan Kemajuan 2",
+                          calculated_status: "ON TRACK",
+                        },
+                        {
+                          id: 8,
+                          project_code: "PENG-2026-08",
+                          title: "Pengolahan Sampah Organik Berkelanjutan",
+                          status: "PENDING",
+                          created_at: "2026-03-20T08:00:00.000Z",
+                          user: {
+                            name: "Rina Wulandari",
+                          },
+                          progress_percentage: 25,
+                          milestone_berikutnya: "Laporan Kemajuan 1",
+                          calculated_status: "DELAYED",
+                        },
+                      ],
+                      meta: {
+                        totalData: 17,
+                        totalPages: 4,
+                        currentPage: 1,
+                        limit: 5,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            400: {
+              description: "Validasi query gagal",
+              content: {
+                "application/json": {
+                  examples: {
+                    invalidPage: {
+                      value: {
+                        message: "Query page harus berupa angka bulat >= 1.",
+                      },
+                    },
+                    invalidStatusFilter: {
+                      value: {
+                        message:
+                          "statusFilter tidak valid. Gunakan salah satu: PENDING, SEDANG_BERJALAN, SELESAI.",
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            401: {
+              description: "Unauthorized",
+              content: {
+                "application/json": {
+                  example: { message: "Unauthorized." },
+                },
+              },
+            },
+            403: {
+              description: "Forbidden — hanya ADMIN_LPPM",
+              content: {
+                "application/json": {
+                  example: {
+                    message:
+                      "You do not have permission to access this resource.",
+                  },
+                },
+              },
+            },
+            500: {
+              description: "Internal server error",
+              content: {
+                "application/json": {
+                  example: {
+                    message:
+                      "Terjadi kesalahan pada server saat mengambil monitoring proyek.",
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+
+      "/monitoring/projects/{id}": {
+        get: {
+          tags: ["Monitoring"],
+          summary: "Ambil detail monitoring proyek",
+          description: `
+Mengambil detail monitoring satu proyek berdasarkan ID.
+
+**Role akses:**
+- ADMIN_LPPM
+
+**Catatan:**
+- Menyertakan data peneliti, milestones, dan dokumen.
+- Field \`calculated_status\` dihitung otomatis (\`COMPLETED\`, \`DELAYED\`, \`ON TRACK\`).
+          `,
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: "id",
+              in: "path",
+              required: true,
+              description: "ID proyek monitoring.",
+              schema: {
+                type: "integer",
+                minimum: 1,
+                example: 7,
+              },
+            },
+          ],
+          responses: {
+            200: {
+              description: "Detail proyek berhasil diambil",
+              content: {
+                "application/json": {
+                  example: {
+                    message: "Success",
+                    data: {
+                      id: 7,
+                      proposal_id: 12,
+                      project_code: "PENG-2026-07",
+                      title: "Pemberdayaan UMKM Berbasis Digital",
+                      summary:
+                        "Program pengabdian untuk peningkatan literasi digital UMKM desa.",
+                      start_date: "2026-04-01T00:00:00.000Z",
+                      end_date: "2026-11-30T00:00:00.000Z",
+                      overall_progress: 50,
+                      status: "SEDANG_BERJALAN",
+                      is_archived: false,
+                      created_at: "2026-04-01T08:00:00.000Z",
+                      updated_at: "2026-04-10T08:00:00.000Z",
+                      disbursement_status: "MENUNGGU_PERSETUJUAN",
+                      realized_amount: 0,
+                      disbursed_at: null,
+                      user: {
+                        name: "Budi Santoso",
+                        nidn_nip: "0123456789",
+                      },
+                      progress_percentage: 50,
+                      milestone_berikutnya: "Laporan Kemajuan 2",
+                      calculated_status: "ON TRACK",
+                      milestones: [
+                        {
+                          id: 21,
+                          project_id: 7,
+                          title: "Laporan Kemajuan 1",
+                          description: null,
+                          sequence: 2,
+                          target_percentage: 30,
+                          due_date: "2026-06-01T00:00:00.000Z",
+                          status: "COMPLETED",
+                          completed_at: "2026-05-28T10:00:00.000Z",
+                          created_at: "2026-04-01T08:30:00.000Z",
+                          updated_at: "2026-05-28T10:00:00.000Z",
+                        },
+                        {
+                          id: 22,
+                          project_id: 7,
+                          title: "Laporan Kemajuan 2",
+                          description: null,
+                          sequence: 3,
+                          target_percentage: 70,
+                          due_date: "2026-08-01T00:00:00.000Z",
+                          status: "PENDING",
+                          completed_at: null,
+                          created_at: "2026-04-01T08:30:00.000Z",
+                          updated_at: "2026-04-01T08:30:00.000Z",
+                        },
+                      ],
+                      documents: [
+                        {
+                          id: 91,
+                          project_id: 7,
+                          milestone_id: 21,
+                          document_type: "LAPORAN_KEMAJUAN_1",
+                          title: "Laporan Tahap 1.pdf",
+                          file_path:
+                            "pengabdian/7/milestone_21/1711234567000-Laporan_Tahap_1.pdf",
+                          file_size: 231122,
+                          mime_type: "application/pdf",
+                          verification_status: "APPROVED",
+                          verification_notes: "Dokumen valid.",
+                          uploaded_by: 3,
+                          uploaded_at: "2026-05-28T11:00:00.000Z",
+                        },
+                      ],
+                    },
+                  },
+                },
+              },
+            },
+            400: {
+              description: "ID proyek tidak valid",
+              content: {
+                "application/json": {
+                  example: { message: "ID proyek tidak valid." },
+                },
+              },
+            },
+            401: {
+              description: "Unauthorized",
+              content: {
+                "application/json": {
+                  example: { message: "Unauthorized." },
+                },
+              },
+            },
+            403: {
+              description: "Forbidden — hanya ADMIN_LPPM",
+              content: {
+                "application/json": {
+                  example: {
+                    message:
+                      "You do not have permission to access this resource.",
+                  },
+                },
+              },
+            },
+            404: {
+              description: "Proyek tidak ditemukan",
+              content: {
+                "application/json": {
+                  example: { message: "Proyek tidak ditemukan." },
+                },
+              },
+            },
+            500: {
+              description: "Internal server error",
+              content: {
+                "application/json": {
+                  example: {
+                    message:
+                      "Terjadi kesalahan pada server saat mengambil detail proyek.",
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+
       /** ================= PUBLIC REPOSITORY ================= */
       "/public/repository/pengabdian": {
         get: {
