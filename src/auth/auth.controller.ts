@@ -9,12 +9,10 @@ import {
   registerDosenSchema,
   registerReviewerSchema,
 } from "./auth.validation";
-import { createClient } from "@supabase/supabase-js";
+import { supabase } from "../config/storage";
 
-const supabase = createClient(
-  process.env.SUPABASE_URL as string,
-  process.env.SUPABASE_ANON_KEY as string,
-);
+const CV_BUCKET_NAME = "lppm_documents";
+const CV_FOLDER_NAME = "cv";
 
 // register
 export const registerDosenController = async (
@@ -56,28 +54,38 @@ export const registerReviewerController = async (
   req: Request,
   res: Response,
 ) => {
+  let uploadedFilePath: string | null = null;
+
   try {
     if (!req.file) {
       return res.status(400).json({ message: "File CV wajib diunggah." });
     }
 
-    const uniqueFileName = `cv-${Date.now()}-${req.file.originalname.replace(/\s+/g, "-")}`;
+    const sanitizedOriginalName = req.file.originalname.replace(
+      /[^a-zA-Z0-9._-]/g,
+      "-",
+    );
+    const uniqueFileName = `cv-${Date.now()}-${sanitizedOriginalName}`;
+    const filePath = `${CV_FOLDER_NAME}/${uniqueFileName}`;
+    uploadedFilePath = filePath;
 
     const { error: uploadError } = await supabase.storage
-      .from("cv_reviewer")
-      .upload(uniqueFileName, req.file.buffer, {
+      .from(CV_BUCKET_NAME)
+      .upload(filePath, req.file.buffer, {
         contentType: req.file.mimetype,
+        upsert: false,
       });
 
     if (uploadError) {
+      console.error("[REGISTER_REVIEWER_UPLOAD_ERROR]", uploadError);
       return res
         .status(500)
         .json({ message: "Gagal mengunggah file CV ke Storage." });
     }
 
     const { data: publicUrlData } = supabase.storage
-      .from("cv_reviewer")
-      .getPublicUrl(uniqueFileName);
+      .from(CV_BUCKET_NAME)
+      .getPublicUrl(filePath);
 
     const cvFilePath = publicUrlData.publicUrl;
 
@@ -89,7 +97,8 @@ export const registerReviewerController = async (
     const validation = registerReviewerSchema.safeParse(dataToValidate);
 
     if (!validation.success) {
-      await supabase.storage.from("cv_reviewer").remove([uniqueFileName]);
+      await supabase.storage.from(CV_BUCKET_NAME).remove([filePath]);
+      uploadedFilePath = null;
 
       return res.status(400).json({
         message: "Validasi data gagal!",
@@ -106,6 +115,10 @@ export const registerReviewerController = async (
       data: user,
     });
   } catch (error) {
+    if (uploadedFilePath) {
+      await supabase.storage.from(CV_BUCKET_NAME).remove([uploadedFilePath]);
+    }
+
     if (error instanceof HttpError) {
       return res.status(error.statusCode).json({ message: error.message });
     }

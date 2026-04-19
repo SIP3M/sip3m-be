@@ -472,6 +472,7 @@ Endpoint untuk registrasi user dengan role **REVIEWER_EKSTERNAL**.
 - Request menggunakan **multipart/form-data** karena terdapat upload file CV.
 - File CV maksimal **5 MB**.
 - Format file CV yang diperbolehkan: **PDF, DOC, DOCX**.
+- File CV disimpan di bucket **lppm_documents** pada folder **cv/**.
 - Setelah registrasi, akun berstatus \`is_active: false\` dan harus diverifikasi oleh Admin LPPM.
 - \`username\` dan \`email\` harus unik.
     `,
