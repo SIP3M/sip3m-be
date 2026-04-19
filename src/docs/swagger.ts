@@ -471,6 +471,7 @@ Endpoint untuk registrasi user dengan role **REVIEWER_EKSTERNAL**.
 **Catatan:**
 - Request menggunakan **multipart/form-data** karena terdapat upload file CV.
 - File CV maksimal **5 MB**.
+- Format file CV yang diperbolehkan: **PDF, DOC, DOCX**.
 - Setelah registrasi, akun berstatus \`is_active: false\` dan harus diverifikasi oleh Admin LPPM.
 - \`username\` dan \`email\` harus unik.
     `,
@@ -520,7 +521,8 @@ Endpoint untuk registrasi user dengan role **REVIEWER_EKSTERNAL**.
                     cv: {
                       type: "string",
                       format: "binary",
-                      description: "File CV, maks 5 MB.",
+                      description:
+                        "File CV wajib. Format: PDF/DOC/DOCX, ukuran maksimal 5 MB.",
                     },
                     username: {
                       type: "string",
@@ -569,11 +571,23 @@ Endpoint untuk registrasi user dengan role **REVIEWER_EKSTERNAL**.
               },
             },
             400: {
-              description: "Validasi data gagal atau file CV tidak diunggah",
+              description:
+                "Validasi data gagal, file CV tidak diunggah, format file tidak valid, atau ukuran file melebihi batas",
               content: {
                 "application/json": {
                   examples: {
                     noFile: { value: { message: "File CV wajib diunggah." } },
+                    invalidFileFormat: {
+                      value: {
+                        message:
+                          "Format file CV tidak didukung. Hanya PDF, DOC, atau DOCX yang diperbolehkan.",
+                      },
+                    },
+                    fileTooLarge: {
+                      value: {
+                        message: "Ukuran file CV maksimal 5 MB.",
+                      },
+                    },
                     validationFail: {
                       value: {
                         message: "Validasi data gagal!",
