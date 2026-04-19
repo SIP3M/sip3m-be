@@ -13,6 +13,17 @@ import type {
 const BUCKET_NAME = "lppm_documents";
 const PROPOSALS_PER_PAGE = 5;
 
+const extractFileName = (pathOrUrl: string | null): string | null => {
+  if (!pathOrUrl) {
+    return null;
+  }
+
+  const normalized = pathOrUrl.split("?")[0];
+  const fileName = normalized.split("/").pop() ?? null;
+
+  return fileName ? decodeURIComponent(fileName) : null;
+};
+
 const uploadToSupabase = async (
   file: Express.Multer.File,
   folder: string,
@@ -378,7 +389,25 @@ export const editProposal = async (
     message: isDraft
       ? "Proposal berhasil diperbarui."
       : "Proposal berhasil diperbarui dan dikirim.",
-    data: updatedProposal,
+    data: {
+      ...updatedProposal,
+      file_info: {
+        proposal_file: {
+          previous_path: existingProposal.proposal_file_path,
+          previous_name: extractFileName(existingProposal.proposal_file_path),
+          current_path: updatedProposal.proposal_file_path,
+          current_name: extractFileName(updatedProposal.proposal_file_path),
+          replaced: Boolean(proposalFilePath),
+        },
+        rab_file: {
+          previous_path: existingProposal.rab_file_path,
+          previous_name: extractFileName(existingProposal.rab_file_path),
+          current_path: updatedProposal.rab_file_path,
+          current_name: extractFileName(updatedProposal.rab_file_path),
+          replaced: Boolean(rabFilePath),
+        },
+      },
+    },
   };
 };
 

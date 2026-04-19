@@ -2576,6 +2576,26 @@ Endpoint untuk mengedit proposal yang sudah ada.
                           submitted_at: null,
                           created_at: "2026-03-07T09:00:00.000Z",
                           updated_at: "2026-03-08T10:00:00.000Z",
+                          file_info: {
+                            proposal_file: {
+                              previous_path:
+                                "https://storage.example.com/proposals/3_1234567890_proposal_lama.pdf",
+                              previous_name: "3_1234567890_proposal_lama.pdf",
+                              current_path:
+                                "https://storage.example.com/proposals/3_1234567890_proposal_lama.pdf",
+                              current_name: "3_1234567890_proposal_lama.pdf",
+                              replaced: false,
+                            },
+                            rab_file: {
+                              previous_path:
+                                "https://storage.example.com/rabs/3_1234567890_rab_lama.pdf",
+                              previous_name: "3_1234567890_rab_lama.pdf",
+                              current_path:
+                                "https://storage.example.com/rabs/3_1234567890_rab_lama.pdf",
+                              current_name: "3_1234567890_rab_lama.pdf",
+                              replaced: false,
+                            },
+                          },
                         },
                       },
                     },
@@ -2598,6 +2618,26 @@ Endpoint untuk mengedit proposal yang sudah ada.
                           submitted_at: "2026-03-08T10:00:00.000Z",
                           created_at: "2026-03-07T09:00:00.000Z",
                           updated_at: "2026-03-08T10:00:00.000Z",
+                          file_info: {
+                            proposal_file: {
+                              previous_path:
+                                "https://storage.example.com/proposals/3_1234567890_proposal_lama.pdf",
+                              previous_name: "3_1234567890_proposal_lama.pdf",
+                              current_path:
+                                "https://storage.example.com/proposals/3_1234567890_proposal.pdf",
+                              current_name: "3_1234567890_proposal.pdf",
+                              replaced: true,
+                            },
+                            rab_file: {
+                              previous_path:
+                                "https://storage.example.com/rabs/3_1234567890_rab_lama.pdf",
+                              previous_name: "3_1234567890_rab_lama.pdf",
+                              current_path:
+                                "https://storage.example.com/rabs/3_1234567890_rab.pdf",
+                              current_name: "3_1234567890_rab.pdf",
+                              replaced: true,
+                            },
+                          },
                         },
                       },
                     },
