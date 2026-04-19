@@ -8,6 +8,7 @@ import {
   deleteProposalController,
   editProposalController,
   getAllProposalsController,
+  getMyProposalsController,
   getProposalByIdController,
   getProposalReviewsController,
   submitProposalController,
@@ -41,6 +42,13 @@ router.get(
     ROLES.REVIEWER_EKSTERNAL,
   ]),
   getAllProposalsController,
+);
+
+router.get(
+  "/proposals/me",
+  authMiddleware,
+  requireRole([ROLES.DOSEN]),
+  getMyProposalsController,
 );
 
 router.get(

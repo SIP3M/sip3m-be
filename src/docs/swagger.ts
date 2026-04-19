@@ -2254,6 +2254,126 @@ Endpoint untuk mengambil daftar proposal dengan pagination.
         },
       },
 
+      "/proposals/me": {
+        get: {
+          tags: ["Proposal"],
+          summary: "Ambil daftar proposal milik dosen yang login",
+          description: `
+Endpoint untuk mengambil daftar proposal milik user yang sedang login (role DOSEN).
+
+**Role akses:**
+- DOSEN
+
+**Catatan:**
+- Jumlah data per halaman tetap **5 data**.
+- Gunakan query \`page\` untuk pagination.
+- Gunakan query \`search\` untuk pencarian berdasarkan judul, skema, atau fakultas.
+          `,
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: "page",
+              in: "query",
+              required: false,
+              schema: {
+                type: "integer",
+                minimum: 1,
+                default: 1,
+              },
+              description: "Nomor halaman (default 1).",
+            },
+            {
+              name: "search",
+              in: "query",
+              required: false,
+              schema: {
+                type: "string",
+                example: "ai",
+              },
+              description: "Pencarian untuk judul, skema, atau fakultas.",
+            },
+          ],
+          responses: {
+            200: {
+              description: "Berhasil mengambil daftar proposal saya",
+              content: {
+                "application/json": {
+                  example: {
+                    message: "Berhasil mengambil daftar proposal saya.",
+                    data: [
+                      {
+                        id: 1,
+                        title: "Penelitian AI untuk Pertanian",
+                        lead_researcher_id: 3,
+                        user: {
+                          name: "Dosen A",
+                          nidn_nip: "0123456789",
+                        },
+                        faculty: "Teknik",
+                        skema: "Penelitian Dasar",
+                        funding_request_amount: 15000000,
+                        status: "DRAFT",
+                        proposal_file_path: null,
+                        rab_file_path: null,
+                        submitted_at: null,
+                        created_at: "2026-03-07T09:00:00.000Z",
+                        updated_at: "2026-03-07T09:00:00.000Z",
+                      },
+                    ],
+                    meta: {
+                      totalData: 4,
+                      totalPages: 1,
+                      currentPage: 1,
+                      limit: 5,
+                    },
+                  },
+                },
+              },
+            },
+            400: {
+              description: "Validasi query gagal",
+              content: {
+                "application/json": {
+                  example: {
+                    message: "Validasi query gagal.",
+                    errors: {
+                      page: ["page minimal 1."],
+                    },
+                  },
+                },
+              },
+            },
+            401: {
+              description: "Unauthorized",
+              content: {
+                "application/json": {
+                  example: { message: "Unauthorized" },
+                },
+              },
+            },
+            403: {
+              description: "Forbidden — role tidak memiliki akses",
+              content: {
+                "application/json": {
+                  example: { message: "Forbidden: insufficient role" },
+                },
+              },
+            },
+            500: {
+              description: "Internal server error",
+              content: {
+                "application/json": {
+                  example: {
+                    message:
+                      "Terjadi kesalahan pada server saat mengambil data proposal saya.",
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+
       "/proposals/{id}": {
         get: {
           tags: ["Proposal"],

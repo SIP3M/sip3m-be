@@ -195,6 +195,86 @@ export const getAllProposals = async ({
   };
 };
 
+export const getMyProposals = async ({
+  userId,
+  page,
+  search,
+}: {
+  userId: number;
+  page: number;
+  search?: string;
+}) => {
+  const skip = (page - 1) * PROPOSALS_PER_PAGE;
+
+  const whereClause: Prisma.proposalsWhereInput = {
+    lead_researcher_id: userId,
+    ...(search
+      ? {
+          OR: [
+            {
+              title: {
+                contains: search,
+                mode: "insensitive",
+              },
+            },
+            {
+              skema: {
+                contains: search,
+                mode: "insensitive",
+              },
+            },
+            {
+              faculty: {
+                contains: search,
+                mode: "insensitive",
+              },
+            },
+          ],
+        }
+      : {}),
+  };
+
+  const [totalData, data] = await prisma.$transaction([
+    prisma.proposals.count({ where: whereClause }),
+    prisma.proposals.findMany({
+      where: whereClause,
+      select: {
+        id: true,
+        title: true,
+        lead_researcher_id: true,
+        faculty: true,
+        funding_request_amount: true,
+        status: true,
+        skema: true,
+        proposal_file_path: true,
+        rab_file_path: true,
+        submitted_at: true,
+        created_at: true,
+        updated_at: true,
+        user: {
+          select: {
+            name: true,
+            nidn_nip: true,
+          },
+        },
+      },
+      orderBy: { created_at: "desc" },
+      skip,
+      take: PROPOSALS_PER_PAGE,
+    }),
+  ]);
+
+  return {
+    data,
+    meta: {
+      totalData,
+      totalPages: Math.max(1, Math.ceil(totalData / PROPOSALS_PER_PAGE)),
+      currentPage: page,
+      limit: PROPOSALS_PER_PAGE,
+    },
+  };
+};
+
 export const getProposalById = async (proposalId: number) => {
   const proposal = await prisma.proposals.findUnique({
     where: { id: proposalId },
