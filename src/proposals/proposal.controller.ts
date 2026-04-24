@@ -4,6 +4,7 @@ import { HttpError } from "../common/errors/http-error";
 import type { ProposalStatus } from "../generated/prisma/enums";
 import {
   createProposalSchema,
+  evaluateProposalSchema,
   editProposalSchema,
   updateProposalStatusSchema,
   assignReviewerSchema,
@@ -17,6 +18,7 @@ import {
   getMyProposals as getMyProposalsService,
   getProposalById,
   getProposalReviews,
+  evaluateProposal as evaluateProposalService,
   submitProposal,
   updateProposalStatus,
   assignReviewersService,
@@ -394,6 +396,48 @@ export const getProposalReviewsController = async (
     console.error("[GET_PROPOSAL_REVIEWS_ERROR]", error);
     return res.status(500).json({
       message: "Terjadi kesalahan pada server saat mengambil riwayat review.",
+    });
+  }
+};
+
+export const evaluateProposalController = async (
+  req: AuthenticatedRequest,
+  res: Response,
+): Promise<Response> => {
+  try {
+    if (!req.user?.userId) {
+      throw new HttpError("Unauthorized", 401);
+    }
+
+    const proposalId = Number(req.params.id);
+    if (Number.isNaN(proposalId) || proposalId <= 0) {
+      return res.status(400).json({ message: "ID proposal tidak valid." });
+    }
+
+    const validation = evaluateProposalSchema.safeParse(req.body);
+    if (!validation.success) {
+      return res.status(400).json({
+        message: "Validasi data gagal.",
+        errors: validation.error.flatten().fieldErrors,
+      });
+    }
+
+    const reviewerId = Number(req.user.userId);
+    const result = await evaluateProposalService(
+      proposalId,
+      reviewerId,
+      validation.data,
+    );
+
+    return res.status(200).json(result);
+  } catch (error) {
+    if (error instanceof HttpError) {
+      return res.status(error.statusCode).json({ message: error.message });
+    }
+
+    console.error("[EVALUATE_PROPOSAL_ERROR]", error);
+    return res.status(500).json({
+      message: "Terjadi kesalahan pada server saat menilai proposal.",
     });
   }
 };

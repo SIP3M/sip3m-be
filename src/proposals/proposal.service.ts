@@ -6,6 +6,7 @@ import { ProposalStatus } from "../generated/prisma/enums";
 import type { ProposalFiles } from "./proposal.types";
 import type {
   CreateProposalInput,
+  EvaluateProposalInput,
   EditProposalInput,
   UpdateProposalStatusInput,
 } from "./proposal.validation";
@@ -718,6 +719,181 @@ export const assignReviewersService = async (
   return {
     message:
       "Reviewer berhasil ditugaskan dan status proposal diubah menjadi UNDER_REVIEW.",
+    data: result,
+  };
+};
+
+const calculateTotalScore = (input: {
+  score_perumusan: number;
+  score_tinjauan: number;
+  score_metode: number;
+  score_anggaran: number;
+  score_luaran: number;
+}): number => {
+  const total =
+    input.score_perumusan +
+    input.score_tinjauan +
+    input.score_metode +
+    input.score_anggaran +
+    input.score_luaran;
+
+  return Number(total.toFixed(2));
+};
+
+export const evaluateProposal = async (
+  proposalId: number,
+  reviewerId: number,
+  input: EvaluateProposalInput,
+) => {
+  const proposal = await prisma.proposals.findUnique({
+    where: { id: proposalId },
+    select: {
+      id: true,
+      title: true,
+      status: true,
+      lead_researcher_id: true,
+    },
+  });
+
+  if (!proposal) {
+    throw new HttpError("Proposal tidak ditemukan.", 404);
+  }
+
+  const assignment = await prisma.proposalReviewers.findFirst({
+    where: {
+      proposal_id: proposalId,
+      reviewer_id: reviewerId,
+    },
+    select: { id: true },
+  });
+
+  if (!assignment) {
+    throw new HttpError(
+      "Anda tidak ditugaskan untuk mereview proposal ini.",
+      403,
+    );
+  }
+
+  const existingReview = await prisma.proposalReviews.findFirst({
+    where: {
+      proposal_id: proposalId,
+      reviewer_id: reviewerId,
+    },
+  });
+
+  if (input.is_draft) {
+    const reviewStatus = existingReview?.status ?? ProposalStatus.UNDER_REVIEW;
+
+    const draftData: Prisma.ProposalReviewsUncheckedCreateInput = {
+      proposal_id: proposalId,
+      reviewer_id: reviewerId,
+      status: reviewStatus,
+      notes: input.notes ?? existingReview?.notes ?? "",
+      score_perumusan:
+        input.score_perumusan ?? existingReview?.score_perumusan ?? null,
+      score_tinjauan:
+        input.score_tinjauan ?? existingReview?.score_tinjauan ?? null,
+      score_metode: input.score_metode ?? existingReview?.score_metode ?? null,
+      score_anggaran:
+        input.score_anggaran ?? existingReview?.score_anggaran ?? null,
+      score_luaran: input.score_luaran ?? existingReview?.score_luaran ?? null,
+      total_score:
+        input.score_perumusan !== undefined &&
+        input.score_tinjauan !== undefined &&
+        input.score_metode !== undefined &&
+        input.score_anggaran !== undefined &&
+        input.score_luaran !== undefined
+          ? calculateTotalScore({
+              score_perumusan: input.score_perumusan,
+              score_tinjauan: input.score_tinjauan,
+              score_metode: input.score_metode,
+              score_anggaran: input.score_anggaran,
+              score_luaran: input.score_luaran,
+            })
+          : (existingReview?.total_score ?? null),
+      kekuatan_proposal:
+        input.kekuatan_proposal ?? existingReview?.kekuatan_proposal ?? null,
+      kelemahan_proposal:
+        input.kelemahan_proposal ?? existingReview?.kelemahan_proposal ?? null,
+      rekomendasi_akhir:
+        input.rekomendasi_akhir ?? existingReview?.rekomendasi_akhir ?? null,
+    };
+
+    const savedDraft = existingReview
+      ? await prisma.proposalReviews.update({
+          where: { id: existingReview.id },
+          data: draftData,
+        })
+      : await prisma.proposalReviews.create({ data: draftData });
+
+    return {
+      message: "Draft penilaian berhasil disimpan.",
+      data: savedDraft,
+    };
+  }
+
+  if (proposal.status !== ProposalStatus.UNDER_REVIEW) {
+    throw new HttpError(
+      `Proposal belum dapat disubmit review. Status saat ini: ${proposal.status}.`,
+      400,
+    );
+  }
+
+  const finalTotalScore = calculateTotalScore({
+    score_perumusan: input.score_perumusan,
+    score_tinjauan: input.score_tinjauan,
+    score_metode: input.score_metode,
+    score_anggaran: input.score_anggaran,
+    score_luaran: input.score_luaran,
+  });
+
+  const result = await prisma.$transaction(async (tx) => {
+    const reviewData: Prisma.ProposalReviewsUncheckedCreateInput = {
+      proposal_id: proposalId,
+      reviewer_id: reviewerId,
+      status: input.status,
+      notes: input.notes ?? "",
+      score_perumusan: input.score_perumusan,
+      score_tinjauan: input.score_tinjauan,
+      score_metode: input.score_metode,
+      score_anggaran: input.score_anggaran,
+      score_luaran: input.score_luaran,
+      total_score: finalTotalScore,
+      kekuatan_proposal: input.kekuatan_proposal,
+      kelemahan_proposal: input.kelemahan_proposal,
+      rekomendasi_akhir: input.rekomendasi_akhir,
+    };
+
+    const review = existingReview
+      ? await tx.proposalReviews.update({
+          where: { id: existingReview.id },
+          data: reviewData,
+        })
+      : await tx.proposalReviews.create({ data: reviewData });
+
+    const updatedProposal = await tx.proposals.update({
+      where: { id: proposalId },
+      data: {
+        status: input.status,
+      },
+    });
+
+    await tx.notifications.create({
+      data: {
+        user_id: proposal.lead_researcher_id,
+        title: "Proposal Sudah Direview",
+        message: `Proposal "${proposal.title}" telah direview reviewer dengan hasil ${input.status}.`,
+      },
+    });
+
+    return {
+      review,
+      proposal: updatedProposal,
+    };
+  });
+
+  return {
+    message: "Penilaian proposal berhasil disubmit.",
     data: result,
   };
 };

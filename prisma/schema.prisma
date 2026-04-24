@@ -89,6 +89,17 @@ model ProposalReviews {
   notes       String?        @db.Text
   created_at  DateTime       @default(now())
 
+  // perhitungan nilai
+  score_perumusan   Float? 
+  score_tinjauan  Float? 
+  score_metode    Float? 
+  score_anggaran   Float? 
+  score_luaran      Float? 
+  total_score  Float? 
+  kekuatan_proposal String? @db.Text
+  kelemahan_proposal String? @db.Text
+  rekomendasi_akhir  String? @db.VarChar(50)
+
   proposal proposals @relation(fields: [proposal_id], references: [id])
   reviewer users     @relation(fields: [reviewer_id], references: [id])
 }

@@ -7,6 +7,7 @@ import {
   createProposalController,
   deleteProposalController,
   editProposalController,
+  evaluateProposalController,
   getAllProposalsController,
   getMyProposalsController,
   getProposalByIdController,
@@ -120,6 +121,13 @@ router.post(
   authMiddleware,
   requireRole([ROLES.ADMIN_LPPM, ROLES.STAFF_LPPM]),
   assignReviewersController,
+);
+
+router.put(
+  "/proposals/:id/evaluate",
+  authMiddleware,
+  requireRole([ROLES.REVIEWER, ROLES.REVIEWER_EKSTERNAL]),
+  evaluateProposalController,
 );
 
 router.get(
