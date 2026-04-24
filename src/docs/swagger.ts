@@ -140,6 +140,52 @@ export const swaggerSpec = swaggerJSDoc({
               type: ["string", "null"],
               example: "Proposal sudah memenuhi semua kriteria.",
             },
+            score_perumusan: {
+              type: ["number", "null"],
+              example: 85,
+              description: "Skor aspek perumusan masalah (0-100).",
+            },
+            score_tinjauan: {
+              type: ["number", "null"],
+              example: 80,
+              description: "Skor aspek tinjauan pustaka (0-100).",
+            },
+            score_metode: {
+              type: ["number", "null"],
+              example: 88,
+              description: "Skor aspek metode penelitian/pengabdian (0-100).",
+            },
+            score_anggaran: {
+              type: ["number", "null"],
+              example: 82,
+              description: "Skor aspek anggaran (0-100).",
+            },
+            score_luaran: {
+              type: ["number", "null"],
+              example: 90,
+              description: "Skor aspek luaran (0-100).",
+            },
+            total_score: {
+              type: ["number", "null"],
+              example: 425,
+              description:
+                "Total skor dari seluruh komponen penilaian (penjumlahan).",
+            },
+            kekuatan_proposal: {
+              type: ["string", "null"],
+              example:
+                "Topik relevan, rumusan jelas, dan metode cukup kuat untuk menjawab tujuan.",
+            },
+            kelemahan_proposal: {
+              type: ["string", "null"],
+              example:
+                "Rencana mitigasi risiko masih perlu dirinci lebih operasional.",
+            },
+            rekomendasi_akhir: {
+              type: ["string", "null"],
+              example:
+                "Layak didanai dengan revisi minor pada bagian metodologi.",
+            },
             created_at: {
               type: "string",
               format: "date-time",
@@ -3373,6 +3419,349 @@ Endpoint untuk mengubah status proposal oleh Admin atau Reviewer.
         },
       },
 
+      "/proposals/{id}/evaluate": {
+        put: {
+          tags: ["Proposal"],
+          summary: "Simpan draft / submit penilaian proposal oleh reviewer",
+          description: `
+Endpoint untuk reviewer melakukan penilaian proposal.
+
+**Role akses:**
+- REVIEWER
+- REVIEWER_EKSTERNAL
+
+**Mode penilaian:**
+- 'is_draft: true' → simpan draft (boleh parsial, tidak mengubah status proposal).
+- 'is_draft: false' → submit final (semua field penilaian wajib, status proposal berubah sesuai keputusan reviewer).
+
+**Keputusan submit yang diperbolehkan:**
+- ACCEPTED
+- REJECTED
+- REVISION
+          `,
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: "id",
+              in: "path",
+              required: true,
+              description: "ID proposal",
+              schema: { type: "integer", example: 1 },
+            },
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  oneOf: [
+                    {
+                      type: "object",
+                      required: ["is_draft"],
+                      properties: {
+                        is_draft: {
+                          type: "boolean",
+                          enum: [true],
+                          example: true,
+                        },
+                        status: {
+                          type: "string",
+                          enum: ["ACCEPTED", "REJECTED", "REVISION"],
+                          example: "REVISION",
+                        },
+                        score_perumusan: {
+                          type: "number",
+                          minimum: 0,
+                          maximum: 100,
+                          example: 80,
+                        },
+                        score_tinjauan: {
+                          type: "number",
+                          minimum: 0,
+                          maximum: 100,
+                          example: 78,
+                        },
+                        score_metode: {
+                          type: "number",
+                          minimum: 0,
+                          maximum: 100,
+                          example: 82,
+                        },
+                        score_anggaran: {
+                          type: "number",
+                          minimum: 0,
+                          maximum: 100,
+                          example: 76,
+                        },
+                        score_luaran: {
+                          type: "number",
+                          minimum: 0,
+                          maximum: 100,
+                          example: 84,
+                        },
+                        kekuatan_proposal: {
+                          type: "string",
+                          example:
+                            "Topik relevan dan rancangan kegiatan cukup sistematis.",
+                        },
+                        kelemahan_proposal: {
+                          type: "string",
+                          example:
+                            "Bagian rencana evaluasi luaran perlu diperjelas.",
+                        },
+                        rekomendasi_akhir: {
+                          type: "string",
+                          example: "Revisi minor sebelum pendanaan.",
+                        },
+                        notes: {
+                          type: "string",
+                          example: "Draft awal penilaian reviewer.",
+                        },
+                      },
+                    },
+                    {
+                      type: "object",
+                      required: [
+                        "is_draft",
+                        "status",
+                        "score_perumusan",
+                        "score_tinjauan",
+                        "score_metode",
+                        "score_anggaran",
+                        "score_luaran",
+                        "kekuatan_proposal",
+                        "kelemahan_proposal",
+                        "rekomendasi_akhir",
+                      ],
+                      properties: {
+                        is_draft: {
+                          type: "boolean",
+                          enum: [false],
+                          example: false,
+                        },
+                        status: {
+                          type: "string",
+                          enum: ["ACCEPTED", "REJECTED", "REVISION"],
+                          example: "ACCEPTED",
+                        },
+                        score_perumusan: {
+                          type: "number",
+                          minimum: 0,
+                          maximum: 100,
+                          example: 90,
+                        },
+                        score_tinjauan: {
+                          type: "number",
+                          minimum: 0,
+                          maximum: 100,
+                          example: 88,
+                        },
+                        score_metode: {
+                          type: "number",
+                          minimum: 0,
+                          maximum: 100,
+                          example: 92,
+                        },
+                        score_anggaran: {
+                          type: "number",
+                          minimum: 0,
+                          maximum: 100,
+                          example: 85,
+                        },
+                        score_luaran: {
+                          type: "number",
+                          minimum: 0,
+                          maximum: 100,
+                          example: 89,
+                        },
+                        kekuatan_proposal: {
+                          type: "string",
+                          example:
+                            "Kebaruan topik kuat, metodologi jelas, dan luaran terukur.",
+                        },
+                        kelemahan_proposal: {
+                          type: "string",
+                          example:
+                            "Timeline implementasi perlu penajaman pada fase akhir.",
+                        },
+                        rekomendasi_akhir: {
+                          type: "string",
+                          example: "Layak didanai.",
+                        },
+                        notes: {
+                          type: "string",
+                          example: "Secara keseluruhan proposal sangat baik.",
+                        },
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          },
+          responses: {
+            200: {
+              description:
+                "Draft berhasil disimpan atau penilaian berhasil disubmit",
+              content: {
+                "application/json": {
+                  examples: {
+                    draftSaved: {
+                      summary: "Simpan draft penilaian",
+                      value: {
+                        message: "Draft penilaian berhasil disimpan.",
+                        data: {
+                          id: 10,
+                          proposal_id: 1,
+                          reviewer_id: 5,
+                          status: "UNDER_REVIEW",
+                          notes: "Draft awal penilaian reviewer.",
+                          score_perumusan: 80,
+                          score_tinjauan: 78,
+                          score_metode: 82,
+                          score_anggaran: 76,
+                          score_luaran: 84,
+                          total_score: 400,
+                          kekuatan_proposal:
+                            "Topik relevan dan rancangan kegiatan cukup sistematis.",
+                          kelemahan_proposal:
+                            "Bagian rencana evaluasi luaran perlu diperjelas.",
+                          rekomendasi_akhir: "Revisi minor sebelum pendanaan.",
+                          created_at: "2026-03-10T09:00:00.000Z",
+                        },
+                      },
+                    },
+                    submitted: {
+                      summary: "Submit penilaian final",
+                      value: {
+                        message: "Penilaian proposal berhasil disubmit.",
+                        data: {
+                          review: {
+                            id: 10,
+                            proposal_id: 1,
+                            reviewer_id: 5,
+                            status: "ACCEPTED",
+                            notes: "Secara keseluruhan proposal sangat baik.",
+                            score_perumusan: 90,
+                            score_tinjauan: 88,
+                            score_metode: 92,
+                            score_anggaran: 85,
+                            score_luaran: 89,
+                            total_score: 444,
+                            kekuatan_proposal:
+                              "Kebaruan topik kuat, metodologi jelas, dan luaran terukur.",
+                            kelemahan_proposal:
+                              "Timeline implementasi perlu penajaman pada fase akhir.",
+                            rekomendasi_akhir: "Layak didanai.",
+                            created_at: "2026-03-10T09:00:00.000Z",
+                          },
+                          proposal: {
+                            id: 1,
+                            title: "Penelitian AI untuk Pertanian",
+                            lead_researcher_id: 3,
+                            faculty: "Teknik",
+                            skema: "Penelitian Dasar",
+                            funding_request_amount: 15000000,
+                            status: "ACCEPTED",
+                            proposal_file_path:
+                              "https://storage.example.com/proposals/3_1234567890_proposal.pdf",
+                            rab_file_path:
+                              "https://storage.example.com/rabs/3_1234567890_rab.pdf",
+                            submitted_at: "2026-03-07T10:00:00.000Z",
+                            created_at: "2026-03-07T09:00:00.000Z",
+                            updated_at: "2026-03-10T10:00:00.000Z",
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            400: {
+              description:
+                "ID tidak valid, validasi gagal, atau status proposal belum dapat direview",
+              content: {
+                "application/json": {
+                  examples: {
+                    invalidId: {
+                      summary: "ID proposal tidak valid",
+                      value: { message: "ID proposal tidak valid." },
+                    },
+                    validationFail: {
+                      summary: "Validasi body gagal",
+                      value: {
+                        message: "Validasi data gagal.",
+                        errors: {
+                          status: [
+                            "Status hasil review tidak valid. Pilihan: ACCEPTED, REJECTED, REVISION.",
+                          ],
+                        },
+                      },
+                    },
+                    proposalStateInvalid: {
+                      summary: "Proposal belum bisa submit review",
+                      value: {
+                        message:
+                          "Proposal belum dapat disubmit review. Status saat ini: ADMIN_VERIFIED.",
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            401: {
+              description: "Unauthorized",
+              content: {
+                "application/json": {
+                  example: { message: "Unauthorized" },
+                },
+              },
+            },
+            403: {
+              description:
+                "Forbidden — reviewer tidak ditugaskan atau role tidak memiliki akses",
+              content: {
+                "application/json": {
+                  examples: {
+                    notAssigned: {
+                      summary: "Reviewer tidak ditugaskan",
+                      value: {
+                        message:
+                          "Anda tidak ditugaskan untuk mereview proposal ini.",
+                      },
+                    },
+                    insufficientRole: {
+                      summary: "Role tidak memiliki akses endpoint",
+                      value: { message: "Forbidden: insufficient role" },
+                    },
+                  },
+                },
+              },
+            },
+            404: {
+              description: "Proposal tidak ditemukan",
+              content: {
+                "application/json": {
+                  example: { message: "Proposal tidak ditemukan." },
+                },
+              },
+            },
+            500: {
+              description: "Internal server error",
+              content: {
+                "application/json": {
+                  example: {
+                    message:
+                      "Terjadi kesalahan pada server saat menilai proposal.",
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+
       "/proposals/{id}/reviews": {
         get: {
           tags: ["Proposal"],
@@ -3417,6 +3806,15 @@ Endpoint untuk mengambil riwayat review sebuah proposal.
                         status: "ADMIN_VERIFIED",
                         notes:
                           "Proposal sudah memenuhi persyaratan administratif.",
+                        score_perumusan: null,
+                        score_tinjauan: null,
+                        score_metode: null,
+                        score_anggaran: null,
+                        score_luaran: null,
+                        total_score: null,
+                        kekuatan_proposal: null,
+                        kelemahan_proposal: null,
+                        rekomendasi_akhir: null,
                         created_at: "2026-03-08T11:00:00.000Z",
                         reviewer: {
                           id: 2,
@@ -3430,6 +3828,17 @@ Endpoint untuk mengambil riwayat review sebuah proposal.
                         reviewer_id: 5,
                         status: "UNDER_REVIEW",
                         notes: "",
+                        score_perumusan: 80,
+                        score_tinjauan: 78,
+                        score_metode: 82,
+                        score_anggaran: 76,
+                        score_luaran: 84,
+                        total_score: 400,
+                        kekuatan_proposal:
+                          "Topik relevan dan rancangan kegiatan cukup sistematis.",
+                        kelemahan_proposal:
+                          "Bagian rencana evaluasi luaran perlu diperjelas.",
+                        rekomendasi_akhir: "Revisi minor sebelum pendanaan.",
                         created_at: "2026-03-08T14:00:00.000Z",
                         reviewer: {
                           id: 5,
@@ -3444,6 +3853,17 @@ Endpoint untuk mengambil riwayat review sebuah proposal.
                         status: "ACCEPTED",
                         notes:
                           "Proposal sudah memenuhi semua kriteria penilaian.",
+                        score_perumusan: 90,
+                        score_tinjauan: 88,
+                        score_metode: 92,
+                        score_anggaran: 85,
+                        score_luaran: 89,
+                        total_score: 444,
+                        kekuatan_proposal:
+                          "Kebaruan topik kuat, metodologi jelas, dan luaran terukur.",
+                        kelemahan_proposal:
+                          "Timeline implementasi perlu penajaman pada fase akhir.",
+                        rekomendasi_akhir: "Layak didanai.",
                         created_at: "2026-03-09T10:00:00.000Z",
                         reviewer: {
                           id: 5,
