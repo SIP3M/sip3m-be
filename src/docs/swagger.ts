@@ -2107,9 +2107,6 @@ Endpoint untuk membuat proposal penelitian baru.
             },
           },
         },
-      },
-
-      "/getAllProposals": {
         get: {
           tags: ["Proposal"],
           summary: "Ambil daftar proposal (pagination)",
@@ -2126,6 +2123,7 @@ Endpoint untuk mengambil daftar proposal dengan pagination.
 - Jumlah data per halaman tetap **5 data**.
 - Gunakan query \`page\` untuk berpindah halaman.
 - Gunakan query \`search\` untuk mencari berdasarkan judul, skema, fakultas, nama dosen, atau NIDN/NIP.
+- Gunakan query \`status\` untuk filter status proposal (misalnya \`ADMIN_VERIFIED\` saat proses assign reviewer).
 - Membutuhkan autentikasi JWT.
           `,
           security: [{ bearerAuth: [] }],
@@ -2151,6 +2149,174 @@ Endpoint untuk mengambil daftar proposal dengan pagination.
               },
               description:
                 "Kata kunci pencarian untuk judul, skema, fakultas, nama dosen, atau NIDN/NIP.",
+            },
+            {
+              name: "status",
+              in: "query",
+              required: false,
+              schema: {
+                type: "string",
+                enum: [
+                  "DRAFT",
+                  "SUBMITTED",
+                  "ADMIN_VERIFIED",
+                  "UNDER_REVIEW",
+                  "REVISION",
+                  "ACCEPTED",
+                  "REJECTED",
+                ],
+                example: "ADMIN_VERIFIED",
+              },
+              description: "Filter berdasarkan status proposal.",
+            },
+          ],
+          responses: {
+            200: {
+              description: "Berhasil mengambil daftar proposal",
+              content: {
+                "application/json": {
+                  example: {
+                    message: "Berhasil mengambil daftar proposal.",
+                    data: [
+                      {
+                        id: 1,
+                        title: "Penelitian AI untuk Pertanian",
+                        lead_researcher_id: 3,
+                        user: {
+                          name: "Dosen A",
+                          nidn_nip: "0123456789",
+                        },
+                        faculty: "Teknik",
+                        skema: "Penelitian Dasar",
+                        funding_request_amount: 15000000,
+                        status: "SUBMITTED",
+                        proposal_file_path:
+                          "https://storage.example.com/proposals/3_1234567890_proposal.pdf",
+                        rab_file_path:
+                          "https://storage.example.com/rabs/3_1234567890_rab.pdf",
+                        submitted_at: "2026-03-07T10:00:00.000Z",
+                        created_at: "2026-03-07T09:00:00.000Z",
+                        updated_at: "2026-03-07T10:00:00.000Z",
+                      },
+                    ],
+                    meta: {
+                      totalData: 12,
+                      totalPages: 3,
+                      currentPage: 1,
+                      limit: 5,
+                    },
+                  },
+                },
+              },
+            },
+            400: {
+              description: "Validasi query gagal",
+              content: {
+                "application/json": {
+                  example: {
+                    message: "Validasi query gagal.",
+                    errors: {
+                      page: ["page minimal 1."],
+                    },
+                  },
+                },
+              },
+            },
+            401: {
+              description: "Unauthorized",
+              content: {
+                "application/json": {
+                  example: { message: "Unauthorized" },
+                },
+              },
+            },
+            403: {
+              description: "Forbidden — role tidak memiliki akses",
+              content: {
+                "application/json": {
+                  example: { message: "Forbidden: insufficient role" },
+                },
+              },
+            },
+            500: {
+              description: "Internal server error",
+              content: {
+                "application/json": {
+                  example: {
+                    message:
+                      "Terjadi kesalahan pada server saat mengambil data proposal.",
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+
+      "/getAllProposals": {
+        get: {
+          deprecated: true,
+          tags: ["Proposal"],
+          summary:
+            "[Deprecated] Ambil daftar proposal (gunakan GET /proposals)",
+          description: `
+Endpoint untuk mengambil daftar proposal dengan pagination.
+
+**Role akses:**
+- ADMIN_LPPM
+- STAFF_LPPM
+- REVIEWER
+- REVIEWER_EKSTERNAL
+
+**Catatan:**
+- Jumlah data per halaman tetap **5 data**.
+- Gunakan query \`page\` untuk berpindah halaman.
+- Gunakan query \`search\` untuk mencari berdasarkan judul, skema, fakultas, nama dosen, atau NIDN/NIP.
+- Gunakan query \`status\` untuk filter status proposal (misalnya \`ADMIN_VERIFIED\` saat proses assign reviewer).
+- Membutuhkan autentikasi JWT.
+          `,
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: "page",
+              in: "query",
+              required: false,
+              schema: {
+                type: "integer",
+                minimum: 1,
+                default: 1,
+              },
+              description: "Nomor halaman (default 1).",
+            },
+            {
+              name: "search",
+              in: "query",
+              required: false,
+              schema: {
+                type: "string",
+                example: "dosen a",
+              },
+              description:
+                "Kata kunci pencarian untuk judul, skema, fakultas, nama dosen, atau NIDN/NIP.",
+            },
+            {
+              name: "status",
+              in: "query",
+              required: false,
+              schema: {
+                type: "string",
+                enum: [
+                  "DRAFT",
+                  "SUBMITTED",
+                  "ADMIN_VERIFIED",
+                  "UNDER_REVIEW",
+                  "REVISION",
+                  "ACCEPTED",
+                  "REJECTED",
+                ],
+                example: "ADMIN_VERIFIED",
+              },
+              description: "Filter berdasarkan status proposal.",
             },
           ],
           responses: {
@@ -2268,6 +2434,7 @@ Endpoint untuk mengambil daftar proposal milik user yang sedang login (role DOSE
 - Jumlah data per halaman tetap **5 data**.
 - Gunakan query \`page\` untuk pagination.
 - Gunakan query \`search\` untuk pencarian berdasarkan judul, skema, atau fakultas.
+- Gunakan query \`status\` untuk filter status proposal milik dosen.
           `,
           security: [{ bearerAuth: [] }],
           parameters: [
@@ -2291,6 +2458,25 @@ Endpoint untuk mengambil daftar proposal milik user yang sedang login (role DOSE
                 example: "ai",
               },
               description: "Pencarian untuk judul, skema, atau fakultas.",
+            },
+            {
+              name: "status",
+              in: "query",
+              required: false,
+              schema: {
+                type: "string",
+                enum: [
+                  "DRAFT",
+                  "SUBMITTED",
+                  "ADMIN_VERIFIED",
+                  "UNDER_REVIEW",
+                  "REVISION",
+                  "ACCEPTED",
+                  "REJECTED",
+                ],
+                example: "DRAFT",
+              },
+              description: "Filter berdasarkan status proposal.",
             },
           ],
           responses: {

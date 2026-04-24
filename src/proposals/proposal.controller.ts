@@ -1,6 +1,7 @@
 import { Response } from "express";
 import { AuthenticatedRequest } from "../auth/types/auth.jwt.types";
 import { HttpError } from "../common/errors/http-error";
+import type { ProposalStatus } from "../generated/prisma/enums";
 import {
   createProposalSchema,
   editProposalSchema,
@@ -79,6 +80,7 @@ export const getAllProposalsController = async (
     const proposals = await getAllProposalsService({
       page: queryValidation.data.page,
       search: queryValidation.data.search,
+      status: queryValidation.data.status as ProposalStatus | undefined,
     });
 
     return res.status(200).json({
@@ -121,6 +123,7 @@ export const getMyProposalsController = async (
       userId,
       page: queryValidation.data.page,
       search: queryValidation.data.search,
+      status: queryValidation.data.status as ProposalStatus | undefined,
     });
 
     return res.status(200).json({

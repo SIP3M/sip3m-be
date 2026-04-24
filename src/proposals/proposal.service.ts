@@ -114,56 +114,61 @@ export const createProposal = async (
 export const getAllProposals = async ({
   page,
   search,
+  status,
 }: {
   page: number;
   search?: string;
+  status?: ProposalStatus;
 }) => {
   const skip = (page - 1) * PROPOSALS_PER_PAGE;
 
-  const whereClause: Prisma.proposalsWhereInput = search
-    ? {
-        OR: [
-          {
-            title: {
-              contains: search,
-              mode: "insensitive",
+  const whereClause: Prisma.proposalsWhereInput = {
+    ...(status ? { status } : {}),
+    ...(search
+      ? {
+          OR: [
+            {
+              title: {
+                contains: search,
+                mode: "insensitive",
+              },
             },
-          },
-          {
-            skema: {
-              contains: search,
-              mode: "insensitive",
+            {
+              skema: {
+                contains: search,
+                mode: "insensitive",
+              },
             },
-          },
-          {
-            faculty: {
-              contains: search,
-              mode: "insensitive",
+            {
+              faculty: {
+                contains: search,
+                mode: "insensitive",
+              },
             },
-          },
-          {
-            user: {
-              is: {
-                name: {
-                  contains: search,
-                  mode: "insensitive",
+            {
+              user: {
+                is: {
+                  name: {
+                    contains: search,
+                    mode: "insensitive",
+                  },
                 },
               },
             },
-          },
-          {
-            user: {
-              is: {
-                nidn_nip: {
-                  contains: search,
-                  mode: "insensitive",
+            {
+              user: {
+                is: {
+                  nidn_nip: {
+                    contains: search,
+                    mode: "insensitive",
+                  },
                 },
               },
             },
-          },
-        ],
-      }
-    : {};
+          ],
+        }
+      : {}),
+  };
 
   const [totalData, data] = await prisma.$transaction([
     prisma.proposals.count({ where: whereClause }),
@@ -210,15 +215,18 @@ export const getMyProposals = async ({
   userId,
   page,
   search,
+  status,
 }: {
   userId: number;
   page: number;
   search?: string;
+  status?: ProposalStatus;
 }) => {
   const skip = (page - 1) * PROPOSALS_PER_PAGE;
 
   const whereClause: Prisma.proposalsWhereInput = {
     lead_researcher_id: userId,
+    ...(status ? { status } : {}),
     ...(search
       ? {
           OR: [

@@ -33,6 +33,19 @@ router.post(
 );
 
 router.get(
+  "/proposals",
+  authMiddleware,
+  requireRole([
+    ROLES.ADMIN_LPPM,
+    ROLES.STAFF_LPPM,
+    ROLES.REVIEWER,
+    ROLES.REVIEWER_EKSTERNAL,
+  ]),
+  getAllProposalsController,
+);
+
+// Deprecated alias (backward compatibility)
+router.get(
   "/getAllProposals",
   authMiddleware,
   requireRole([
