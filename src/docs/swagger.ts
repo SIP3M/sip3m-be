@@ -2606,6 +2606,153 @@ Endpoint untuk mengambil daftar proposal milik user yang sedang login (role DOSE
         },
       },
 
+      "/proposals/assigned": {
+        get: {
+          tags: ["Proposal"],
+          summary: "Ambil daftar tugas proposal reviewer yang login",
+          description: `
+Endpoint untuk mengambil daftar proposal yang **ditugaskan** ke reviewer yang sedang login.
+
+**Role akses:**
+- REVIEWER
+- REVIEWER_EKSTERNAL
+
+**Catatan:**
+- Jumlah data per halaman tetap **5 data**.
+- Secara default hanya menampilkan proposal dengan status \`UNDER_REVIEW\`.
+- Query \`status\` bisa dipakai jika perlu melihat assignment pada status lain.
+- Data cocok untuk kebutuhan tabel FE reviewer (judul penelitian/proposal, file proposal, file RAB, peneliti).
+          `,
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: "page",
+              in: "query",
+              required: false,
+              schema: {
+                type: "integer",
+                minimum: 1,
+                default: 1,
+              },
+              description: "Nomor halaman (default 1).",
+            },
+            {
+              name: "search",
+              in: "query",
+              required: false,
+              schema: {
+                type: "string",
+                example: "ai",
+              },
+              description:
+                "Pencarian untuk judul, skema, fakultas, nama dosen, atau NIDN/NIP.",
+            },
+            {
+              name: "status",
+              in: "query",
+              required: false,
+              schema: {
+                type: "string",
+                enum: [
+                  "DRAFT",
+                  "SUBMITTED",
+                  "ADMIN_VERIFIED",
+                  "UNDER_REVIEW",
+                  "REVISION",
+                  "ACCEPTED",
+                  "REJECTED",
+                ],
+                example: "UNDER_REVIEW",
+              },
+              description:
+                "Filter status proposal. Jika tidak dikirim, default `UNDER_REVIEW`.",
+            },
+          ],
+          responses: {
+            200: {
+              description: "Berhasil mengambil daftar tugas proposal reviewer",
+              content: {
+                "application/json": {
+                  example: {
+                    message:
+                      "Berhasil mengambil daftar proposal tugas reviewer.",
+                    data: [
+                      {
+                        id: 21,
+                        title: "Penelitian AI untuk Pertanian",
+                        lead_researcher_id: 3,
+                        user: {
+                          name: "Dosen A",
+                          nidn_nip: "0123456789",
+                        },
+                        faculty: "Teknik",
+                        skema: "Penelitian Dasar",
+                        funding_request_amount: 15000000,
+                        status: "UNDER_REVIEW",
+                        proposal_file_path:
+                          "https://storage.example.com/proposals/3_1234567890_proposal.pdf",
+                        rab_file_path:
+                          "https://storage.example.com/rabs/3_1234567890_rab.pdf",
+                        submitted_at: "2026-03-07T10:00:00.000Z",
+                        assigned_at: "2026-03-08T09:30:00.000Z",
+                        created_at: "2026-03-07T09:00:00.000Z",
+                        updated_at: "2026-03-08T09:35:00.000Z",
+                      },
+                    ],
+                    meta: {
+                      totalData: 4,
+                      totalPages: 1,
+                      currentPage: 1,
+                      limit: 5,
+                    },
+                  },
+                },
+              },
+            },
+            400: {
+              description: "Validasi query gagal",
+              content: {
+                "application/json": {
+                  example: {
+                    message: "Validasi query gagal.",
+                    errors: {
+                      page: ["page minimal 1."],
+                    },
+                  },
+                },
+              },
+            },
+            401: {
+              description: "Unauthorized",
+              content: {
+                "application/json": {
+                  example: { message: "Unauthorized" },
+                },
+              },
+            },
+            403: {
+              description: "Forbidden — role tidak memiliki akses",
+              content: {
+                "application/json": {
+                  example: { message: "Forbidden: insufficient role" },
+                },
+              },
+            },
+            500: {
+              description: "Internal server error",
+              content: {
+                "application/json": {
+                  example: {
+                    message:
+                      "Terjadi kesalahan pada server saat mengambil data tugas proposal reviewer.",
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+
       "/proposals/{id}": {
         get: {
           tags: ["Proposal"],

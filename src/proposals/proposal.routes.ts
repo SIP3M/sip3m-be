@@ -9,6 +9,7 @@ import {
   editProposalController,
   evaluateProposalController,
   getAllProposalsController,
+  getAssignedProposalsController,
   getMyProposalsController,
   getProposalByIdController,
   getProposalReviewsController,
@@ -63,6 +64,13 @@ router.get(
   authMiddleware,
   requireRole([ROLES.DOSEN]),
   getMyProposalsController,
+);
+
+router.get(
+  "/proposals/assigned",
+  authMiddleware,
+  requireRole([ROLES.REVIEWER, ROLES.REVIEWER_EKSTERNAL]),
+  getAssignedProposalsController,
 );
 
 router.get(

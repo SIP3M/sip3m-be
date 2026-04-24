@@ -212,6 +212,128 @@ export const getAllProposals = async ({
   };
 };
 
+export const getAssignedProposalsForReviewer = async ({
+  reviewerId,
+  page,
+  search,
+  status,
+}: {
+  reviewerId: number;
+  page: number;
+  search?: string;
+  status?: ProposalStatus;
+}) => {
+  const skip = (page - 1) * PROPOSALS_PER_PAGE;
+  const effectiveStatus = status ?? ProposalStatus.UNDER_REVIEW;
+
+  const whereClause: Prisma.proposalsWhereInput = {
+    status: effectiveStatus,
+    reviewers: {
+      some: {
+        reviewer_id: reviewerId,
+      },
+    },
+    ...(search
+      ? {
+          OR: [
+            {
+              title: {
+                contains: search,
+                mode: "insensitive",
+              },
+            },
+            {
+              skema: {
+                contains: search,
+                mode: "insensitive",
+              },
+            },
+            {
+              faculty: {
+                contains: search,
+                mode: "insensitive",
+              },
+            },
+            {
+              user: {
+                is: {
+                  name: {
+                    contains: search,
+                    mode: "insensitive",
+                  },
+                },
+              },
+            },
+            {
+              user: {
+                is: {
+                  nidn_nip: {
+                    contains: search,
+                    mode: "insensitive",
+                  },
+                },
+              },
+            },
+          ],
+        }
+      : {}),
+  };
+
+  const [totalData, rawData] = await prisma.$transaction([
+    prisma.proposals.count({ where: whereClause }),
+    prisma.proposals.findMany({
+      where: whereClause,
+      select: {
+        id: true,
+        title: true,
+        lead_researcher_id: true,
+        faculty: true,
+        funding_request_amount: true,
+        status: true,
+        skema: true,
+        proposal_file_path: true,
+        rab_file_path: true,
+        submitted_at: true,
+        created_at: true,
+        updated_at: true,
+        user: {
+          select: {
+            name: true,
+            nidn_nip: true,
+          },
+        },
+        reviewers: {
+          where: {
+            reviewer_id: reviewerId,
+          },
+          select: {
+            created_at: true,
+          },
+          take: 1,
+        },
+      },
+      orderBy: { created_at: "desc" },
+      skip,
+      take: PROPOSALS_PER_PAGE,
+    }),
+  ]);
+
+  const data = rawData.map(({ reviewers, ...proposal }) => ({
+    ...proposal,
+    assigned_at: reviewers[0]?.created_at ?? null,
+  }));
+
+  return {
+    data,
+    meta: {
+      totalData,
+      totalPages: Math.max(1, Math.ceil(totalData / PROPOSALS_PER_PAGE)),
+      currentPage: page,
+      limit: PROPOSALS_PER_PAGE,
+    },
+  };
+};
+
 export const getMyProposals = async ({
   userId,
   page,
