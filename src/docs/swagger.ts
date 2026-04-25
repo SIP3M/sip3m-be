@@ -3367,6 +3367,7 @@ Endpoint untuk mengubah status proposal oleh Admin atau Reviewer.
 **Catatan:**
 - Setiap perubahan status akan mencatat riwayat review di tabel \`ProposalReviews\`.
 - Notifikasi otomatis akan dikirim ke lead researcher.
+- **Otomatisasi ACCEPTED:** Jika status diubah menjadi \`ACCEPTED\`, sistem akan otomatis membuat record di tabel \`PengabdianProjects\` (status: \`PENDING\`, disbursement: \`MENUNGGU_PERSETUJUAN\`) dan membuat 4 tahapan milestone default (\`Penandatanganan Kontrak\`, \`Laporan Kemajuan 1 & 2\`, \`Laporan Akhir\`).
 - Field \`notes\` bersifat opsional, maks 500 karakter.
           `,
           security: [{ bearerAuth: [] }],
@@ -3444,7 +3445,7 @@ Endpoint untuk mengubah status proposal oleh Admin atau Reviewer.
                       summary: "Reviewer menerima proposal",
                       value: {
                         message:
-                          "Status proposal berhasil diubah dari UNDER_REVIEW ke ACCEPTED.",
+                          "Status proposal berhasil diubah dari UNDER_REVIEW ke ACCEPTED. Proyek pengabdian dan milestone telah dibuat otomatis.",
                         data: {
                           id: 1,
                           title: "Penelitian AI untuk Pertanian",
@@ -3583,7 +3584,7 @@ Endpoint untuk reviewer melakukan penilaian proposal.
 - 'is_draft: false' → submit final (semua field penilaian wajib, status proposal berubah sesuai keputusan reviewer).
 
 **Keputusan submit yang diperbolehkan:**
-- ACCEPTED
+- ACCEPTED (Memicu pembuatan Proyek Pengabdian & Milestone otomatis)
 - REJECTED
 - REVISION
           `,
@@ -6134,7 +6135,7 @@ Endpoint untuk mengambil semua notifikasi milik user yang sedang login.
                           user_id: 3,
                           title: "Proposal Diterima 🎉",
                           message:
-                            'Selamat! Proposal "Penelitian AI untuk Pertanian" telah diterima dan disetujui.',
+                            'Selamat! Proposal "Penelitian AI untuk Pertanian" telah diterima dan disetujui. Proyek pengabdian Anda telah dibuat secara otomatis.',
                           is_read: false,
                           created_at: "2026-03-09T10:00:00.000Z",
                         },

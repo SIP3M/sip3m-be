@@ -702,25 +702,7 @@ export const updateProposalStatus = async (
     );
   }
 
-  // Update status proposal
-  const updatedProposal = await prisma.proposals.update({
-    where: { id: proposalId },
-    data: {
-      status: newStatus,
-    },
-  });
-
-  // 1. Simpan riwayat review
-  await prisma.proposalReviews.create({
-    data: {
-      proposal_id: proposalId,
-      reviewer_id: userId,
-      status: newStatus,
-      notes: input.notes ?? "",
-    },
-  });
-
-  // 2. Buat notifikasi otomatis
+  // Buat pesan notifikasi terlebih dahulu (sebelum transaksi)
   let notifTitle: string;
   let notifMessage: string;
 
@@ -739,7 +721,7 @@ export const updateProposalStatus = async (
       break;
     case ProposalStatus.ACCEPTED:
       notifTitle = "Proposal Diterima 🎉";
-      notifMessage = `Selamat! Proposal "${proposal.title}" telah diterima dan disetujui.`;
+      notifMessage = `Selamat! Proposal "${proposal.title}" telah diterima dan disetujui. Proyek pengabdian Anda telah dibuat secara otomatis.`;
       break;
     case ProposalStatus.REJECTED:
       notifTitle = "Proposal Ditolak";
@@ -750,13 +732,88 @@ export const updateProposalStatus = async (
       notifMessage = `Status proposal "${proposal.title}" telah diubah menjadi ${newStatus}.`;
   }
 
-  // 3. Simpan notifikasi untuk Dosen (lead researcher)
-  await prisma.notifications.create({
-    data: {
-      user_id: proposal.lead_researcher_id,
-      title: notifTitle,
-      message: notifMessage,
-    },
+  // Jalankan semua operasi DB secara atomik dalam satu transaksi
+  const result = await prisma.$transaction(async (tx) => {
+    // 1. Update status proposal
+    const updatedProposal = await tx.proposals.update({
+      where: { id: proposalId },
+      data: { status: newStatus },
+    });
+
+    // 2. Simpan riwayat review
+    await tx.proposalReviews.create({
+      data: {
+        proposal_id: proposalId,
+        reviewer_id: userId,
+        status: newStatus,
+        notes: input.notes ?? "",
+      },
+    });
+
+    // 3. Simpan notifikasi untuk Dosen (lead researcher)
+    await tx.notifications.create({
+      data: {
+        user_id: proposal.lead_researcher_id,
+        title: notifTitle,
+        message: notifMessage,
+      },
+    });
+
+    // 4. Jika proposal ACCEPTED, otomatis buat PengabdianProject + Milestones default
+    if (newStatus === ProposalStatus.ACCEPTED) {
+      // Pastikan proyek belum pernah dibuat sebelumnya (idempotent guard)
+      const existingProject = await tx.pengabdianProjects.findUnique({
+        where: { proposal_id: proposalId },
+      });
+
+      if (!existingProject) {
+        // 4a. Buat record PengabdianProject
+        const newProject = await tx.pengabdianProjects.create({
+          data: {
+            proposal_id: proposalId,
+            title: proposal.title,
+            status: "PENDING",
+            disbursement_status: "MENUNGGU_PERSETUJUAN",
+          },
+        });
+
+        // 4b. Buat 4 milestone default secara atomik
+        await tx.pengabdianMilestones.createMany({
+          data: [
+            {
+              project_id: newProject.id,
+              sequence: 1,
+              title: "Penandatanganan Kontrak & Persiapan",
+              target_percentage: 0,
+              status: "PENDING",
+            },
+            {
+              project_id: newProject.id,
+              sequence: 2,
+              title: "Laporan Kemajuan 1",
+              target_percentage: 30,
+              status: "PENDING",
+            },
+            {
+              project_id: newProject.id,
+              sequence: 3,
+              title: "Laporan Kemajuan 2",
+              target_percentage: 70,
+              status: "PENDING",
+            },
+            {
+              project_id: newProject.id,
+              sequence: 4,
+              title: "Laporan Akhir",
+              target_percentage: 100,
+              status: "PENDING",
+            },
+          ],
+        });
+      }
+    }
+
+    return updatedProposal;
   });
 
   // 4. Otomatis buat project pengabdian saat proposal diterima
@@ -774,8 +831,8 @@ export const updateProposalStatus = async (
   }
 
   return {
-    message: `Status proposal berhasil diubah dari ${currentStatus} ke ${newStatus}.`,
-    data: updatedProposal,
+    message: `Status proposal berhasil diubah dari ${currentStatus} ke ${newStatus}.${newStatus === ProposalStatus.ACCEPTED ? " Proyek pengabdian dan milestone default telah dibuat secara otomatis." : ""}`,
+    data: result,
   };
 };
 
@@ -1018,6 +1075,15 @@ export const evaluateProposal = async (
       },
     });
 
+<<<<<<< HEAD
+    // Buat notifikasi untuk pemilik proposal
+    let notifTitle = "Proposal Sudah Direview";
+    let notifMessage = `Proposal "${proposal.title}" telah direview reviewer dengan hasil ${input.status}.`;
+
+    if (input.status === ProposalStatus.ACCEPTED) {
+      notifTitle = "Proposal Diterima 🎉";
+      notifMessage = `Selamat! Proposal "${proposal.title}" telah diterima dan disetujui. Proyek pengabdian Anda telah dibuat secara otomatis.`;
+=======
     if (input.status === ProposalStatus.ACCEPTED) {
       await tx.pengabdianProjects.upsert({
         where: { proposal_id: proposalId },
@@ -1029,15 +1095,67 @@ export const evaluateProposal = async (
           project_code: buildProjectCode(proposalId),
         },
       });
+>>>>>>> ec5610b099e109e81cb3b71f73c0a0ae7dd0d875
     }
 
     await tx.notifications.create({
       data: {
         user_id: proposal.lead_researcher_id,
-        title: "Proposal Sudah Direview",
-        message: `Proposal "${proposal.title}" telah direview reviewer dengan hasil ${input.status}.`,
+        title: notifTitle,
+        message: notifMessage,
       },
     });
+
+    // Jika proposal ACCEPTED, otomatis buat PengabdianProject + Milestones default
+    if (input.status === ProposalStatus.ACCEPTED) {
+      const existingProject = await tx.pengabdianProjects.findUnique({
+        where: { proposal_id: proposalId },
+      });
+
+      if (!existingProject) {
+        const newProject = await tx.pengabdianProjects.create({
+          data: {
+            proposal_id: proposalId,
+            title: proposal.title,
+            status: "PENDING",
+            disbursement_status: "MENUNGGU_PERSETUJUAN",
+          },
+        });
+
+        await tx.pengabdianMilestones.createMany({
+          data: [
+            {
+              project_id: newProject.id,
+              sequence: 1,
+              title: "Penandatanganan Kontrak & Persiapan",
+              target_percentage: 0,
+              status: "PENDING",
+            },
+            {
+              project_id: newProject.id,
+              sequence: 2,
+              title: "Laporan Kemajuan 1",
+              target_percentage: 30,
+              status: "PENDING",
+            },
+            {
+              project_id: newProject.id,
+              sequence: 3,
+              title: "Laporan Kemajuan 2",
+              target_percentage: 70,
+              status: "PENDING",
+            },
+            {
+              project_id: newProject.id,
+              sequence: 4,
+              title: "Laporan Akhir",
+              target_percentage: 100,
+              status: "PENDING",
+            },
+          ],
+        });
+      }
+    }
 
     return {
       review,
