@@ -183,6 +183,7 @@ export const swaggerSpec = swaggerJSDoc({
             },
             rekomendasi_akhir: {
               type: ["string", "null"],
+              maxLength: 50,
               example:
                 "Layak didanai dengan revisi minor pada bagian metodologi.",
             },
@@ -3658,6 +3659,7 @@ Endpoint untuk reviewer melakukan penilaian proposal.
                         },
                         rekomendasi_akhir: {
                           type: "string",
+                          maxLength: 50,
                           example: "Revisi minor sebelum pendanaan.",
                         },
                         notes: {
@@ -3733,6 +3735,7 @@ Endpoint untuk reviewer melakukan penilaian proposal.
                         },
                         rekomendasi_akhir: {
                           type: "string",
+                          maxLength: 50,
                           example: "Layak didanai.",
                         },
                         notes: {

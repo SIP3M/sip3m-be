@@ -2,6 +2,7 @@ import { Response } from "express";
 import { AuthenticatedRequest } from "../auth/types/auth.jwt.types";
 import { HttpError } from "../common/errors/http-error";
 import type { ProposalStatus } from "../generated/prisma/enums";
+import { Prisma } from "../generated/prisma/client";
 import {
   createProposalSchema,
   evaluateProposalSchema,
@@ -478,6 +479,15 @@ export const evaluateProposalController = async (
   } catch (error) {
     if (error instanceof HttpError) {
       return res.status(error.statusCode).json({ message: error.message });
+    }
+
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      if (error.code === "P2000") {
+        return res.status(400).json({
+          message:
+            "Data penilaian melebihi batas panjang kolom database. Mohon periksa panjang teks yang dikirim.",
+        });
+      }
     }
 
     console.error("[EVALUATE_PROPOSAL_ERROR]", error);

@@ -95,7 +95,7 @@ const draftEvaluateProposalSchema = z.object({
   rekomendasi_akhir: z
     .string()
     .trim()
-    .max(1000, "Rekomendasi akhir maksimal 1000 karakter.")
+    .max(50, "Rekomendasi akhir maksimal 50 karakter.")
     .optional(),
   notes: z
     .string()
@@ -128,7 +128,7 @@ const submitEvaluateProposalSchema = z.object({
     .string()
     .trim()
     .min(1, "Rekomendasi akhir wajib diisi saat submit review.")
-    .max(1000, "Rekomendasi akhir maksimal 1000 karakter."),
+    .max(50, "Rekomendasi akhir maksimal 50 karakter."),
   notes: z
     .string()
     .trim()
