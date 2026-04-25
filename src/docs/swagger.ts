@@ -347,6 +347,117 @@ export const swaggerSpec = swaggerJSDoc({
             },
           },
         },
+        PengabdianMilestone: {
+          type: "object",
+          properties: {
+            id: { type: "number", example: 1 },
+            project_id: { type: "number", example: 1 },
+            sequence: { type: "number", example: 2 },
+            title: { type: "string", example: "Laporan Kemajuan 1" },
+            target_percentage: { type: "number", example: 30 },
+            status: {
+              type: "string",
+              enum: ["PENDING", "ONGOING", "COMPLETED"],
+              example: "COMPLETED",
+              description:
+                "PENDING = belum dimulai, ONGOING = dokumen sudah diupload sebagai draft, COMPLETED = dokumen final sudah disubmit.",
+            },
+          },
+        },
+        PengabdianProjectWithMilestones: {
+          type: "object",
+          description:
+            "Data proyek pengabdian beserta daftar milestones yang sudah diurutkan dari sequence terendah ke tertinggi (untuk timeline kiri ke kanan).",
+          properties: {
+            id: { type: "number", example: 1 },
+            proposal_id: { type: "number", example: 12 },
+            project_code: { type: ["string", "null"], example: "PENG-2026-12" },
+            title: {
+              type: ["string", "null"],
+              example: "Analisis Dampak Lingkungan Limbah Pabrik Gula",
+            },
+            summary: {
+              type: ["string", "null"],
+              example: "Fokus pada mitigasi pencemaran sungai.",
+            },
+            start_date: {
+              type: ["string", "null"],
+              format: "date-time",
+              example: "2026-04-01T00:00:00.000Z",
+            },
+            end_date: {
+              type: ["string", "null"],
+              format: "date-time",
+              example: "2026-11-30T00:00:00.000Z",
+            },
+            overall_progress: {
+              type: "number",
+              example: 30,
+              description:
+                "Persentase kemajuan proyek. Diperbarui otomatis ke target_percentage milestone yang baru saja diselesaikan.",
+            },
+            status: {
+              type: "string",
+              enum: ["PENDING", "SEDANG_BERJALAN", "SELESAI"],
+              example: "SEDANG_BERJALAN",
+            },
+            is_archived: { type: "boolean", example: false },
+            realized_amount: { type: ["number", "null"], example: 5000000 },
+            created_at: {
+              type: "string",
+              format: "date-time",
+              example: "2026-03-21T10:20:00.000Z",
+            },
+            updated_at: {
+              type: "string",
+              format: "date-time",
+              example: "2026-03-22T12:00:00.000Z",
+            },
+            proposal: {
+              type: "object",
+              properties: {
+                id: { type: "number", example: 12 },
+                lead_researcher_id: { type: "number", example: 3 },
+              },
+            },
+            milestones: {
+              type: "array",
+              description:
+                "Milestone diurutkan berdasarkan sequence ASC. Frontend merender dari kiri (sequence 1) ke kanan (sequence 4).",
+              items: { $ref: "#/components/schemas/PengabdianMilestone" },
+              example: [
+                {
+                  id: 1,
+                  sequence: 1,
+                  title: "Tanda Tangan Kontrak",
+                  target_percentage: 0,
+                  status: "COMPLETED",
+                },
+                {
+                  id: 2,
+                  sequence: 2,
+                  title: "Laporan Kemajuan 1",
+                  target_percentage: 30,
+                  status: "ONGOING",
+                },
+                {
+                  id: 3,
+                  sequence: 3,
+                  title: "Laporan Kemajuan 3",
+                  target_percentage: 70,
+                  status: "PENDING",
+                },
+                {
+                  id: 4,
+                  sequence: 4,
+                  title: "Laporan Akhir",
+                  target_percentage: 100,
+                  status: "PENDING",
+                },
+              ],
+            },
+          },
+        },
       },
     },
     security: [{ bearerAuth: [] }],
@@ -6094,6 +6205,276 @@ Endpoint ini **tidak memerlukan autentikasi**.
                     message: "Validasi query gagal.",
                     errors: {
                       page: ["page minimal 1."],
+                    },
+                  },
+                },
+              },
+            },
+            500: { description: "Internal server error" },
+          },
+        },
+      },
+
+      /** ================= PENGABDIAN PROJECTS ================= */
+      "/pengabdian/projects": {
+        get: {
+          tags: ["Pengabdian"],
+          summary: "Ambil daftar proyek pengabdian (Proyek Saya)",
+          description: `
+Endpoint untuk mengambil daftar proyek pengabdian.
+
+**Role akses:**
+- **DOSEN**: Hanya menampilkan proyek milik sendiri (filter otomatis via \`lead_researcher_id\`).
+- **ADMIN_LPPM / STAFF_LPPM**: Menampilkan semua proyek.
+
+**Catatan:**
+- Response menyertakan field \`milestones\` yang diurutkan \`sequence: asc\` agar Frontend dapat me-render **progress bar** dan **timeline milestone** dari kiri ke kanan.
+- \`overall_progress\` pada project merepresentasikan persentase kemajuan terkini (dihitung dari milestone terakhir yang diselesaikan).
+          `,
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: "page",
+              in: "query",
+              required: false,
+              schema: { type: "integer", minimum: 1, default: 1 },
+              description: "Nomor halaman (default: 1).",
+            },
+            {
+              name: "limit",
+              in: "query",
+              required: false,
+              schema: { type: "integer", minimum: 1, default: 10 },
+              description: "Jumlah data per halaman (default: 10).",
+            },
+            {
+              name: "search",
+              in: "query",
+              required: false,
+              schema: { type: "string", example: "limbah" },
+              description: "Pencarian berdasarkan judul atau kode proyek.",
+            },
+            {
+              name: "is_archived",
+              in: "query",
+              required: false,
+              schema: { type: "boolean", example: false },
+              description: "Filter proyek yang diarsipkan (true) atau aktif (false).",
+            },
+          ],
+          responses: {
+            200: {
+              description: "Daftar proyek pengabdian berhasil diambil",
+              content: {
+                "application/json": {
+                  example: {
+                    data: [
+                      {
+                        id: 1,
+                        proposal_id: 12,
+                        project_code: "PENG-2026-12",
+                        title: "Analisis Dampak Lingkungan Limbah Pabrik Gula",
+                        status: "SEDANG_BERJALAN",
+                        overall_progress: 30,
+                        is_archived: false,
+                        realized_amount: null,
+                        created_at: "2026-03-21T10:20:00.000Z",
+                        proposal: { id: 12, lead_researcher_id: 3 },
+                        milestones: [
+                          {
+                            id: 1,
+                            sequence: 1,
+                            title: "Tanda Tangan Kontrak",
+                            target_percentage: 0,
+                            status: "COMPLETED",
+                          },
+                          {
+                            id: 2,
+                            sequence: 2,
+                            title: "Laporan Kemajuan 1",
+                            target_percentage: 30,
+                            status: "ONGOING",
+                          },
+                          {
+                            id: 3,
+                            sequence: 3,
+                            title: "Laporan Kemajuan 3",
+                            target_percentage: 70,
+                            status: "PENDING",
+                          },
+                          {
+                            id: 4,
+                            sequence: 4,
+                            title: "Laporan Akhir",
+                            target_percentage: 100,
+                            status: "PENDING",
+                          },
+                        ],
+                      },
+                    ],
+                    meta: {
+                      totalData: 1,
+                      totalPages: 1,
+                      currentPage: 1,
+                      limit: 10,
+                    },
+                  },
+                },
+              },
+            },
+            401: {
+              description: "Unauthorized — token tidak valid atau tidak dikirim",
+              content: {
+                "application/json": {
+                  example: { message: "Unauthorized" },
+                },
+              },
+            },
+            500: { description: "Internal server error" },
+          },
+        },
+      },
+
+      "/pengabdian/projects/{projectId}/milestones/{milestoneId}/documents": {
+        post: {
+          tags: ["Pengabdian"],
+          summary: "Upload dokumen untuk milestone tertentu",
+          description: `
+Endpoint untuk mengunggah satu atau lebih dokumen terkait sebuah milestone proyek pengabdian.
+
+**Role akses:**
+- **DOSEN** (pemilik proyek)
+
+**Logika otomatis setelah upload berhasil:**
+- Jika \`is_draft = false\` (submit final):
+  - Status milestone diubah menjadi **COMPLETED**.
+  - \`overall_progress\` proyek ditimpa dengan \`target_percentage\` milestone tersebut.
+  - Kedua update dilakukan secara atomik via \`prisma.$transaction\`.
+- Jika \`is_draft = true\` (simpan draft):
+  - Status milestone diubah menjadi **ONGOING** (progress bar sudah bisa dirender).
+
+**Field upload (multipart/form-data):**
+- \`laporan\`: File laporan utama (PDF). Wajib.
+- \`logbook\`: File logbook kegiatan (PDF). Opsional.
+- \`anggaran\`: File bukti penggunaan anggaran (PDF). Opsional.
+          `,
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: "projectId",
+              in: "path",
+              required: true,
+              schema: { type: "integer", example: 1 },
+              description: "ID proyek pengabdian.",
+            },
+            {
+              name: "milestoneId",
+              in: "path",
+              required: true,
+              schema: { type: "integer", example: 2 },
+              description: "ID milestone yang akan diupload dokumennya.",
+            },
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              "multipart/form-data": {
+                schema: {
+                  required: ["laporan"],
+                  properties: {
+                    laporan: {
+                      type: "string",
+                      format: "binary",
+                      description: "File laporan utama (PDF, wajib).",
+                    },
+                    logbook: {
+                      type: "string",
+                      format: "binary",
+                      description: "File logbook kegiatan (PDF, opsional).",
+                    },
+                    anggaran: {
+                      type: "string",
+                      format: "binary",
+                      description:
+                        "File bukti penggunaan anggaran (PDF, opsional).",
+                    },
+                    is_draft: {
+                      type: "boolean",
+                      example: false,
+                      description:
+                        "Jika true → status milestone menjadi ONGOING. Jika false → COMPLETED dan overall_progress diperbarui.",
+                    },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            200: {
+              description: "Dokumen berhasil diunggah dan milestone diperbarui",
+              content: {
+                "application/json": {
+                  example: {
+                    message: "Dokumen milestone berhasil diunggah.",
+                    data: [
+                      {
+                        id: 15,
+                        project_id: 1,
+                        milestone_id: 2,
+                        document_type: "LAPORAN_KEMAJUAN_1",
+                        title: "Laporan_Kemajuan_1.pdf",
+                        file_path:
+                          "pengabdian/1/milestone_2/1714000000000-Laporan_Kemajuan_1.pdf",
+                        file_size: 1234567,
+                        mime_type: "application/pdf",
+                        verification_status: "PENDING",
+                        uploaded_by: 3,
+                        public_url:
+                          "https://storage.supabase.co/lppm_documents/pengabdian/1/milestone_2/1714000000000-Laporan_Kemajuan_1.pdf",
+                        upload_field: "laporan",
+                      },
+                    ],
+                    milestone_update: {
+                      id: 2,
+                      status: "COMPLETED",
+                      project_overall_progress: 30,
+                    },
+                  },
+                },
+              },
+            },
+            400: {
+              description: "Tidak ada file yang diunggah",
+              content: {
+                "application/json": {
+                  example: { message: "Minimal satu file harus diunggah." },
+                },
+              },
+            },
+            401: {
+              description: "Unauthorized",
+              content: {
+                "application/json": {
+                  example: { message: "Unauthorized" },
+                },
+              },
+            },
+            404: {
+              description: "Project atau milestone tidak ditemukan",
+              content: {
+                "application/json": {
+                  examples: {
+                    projectNotFound: {
+                      value: {
+                        message:
+                          "Proyek pengabdian dengan ID 99 tidak ditemukan.",
+                      },
+                    },
+                    milestoneNotFound: {
+                      value: {
+                        message:
+                          "Milestone dengan ID 5 tidak ditemukan pada proyek 1.",
+                      },
                     },
                   },
                 },

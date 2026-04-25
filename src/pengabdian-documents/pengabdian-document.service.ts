@@ -4,6 +4,7 @@ import { HttpError } from "../common/errors/http-error";
 import {
   PengabdianDocumentType,
   DocumentVerificationStatus,
+  PengabdianMilestoneStatus,
 } from "../generated/prisma/enums";
 
 const SUPABASE_BUCKET = "lppm_documents";
@@ -222,7 +223,31 @@ export const uploadMilestoneDocuments = async (
     };
   });
 
-  return Promise.all(uploadTasks);
+  const uploadedDocuments = await Promise.all(uploadTasks);
+
+  // Setelah semua dokumen berhasil diunggah, update milestone & project progress secara atomik
+  if (!isDraft) {
+    await prisma.$transaction([
+      // a. Ubah status milestone menjadi COMPLETED
+      prisma.pengabdianMilestones.update({
+        where: { id: milestoneId },
+        data: { status: PengabdianMilestoneStatus.COMPLETED },
+      }),
+      // b. Timpa overall_progress proyek dengan target_percentage milestone ini
+      prisma.pengabdianProjects.update({
+        where: { id: projectId },
+        data: { overall_progress: milestone.target_percentage },
+      }),
+    ]);
+  } else {
+    // Draft: tandai milestone sebagai ONGOING agar progress bar bisa me-render status
+    await prisma.pengabdianMilestones.update({
+      where: { id: milestoneId },
+      data: { status: PengabdianMilestoneStatus.ONGOING },
+    });
+  }
+
+  return uploadedDocuments;
 };
 
 /**

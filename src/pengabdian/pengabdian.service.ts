@@ -33,7 +33,7 @@ const generateStandardMilestones = async (projectId: number): Promise<void> => {
     data: [
       {
         project_id: projectId,
-        title: "Tanda Tangan kontrak",
+        title: "Tanda Tangan Kontrak",
         sequence: 1,
         target_percentage: 0,
         status: PengabdianMilestoneStatus.PENDING,
@@ -47,7 +47,7 @@ const generateStandardMilestones = async (projectId: number): Promise<void> => {
       },
       {
         project_id: projectId,
-        title: "Laporan Kemajuan 2",
+        title: "Laporan Kemajuan 3",
         sequence: 3,
         target_percentage: 70,
         status: PengabdianMilestoneStatus.PENDING,
@@ -231,18 +231,23 @@ export const getAllPengabdianProjects = async ({
     }),
     prisma.pengabdianProjects.findMany({
       where: whereClause,
-      select: {
-        id: true,
-        project_code: true,
-        title: true,
-        status: true,
-        is_archived: true,
-        realized_amount: true,
-        created_at: true,
+      include: {
         proposal: {
           select: {
             id: true,
             lead_researcher_id: true,
+          },
+        },
+        milestones: {
+          orderBy: {
+            sequence: "asc",
+          },
+          select: {
+            id: true,
+            sequence: true,
+            title: true,
+            target_percentage: true,
+            status: true,
           },
         },
       },
