@@ -767,23 +767,23 @@ export const updateProposalStatus = async (
       });
 
       if (!existingProject) {
-        // 4a. Buat record PengabdianProject
+        // 4a. Buat record PengabdianProject (lengkap dengan project_code)
         const newProject = await tx.pengabdianProjects.create({
           data: {
             proposal_id: proposalId,
             title: proposal.title,
-            status: "PENDING",
-            disbursement_status: "MENUNGGU_PERSETUJUAN",
+            status: PengabdianStatus.PENDING,
+            project_code: buildProjectCode(proposalId),
           },
         });
 
-        // 4b. Buat 4 milestone default secara atomik
+        // 4b. Buat 4 milestone default sesuai spesifikasi
         await tx.pengabdianMilestones.createMany({
           data: [
             {
               project_id: newProject.id,
               sequence: 1,
-              title: "Penandatanganan Kontrak & Persiapan",
+              title: "Tanda Tangan Kontrak",
               target_percentage: 0,
               status: "PENDING",
             },
@@ -797,7 +797,7 @@ export const updateProposalStatus = async (
             {
               project_id: newProject.id,
               sequence: 3,
-              title: "Laporan Kemajuan 2",
+              title: "Laporan Kemajuan 3",
               target_percentage: 70,
               status: "PENDING",
             },
@@ -816,19 +816,6 @@ export const updateProposalStatus = async (
     return updatedProposal;
   });
 
-  // 4. Otomatis buat project pengabdian saat proposal diterima
-  if (newStatus === ProposalStatus.ACCEPTED) {
-    await prisma.pengabdianProjects.upsert({
-      where: { proposal_id: proposalId },
-      update: {},
-      create: {
-        proposal_id: proposalId,
-        status: PengabdianStatus.PENDING,
-        title: proposal.title,
-        project_code: buildProjectCode(proposalId),
-      },
-    });
-  }
 
   return {
     message: `Status proposal berhasil diubah dari ${currentStatus} ke ${newStatus}.${newStatus === ProposalStatus.ACCEPTED ? " Proyek pengabdian dan milestone default telah dibuat secara otomatis." : ""}`,
