@@ -4077,9 +4077,9 @@ Endpoint untuk mengambil riwayat review sebuah proposal.
       "/proposals/{id}/assign-reviewers": {
         post: {
           tags: ["Proposal"],
-          summary: "Assign 2 reviewer ke proposal",
+          summary: "Assign 1-2 reviewer ke proposal",
           description: `
-Endpoint untuk menugaskan 2 reviewer ke sebuah proposal.
+Endpoint untuk menugaskan 1 atau 2 reviewer ke sebuah proposal.
 
 **Role akses:**
 - ADMIN_LPPM
@@ -4087,12 +4087,13 @@ Endpoint untuk menugaskan 2 reviewer ke sebuah proposal.
 
 **Catatan:**
 - Proposal harus berstatus \`ADMIN_VERIFIED\` agar reviewer bisa ditugaskan.
-- Harus mengirim tepat 2 ID reviewer, dan keduanya tidak boleh sama.
-- Kedua ID harus merupakan user aktif dengan role REVIEWER atau REVIEWER_EKSTERNAL.
+- Harus mengirim minimal 1 dan maksimal 2 ID reviewer.
+- Jika mengirim 2 ID, keduanya tidak boleh sama.
+- Seluruh ID harus merupakan user aktif dengan role REVIEWER atau REVIEWER_EKSTERNAL.
 - Setelah berhasil:
   - Data reviewer disimpan ke tabel \`ProposalReviewers\`.
   - Status proposal otomatis berubah menjadi \`UNDER_REVIEW\`.
-  - Notifikasi dikirim ke kedua reviewer dan pemilik proposal.
+  - Notifikasi dikirim ke reviewer yang ditugaskan dan pemilik proposal.
           `,
           security: [{ bearerAuth: [] }],
           parameters: [
@@ -4114,10 +4115,10 @@ Endpoint untuk menugaskan 2 reviewer ke sebuah proposal.
                     reviewerIds: {
                       type: "array",
                       items: { type: "number" },
-                      minItems: 2,
+                      minItems: 1,
                       maxItems: 2,
                       description:
-                        "Array berisi tepat 2 ID reviewer. Kedua ID tidak boleh sama.",
+                        "Array berisi 1 sampai 2 ID reviewer. ID reviewer tidak boleh sama.",
                       example: [4, 6],
                     },
                   },
@@ -4133,7 +4134,7 @@ Endpoint untuk menugaskan 2 reviewer ke sebuah proposal.
                 "application/json": {
                   example: {
                     message:
-                      "Reviewer berhasil ditugaskan dan status proposal diubah menjadi UNDER_REVIEW.",
+                      "Reviewer berhasil ditugaskan (1-2 reviewer) dan status proposal diubah menjadi UNDER_REVIEW.",
                     data: {
                       id: 1,
                       title: "Penelitian AI untuk Pertanian",
@@ -4164,7 +4165,7 @@ Endpoint untuk menugaskan 2 reviewer ke sebuah proposal.
                       value: {
                         message: "Validasi data gagal.",
                         errors: {
-                          reviewerIds: ["Harus memilih tepat 2 reviewer."],
+                          reviewerIds: ["Minimal memilih 1 reviewer."],
                         },
                       },
                     },

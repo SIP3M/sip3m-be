@@ -781,7 +781,7 @@ export const assignReviewersService = async (
     );
   }
 
-  // 2. Validasi kedua reviewer: harus ada & memiliki role REVIEWER / REVIEWER_EKSTERNAL
+  // 2. Validasi reviewer terpilih: harus ada & memiliki role REVIEWER / REVIEWER_EKSTERNAL
   const reviewers = await prisma.users.findMany({
     where: {
       id: { in: reviewerIds },
@@ -817,7 +817,7 @@ export const assignReviewersService = async (
       data: { status: ProposalStatus.UNDER_REVIEW },
     });
 
-    // c. Notifikasi untuk kedua reviewer
+    // c. Notifikasi untuk reviewer yang ditugaskan (1 atau 2 reviewer)
     await tx.notifications.createMany({
       data: reviewerIds.map((reviewerId) => ({
         user_id: reviewerId,
@@ -840,7 +840,7 @@ export const assignReviewersService = async (
 
   return {
     message:
-      "Reviewer berhasil ditugaskan dan status proposal diubah menjadi UNDER_REVIEW.",
+      "Reviewer berhasil ditugaskan (1-2 reviewer) dan status proposal diubah menjadi UNDER_REVIEW.",
     data: result,
   };
 };

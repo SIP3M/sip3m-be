@@ -123,7 +123,7 @@ router.patch(
   updateProposalStatusController,
 );
 
-// Admin/Staff LPPM: assign 2 reviewers → UNDER_REVIEW
+// Admin/Staff LPPM: assign 1-2 reviewers → UNDER_REVIEW
 router.post(
   "/proposals/:id/assign-reviewers",
   authMiddleware,

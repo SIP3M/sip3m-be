@@ -52,7 +52,8 @@ export const updateProposalStatusSchema = z.object({
 export const assignReviewerSchema = z.object({
   reviewerIds: z
     .array(z.number({ message: "Setiap ID reviewer harus berupa angka." }))
-    .length(2, "Harus memilih tepat 2 reviewer.")
+    .min(1, "Minimal memilih 1 reviewer.")
+    .max(2, "Maksimal memilih 2 reviewer.")
     .refine(
       (ids) => new Set(ids).size === ids.length,
       "ID reviewer tidak boleh sama.",
