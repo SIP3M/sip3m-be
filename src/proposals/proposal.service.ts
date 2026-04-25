@@ -131,47 +131,47 @@ export const getAllProposals = async ({
     ...(status ? { status } : {}),
     ...(search
       ? {
-          OR: [
-            {
-              title: {
-                contains: search,
-                mode: "insensitive",
-              },
+        OR: [
+          {
+            title: {
+              contains: search,
+              mode: "insensitive",
             },
-            {
-              skema: {
-                contains: search,
-                mode: "insensitive",
-              },
+          },
+          {
+            skema: {
+              contains: search,
+              mode: "insensitive",
             },
-            {
-              faculty: {
-                contains: search,
-                mode: "insensitive",
-              },
+          },
+          {
+            faculty: {
+              contains: search,
+              mode: "insensitive",
             },
-            {
-              user: {
-                is: {
-                  name: {
-                    contains: search,
-                    mode: "insensitive",
-                  },
+          },
+          {
+            user: {
+              is: {
+                name: {
+                  contains: search,
+                  mode: "insensitive",
                 },
               },
             },
-            {
-              user: {
-                is: {
-                  nidn_nip: {
-                    contains: search,
-                    mode: "insensitive",
-                  },
+          },
+          {
+            user: {
+              is: {
+                nidn_nip: {
+                  contains: search,
+                  mode: "insensitive",
                 },
               },
             },
-          ],
-        }
+          },
+        ],
+      }
       : {}),
   };
 
@@ -239,47 +239,47 @@ export const getAssignedProposalsForReviewer = async ({
     },
     ...(search
       ? {
-          OR: [
-            {
-              title: {
-                contains: search,
-                mode: "insensitive",
-              },
+        OR: [
+          {
+            title: {
+              contains: search,
+              mode: "insensitive",
             },
-            {
-              skema: {
-                contains: search,
-                mode: "insensitive",
-              },
+          },
+          {
+            skema: {
+              contains: search,
+              mode: "insensitive",
             },
-            {
-              faculty: {
-                contains: search,
-                mode: "insensitive",
-              },
+          },
+          {
+            faculty: {
+              contains: search,
+              mode: "insensitive",
             },
-            {
-              user: {
-                is: {
-                  name: {
-                    contains: search,
-                    mode: "insensitive",
-                  },
+          },
+          {
+            user: {
+              is: {
+                name: {
+                  contains: search,
+                  mode: "insensitive",
                 },
               },
             },
-            {
-              user: {
-                is: {
-                  nidn_nip: {
-                    contains: search,
-                    mode: "insensitive",
-                  },
+          },
+          {
+            user: {
+              is: {
+                nidn_nip: {
+                  contains: search,
+                  mode: "insensitive",
                 },
               },
             },
-          ],
-        }
+          },
+        ],
+      }
       : {}),
   };
 
@@ -356,27 +356,27 @@ export const getMyProposals = async ({
     ...(status ? { status } : {}),
     ...(search
       ? {
-          OR: [
-            {
-              title: {
-                contains: search,
-                mode: "insensitive",
-              },
+        OR: [
+          {
+            title: {
+              contains: search,
+              mode: "insensitive",
             },
-            {
-              skema: {
-                contains: search,
-                mode: "insensitive",
-              },
+          },
+          {
+            skema: {
+              contains: search,
+              mode: "insensitive",
             },
-            {
-              faculty: {
-                contains: search,
-                mode: "insensitive",
-              },
+          },
+          {
+            faculty: {
+              contains: search,
+              mode: "insensitive",
             },
-          ],
-        }
+          },
+        ],
+      }
       : {}),
   };
 
@@ -996,17 +996,17 @@ export const evaluateProposal = async (
       score_luaran: input.score_luaran ?? existingReview?.score_luaran ?? null,
       total_score:
         input.score_perumusan !== undefined &&
-        input.score_tinjauan !== undefined &&
-        input.score_metode !== undefined &&
-        input.score_anggaran !== undefined &&
-        input.score_luaran !== undefined
+          input.score_tinjauan !== undefined &&
+          input.score_metode !== undefined &&
+          input.score_anggaran !== undefined &&
+          input.score_luaran !== undefined
           ? calculateTotalScore({
-              score_perumusan: input.score_perumusan,
-              score_tinjauan: input.score_tinjauan,
-              score_metode: input.score_metode,
-              score_anggaran: input.score_anggaran,
-              score_luaran: input.score_luaran,
-            })
+            score_perumusan: input.score_perumusan,
+            score_tinjauan: input.score_tinjauan,
+            score_metode: input.score_metode,
+            score_anggaran: input.score_anggaran,
+            score_luaran: input.score_luaran,
+          })
           : (existingReview?.total_score ?? null),
       kekuatan_proposal:
         input.kekuatan_proposal ?? existingReview?.kekuatan_proposal ?? null,
@@ -1018,9 +1018,9 @@ export const evaluateProposal = async (
 
     const savedDraft = existingReview
       ? await prisma.proposalReviews.update({
-          where: { id: existingReview.id },
-          data: draftData,
-        })
+        where: { id: existingReview.id },
+        data: draftData,
+      })
       : await prisma.proposalReviews.create({ data: draftData });
 
     return {
@@ -1063,9 +1063,9 @@ export const evaluateProposal = async (
 
     const review = existingReview
       ? await tx.proposalReviews.update({
-          where: { id: existingReview.id },
-          data: reviewData,
-        })
+        where: { id: existingReview.id },
+        data: reviewData,
+      })
       : await tx.proposalReviews.create({ data: reviewData });
 
     const updatedProposal = await tx.proposals.update({
@@ -1075,7 +1075,6 @@ export const evaluateProposal = async (
       },
     });
 
-<<<<<<< HEAD
     // Buat notifikasi untuk pemilik proposal
     let notifTitle = "Proposal Sudah Direview";
     let notifMessage = `Proposal "${proposal.title}" telah direview reviewer dengan hasil ${input.status}.`;
@@ -1083,19 +1082,6 @@ export const evaluateProposal = async (
     if (input.status === ProposalStatus.ACCEPTED) {
       notifTitle = "Proposal Diterima 🎉";
       notifMessage = `Selamat! Proposal "${proposal.title}" telah diterima dan disetujui. Proyek pengabdian Anda telah dibuat secara otomatis.`;
-=======
-    if (input.status === ProposalStatus.ACCEPTED) {
-      await tx.pengabdianProjects.upsert({
-        where: { proposal_id: proposalId },
-        update: {},
-        create: {
-          proposal_id: proposalId,
-          status: PengabdianStatus.PENDING,
-          title: proposal.title,
-          project_code: buildProjectCode(proposalId),
-        },
-      });
->>>>>>> ec5610b099e109e81cb3b71f73c0a0ae7dd0d875
     }
 
     await tx.notifications.create({
