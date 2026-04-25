@@ -112,11 +112,11 @@ export const uploadMilestoneDocumentsController = async (
       });
     }
 
-    const { projectId, milestoneId, isDraft } = req.body as {
-      projectId?: string | number;
-      milestoneId?: string | number;
+    const { isDraft } = req.body as {
       isDraft?: string | boolean;
     };
+    const projectId = req.body.projectId || req.params.projectId;
+    const milestoneId = req.body.milestoneId || req.params.milestoneId;
 
     if (!projectId) {
       return res.status(400).json({ message: "projectId wajib diisi." });

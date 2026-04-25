@@ -10,6 +10,12 @@ import {
   updateProjectDetailsController,
   updatePengabdianStatusController,
 } from "./pengabdian.controller";
+import {
+  uploadDocumentMiddleware,
+  handleUploadError,
+  milestoneDocumentUploadFields,
+} from "../pengabdian-documents/upload.middleware";
+import { uploadMilestoneDocumentsController } from "../pengabdian-documents/pengabdian-document.controller";
 
 const router = Router();
 
@@ -44,7 +50,7 @@ router.patch(
 );
 
 router.get(
-  "/pengabdian",
+  "/pengabdian/projects",
   authMiddleware,
   requireRole([
     ROLES.ADMIN_LPPM,
@@ -61,6 +67,15 @@ router.patch(
   authMiddleware,
   requireRole([ROLES.ADMIN_LPPM, ROLES.STAFF_LPPM]),
   updateProjectDetailsController,
+);
+
+router.post(
+  "/pengabdian/projects/:projectId/milestones/:milestoneId/documents",
+  authMiddleware,
+  requireRole([ROLES.DOSEN]),
+  uploadDocumentMiddleware.fields(milestoneDocumentUploadFields),
+  handleUploadError,
+  uploadMilestoneDocumentsController,
 );
 
 router.patch(
