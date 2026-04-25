@@ -2,7 +2,7 @@ import { supabase } from "../config/storage";
 import { Prisma } from "../generated/prisma/client";
 import { prisma } from "../prisma";
 import { HttpError } from "../common/errors/http-error";
-import { ProposalStatus } from "../generated/prisma/enums";
+import { PengabdianStatus, ProposalStatus } from "../generated/prisma/enums";
 import type { ProposalFiles } from "./proposal.types";
 import type {
   CreateProposalInput,
@@ -13,6 +13,10 @@ import type {
 
 const BUCKET_NAME = "lppm_documents";
 const PROPOSALS_PER_PAGE = 5;
+
+const buildProjectCode = (proposalId: number): string => {
+  return `PENG-${new Date().getFullYear()}-${proposalId}`;
+};
 
 const extractFileName = (pathOrUrl: string | null): string | null => {
   if (!pathOrUrl) {
@@ -755,6 +759,20 @@ export const updateProposalStatus = async (
     },
   });
 
+  // 4. Otomatis buat project pengabdian saat proposal diterima
+  if (newStatus === ProposalStatus.ACCEPTED) {
+    await prisma.pengabdianProjects.upsert({
+      where: { proposal_id: proposalId },
+      update: {},
+      create: {
+        proposal_id: proposalId,
+        status: PengabdianStatus.PENDING,
+        title: proposal.title,
+        project_code: buildProjectCode(proposalId),
+      },
+    });
+  }
+
   return {
     message: `Status proposal berhasil diubah dari ${currentStatus} ke ${newStatus}.`,
     data: updatedProposal,
@@ -999,6 +1017,19 @@ export const evaluateProposal = async (
         status: input.status,
       },
     });
+
+    if (input.status === ProposalStatus.ACCEPTED) {
+      await tx.pengabdianProjects.upsert({
+        where: { proposal_id: proposalId },
+        update: {},
+        create: {
+          proposal_id: proposalId,
+          status: PengabdianStatus.PENDING,
+          title: proposal.title,
+          project_code: buildProjectCode(proposalId),
+        },
+      });
+    }
 
     await tx.notifications.create({
       data: {
