@@ -2,6 +2,7 @@ import { Response } from "express";
 import { AuthenticatedRequest } from "../auth/types/auth.jwt.types";
 import { HttpError } from "../common/errors/http-error";
 import type { ProposalStatus } from "../generated/prisma/enums";
+import { Prisma } from "../generated/prisma/client";
 import {
   createProposalSchema,
   evaluateProposalSchema,
@@ -15,6 +16,7 @@ import {
   deleteProposal,
   editProposal,
   getAllProposals as getAllProposalsService,
+  getAssignedProposalsForReviewer,
   getMyProposals as getMyProposalsService,
   getProposalById,
   getProposalReviews,
@@ -141,6 +143,50 @@ export const getMyProposalsController = async (
     return res.status(500).json({
       message:
         "Terjadi kesalahan pada server saat mengambil data proposal saya.",
+    });
+  }
+};
+
+export const getAssignedProposalsController = async (
+  req: AuthenticatedRequest,
+  res: Response,
+): Promise<Response> => {
+  try {
+    if (!req.user?.userId) {
+      throw new HttpError("Unauthorized", 401);
+    }
+
+    const reviewerId = Number(req.user.userId);
+
+    const queryValidation = getAllProposalsQuerySchema.safeParse(req.query);
+
+    if (!queryValidation.success) {
+      return res.status(400).json({
+        message: "Validasi query gagal.",
+        errors: queryValidation.error.flatten().fieldErrors,
+      });
+    }
+
+    const proposals = await getAssignedProposalsForReviewer({
+      reviewerId,
+      page: queryValidation.data.page,
+      search: queryValidation.data.search,
+      status: queryValidation.data.status as ProposalStatus | undefined,
+    });
+
+    return res.status(200).json({
+      message: "Berhasil mengambil daftar proposal tugas reviewer.",
+      ...proposals,
+    });
+  } catch (error) {
+    if (error instanceof HttpError) {
+      return res.status(error.statusCode).json({ message: error.message });
+    }
+
+    console.error("[GET_ASSIGNED_PROPOSALS_ERROR]", error);
+    return res.status(500).json({
+      message:
+        "Terjadi kesalahan pada server saat mengambil data tugas proposal reviewer.",
     });
   }
 };
@@ -433,6 +479,15 @@ export const evaluateProposalController = async (
   } catch (error) {
     if (error instanceof HttpError) {
       return res.status(error.statusCode).json({ message: error.message });
+    }
+
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      if (error.code === "P2000") {
+        return res.status(400).json({
+          message:
+            "Data penilaian melebihi batas panjang kolom database. Mohon periksa panjang teks yang dikirim.",
+        });
+      }
     }
 
     console.error("[EVALUATE_PROPOSAL_ERROR]", error);

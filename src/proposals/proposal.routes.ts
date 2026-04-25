@@ -9,6 +9,7 @@ import {
   editProposalController,
   evaluateProposalController,
   getAllProposalsController,
+  getAssignedProposalsController,
   getMyProposalsController,
   getProposalByIdController,
   getProposalReviewsController,
@@ -66,6 +67,13 @@ router.get(
 );
 
 router.get(
+  "/proposals/assigned",
+  authMiddleware,
+  requireRole([ROLES.REVIEWER, ROLES.REVIEWER_EKSTERNAL]),
+  getAssignedProposalsController,
+);
+
+router.get(
   "/proposals/:id",
   authMiddleware,
   requireRole([ROLES.ADMIN_LPPM, ROLES.STAFF_LPPM, ROLES.REVIEWER]),
@@ -115,7 +123,7 @@ router.patch(
   updateProposalStatusController,
 );
 
-// Admin/Staff LPPM: assign 2 reviewers → UNDER_REVIEW
+// Admin/Staff LPPM: assign 1-2 reviewers → UNDER_REVIEW
 router.post(
   "/proposals/:id/assign-reviewers",
   authMiddleware,

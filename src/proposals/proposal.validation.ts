@@ -52,7 +52,8 @@ export const updateProposalStatusSchema = z.object({
 export const assignReviewerSchema = z.object({
   reviewerIds: z
     .array(z.number({ message: "Setiap ID reviewer harus berupa angka." }))
-    .length(2, "Harus memilih tepat 2 reviewer.")
+    .min(1, "Minimal memilih 1 reviewer.")
+    .max(2, "Maksimal memilih 2 reviewer.")
     .refine(
       (ids) => new Set(ids).size === ids.length,
       "ID reviewer tidak boleh sama.",
@@ -95,7 +96,7 @@ const draftEvaluateProposalSchema = z.object({
   rekomendasi_akhir: z
     .string()
     .trim()
-    .max(1000, "Rekomendasi akhir maksimal 1000 karakter.")
+    .max(50, "Rekomendasi akhir maksimal 50 karakter.")
     .optional(),
   notes: z
     .string()
@@ -128,7 +129,7 @@ const submitEvaluateProposalSchema = z.object({
     .string()
     .trim()
     .min(1, "Rekomendasi akhir wajib diisi saat submit review.")
-    .max(1000, "Rekomendasi akhir maksimal 1000 karakter."),
+    .max(50, "Rekomendasi akhir maksimal 50 karakter."),
   notes: z
     .string()
     .trim()

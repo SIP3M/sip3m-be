@@ -2,7 +2,7 @@ import { supabase } from "../config/storage";
 import { Prisma } from "../generated/prisma/client";
 import { prisma } from "../prisma";
 import { HttpError } from "../common/errors/http-error";
-import { ProposalStatus } from "../generated/prisma/enums";
+import { PengabdianStatus, ProposalStatus } from "../generated/prisma/enums";
 import type { ProposalFiles } from "./proposal.types";
 import type {
   CreateProposalInput,
@@ -13,6 +13,10 @@ import type {
 
 const BUCKET_NAME = "lppm_documents";
 const PROPOSALS_PER_PAGE = 5;
+
+const buildProjectCode = (proposalId: number): string => {
+  return `PENG-${new Date().getFullYear()}-${proposalId}`;
+};
 
 const extractFileName = (pathOrUrl: string | null): string | null => {
   if (!pathOrUrl) {
@@ -200,6 +204,128 @@ export const getAllProposals = async ({
       take: PROPOSALS_PER_PAGE,
     }),
   ]);
+
+  return {
+    data,
+    meta: {
+      totalData,
+      totalPages: Math.max(1, Math.ceil(totalData / PROPOSALS_PER_PAGE)),
+      currentPage: page,
+      limit: PROPOSALS_PER_PAGE,
+    },
+  };
+};
+
+export const getAssignedProposalsForReviewer = async ({
+  reviewerId,
+  page,
+  search,
+  status,
+}: {
+  reviewerId: number;
+  page: number;
+  search?: string;
+  status?: ProposalStatus;
+}) => {
+  const skip = (page - 1) * PROPOSALS_PER_PAGE;
+  const effectiveStatus = status ?? ProposalStatus.UNDER_REVIEW;
+
+  const whereClause: Prisma.proposalsWhereInput = {
+    status: effectiveStatus,
+    reviewers: {
+      some: {
+        reviewer_id: reviewerId,
+      },
+    },
+    ...(search
+      ? {
+          OR: [
+            {
+              title: {
+                contains: search,
+                mode: "insensitive",
+              },
+            },
+            {
+              skema: {
+                contains: search,
+                mode: "insensitive",
+              },
+            },
+            {
+              faculty: {
+                contains: search,
+                mode: "insensitive",
+              },
+            },
+            {
+              user: {
+                is: {
+                  name: {
+                    contains: search,
+                    mode: "insensitive",
+                  },
+                },
+              },
+            },
+            {
+              user: {
+                is: {
+                  nidn_nip: {
+                    contains: search,
+                    mode: "insensitive",
+                  },
+                },
+              },
+            },
+          ],
+        }
+      : {}),
+  };
+
+  const [totalData, rawData] = await prisma.$transaction([
+    prisma.proposals.count({ where: whereClause }),
+    prisma.proposals.findMany({
+      where: whereClause,
+      select: {
+        id: true,
+        title: true,
+        lead_researcher_id: true,
+        faculty: true,
+        funding_request_amount: true,
+        status: true,
+        skema: true,
+        proposal_file_path: true,
+        rab_file_path: true,
+        submitted_at: true,
+        created_at: true,
+        updated_at: true,
+        user: {
+          select: {
+            name: true,
+            nidn_nip: true,
+          },
+        },
+        reviewers: {
+          where: {
+            reviewer_id: reviewerId,
+          },
+          select: {
+            created_at: true,
+          },
+          take: 1,
+        },
+      },
+      orderBy: { created_at: "desc" },
+      skip,
+      take: PROPOSALS_PER_PAGE,
+    }),
+  ]);
+
+  const data = rawData.map(({ reviewers, ...proposal }) => ({
+    ...proposal,
+    assigned_at: reviewers[0]?.created_at ?? null,
+  }));
 
   return {
     data,
@@ -690,6 +816,20 @@ export const updateProposalStatus = async (
     return updatedProposal;
   });
 
+  // 4. Otomatis buat project pengabdian saat proposal diterima
+  if (newStatus === ProposalStatus.ACCEPTED) {
+    await prisma.pengabdianProjects.upsert({
+      where: { proposal_id: proposalId },
+      update: {},
+      create: {
+        proposal_id: proposalId,
+        status: PengabdianStatus.PENDING,
+        title: proposal.title,
+        project_code: buildProjectCode(proposalId),
+      },
+    });
+  }
+
   return {
     message: `Status proposal berhasil diubah dari ${currentStatus} ke ${newStatus}.${newStatus === ProposalStatus.ACCEPTED ? " Proyek pengabdian dan milestone default telah dibuat secara otomatis." : ""}`,
     data: result,
@@ -716,7 +856,7 @@ export const assignReviewersService = async (
     );
   }
 
-  // 2. Validasi kedua reviewer: harus ada & memiliki role REVIEWER / REVIEWER_EKSTERNAL
+  // 2. Validasi reviewer terpilih: harus ada & memiliki role REVIEWER / REVIEWER_EKSTERNAL
   const reviewers = await prisma.users.findMany({
     where: {
       id: { in: reviewerIds },
@@ -752,7 +892,7 @@ export const assignReviewersService = async (
       data: { status: ProposalStatus.UNDER_REVIEW },
     });
 
-    // c. Notifikasi untuk kedua reviewer
+    // c. Notifikasi untuk reviewer yang ditugaskan (1 atau 2 reviewer)
     await tx.notifications.createMany({
       data: reviewerIds.map((reviewerId) => ({
         user_id: reviewerId,
@@ -775,7 +915,7 @@ export const assignReviewersService = async (
 
   return {
     message:
-      "Reviewer berhasil ditugaskan dan status proposal diubah menjadi UNDER_REVIEW.",
+      "Reviewer berhasil ditugaskan (1-2 reviewer) dan status proposal diubah menjadi UNDER_REVIEW.",
     data: result,
   };
 };
@@ -935,6 +1075,7 @@ export const evaluateProposal = async (
       },
     });
 
+<<<<<<< HEAD
     // Buat notifikasi untuk pemilik proposal
     let notifTitle = "Proposal Sudah Direview";
     let notifMessage = `Proposal "${proposal.title}" telah direview reviewer dengan hasil ${input.status}.`;
@@ -942,6 +1083,19 @@ export const evaluateProposal = async (
     if (input.status === ProposalStatus.ACCEPTED) {
       notifTitle = "Proposal Diterima 🎉";
       notifMessage = `Selamat! Proposal "${proposal.title}" telah diterima dan disetujui. Proyek pengabdian Anda telah dibuat secara otomatis.`;
+=======
+    if (input.status === ProposalStatus.ACCEPTED) {
+      await tx.pengabdianProjects.upsert({
+        where: { proposal_id: proposalId },
+        update: {},
+        create: {
+          proposal_id: proposalId,
+          status: PengabdianStatus.PENDING,
+          title: proposal.title,
+          project_code: buildProjectCode(proposalId),
+        },
+      });
+>>>>>>> ec5610b099e109e81cb3b71f73c0a0ae7dd0d875
     }
 
     await tx.notifications.create({
