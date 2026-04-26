@@ -50,6 +50,20 @@ router.patch(
 );
 
 router.get(
+  "/pengabdian",
+  authMiddleware,
+  requireRole([
+    ROLES.ADMIN_LPPM,
+    ROLES.STAFF_LPPM,
+    ROLES.DOSEN,
+    ROLES.REVIEWER,
+    ROLES.REVIEWER_EKSTERNAL,
+  ]),
+  getAllPengabdianProjectsController,
+);
+
+// Deprecated alias (backward compatibility)
+router.get(
   "/pengabdian/projects",
   authMiddleware,
   requireRole([
