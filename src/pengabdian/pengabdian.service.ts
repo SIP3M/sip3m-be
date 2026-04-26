@@ -211,27 +211,27 @@ export const getAllPengabdianProjects = async ({
     ...(is_archived !== undefined ? { is_archived } : {}),
     ...(search
       ? {
-          OR: [
-            { title: { contains: search, mode: "insensitive" } },
-            { project_code: { contains: search, mode: "insensitive" } },
-            {
-              proposal: {
-                user: {
-                  is: {
-                    name: { contains: search, mode: "insensitive" },
-                  },
+        OR: [
+          { title: { contains: search, mode: "insensitive" } },
+          { project_code: { contains: search, mode: "insensitive" } },
+          {
+            proposal: {
+              user: {
+                is: {
+                  name: { contains: search, mode: "insensitive" },
                 },
               },
             },
-          ],
-        }
+          },
+        ],
+      }
       : {}),
     ...(userRole === "DOSEN"
       ? {
-          proposal: {
-            lead_researcher_id: userId,
-          },
-        }
+        proposal: {
+          lead_researcher_id: userId,
+        },
+      }
       : {}),
   };
 
@@ -297,18 +297,23 @@ export const getAllPengabdianProjects = async ({
               },
             },
           },
+          // 👇 UBAH BAGIAN MILESTONE INI
           milestones: {
-            where: {
-              status: PengabdianMilestoneStatus.ONGOING,
-            },
+            // Ambil semua field yang dibutuhkan Frontend
             select: {
+              id: true,
               title: true,
+              sequence: true,
+              target_percentage: true,
+              status: true,
               due_date: true,
             },
+            // Urutkan berdasarkan urutan asli
             orderBy: {
               sequence: "asc",
             },
-            take: 1,
+            // ❌ HAPUS `where: { status: ONGOING }` dan `take: 1` 
+            // agar semua milestone terambil untuk timeline FE.
           },
         },
         orderBy: {
@@ -320,15 +325,19 @@ export const getAllPengabdianProjects = async ({
     ]);
 
   const data = projects.map((project) => {
-    const { milestones, ...rest } = project;
-    const ongoingMilestone = milestones[0] ?? null;
+    // Cari milestone yang ongoing untuk logika is_delayed di Backend
+    const ongoingMilestone = project.milestones.find(
+      (m) => m.status === PengabdianMilestoneStatus.ONGOING
+    ) ?? null;
+
     const isDelayed =
       ongoingMilestone?.due_date !== null &&
       ongoingMilestone?.due_date !== undefined &&
       ongoingMilestone.due_date < now;
 
+    // JANGAN membuang milestones, langsung sebar seluruh project
     return {
-      ...rest,
+      ...project, // 👈 Ini memastikan `milestones` ikut terbawa ke Frontend
       is_delayed: Boolean(isDelayed),
       next_milestone: ongoingMilestone?.title ?? null,
     };
