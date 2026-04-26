@@ -4658,9 +4658,9 @@ Mengambil detail proyek pengabdian dari ID proposal tertentu.
       "/pengabdian": {
         get: {
           tags: ["Pengabdian"],
-          summary: "Ambil daftar proyek pengabdian (paginated)",
+          summary: "Ambil daftar proyek pengabdian dashboard (paginated)",
           description: `
-Mengambil daftar proyek pengabdian dengan dukungan pagination dan filter.
+Mengambil daftar proyek pengabdian untuk dashboard monitoring admin dengan dukungan pagination dan filter.
 
 **Role akses:**
 - ADMIN_LPPM
@@ -4670,7 +4670,8 @@ Mengambil daftar proyek pengabdian dengan dukungan pagination dan filter.
 - REVIEWER_EKSTERNAL
 
 **Catatan performa & akses data:**
-- Data list hanya mengambil field penting (tanpa over-fetching field teks panjang).
+- Response mengembalikan statistik ringkas dan data tabel dashboard.
+- Data list hanya mengambil field penting.
 - Untuk role DOSEN, data otomatis difilter hanya proyek miliknya (berdasarkan \`proposal.lead_researcher_id\`).
           `,
           security: [{ bearerAuth: [] }],
@@ -4694,7 +4695,8 @@ Mengambil daftar proyek pengabdian dengan dukungan pagination dan filter.
               in: "query",
               required: false,
               schema: { type: "string", example: "PENG-2026" },
-              description: "Pencarian berdasarkan title atau project_code.",
+              description:
+                "Pencarian berdasarkan title, project_code, atau nama ketua peneliti.",
             },
             {
               name: "is_archived",
@@ -4706,7 +4708,8 @@ Mengambil daftar proyek pengabdian dengan dukungan pagination dan filter.
           ],
           responses: {
             200: {
-              description: "Berhasil mengambil daftar proyek pengabdian",
+              description:
+                "Berhasil mengambil daftar proyek pengabdian dashboard",
               content: {
                 "application/json": {
                   example: {
@@ -4718,14 +4721,26 @@ Mengambil daftar proyek pengabdian dengan dukungan pagination dan filter.
                         title: "Analisis Dampak Lingkungan Limbah Pabrik Gula",
                         status: "SEDANG_BERJALAN",
                         is_archived: false,
+                        overall_progress: 70,
                         realized_amount: 0,
+                        is_delayed: false,
+                        next_milestone: "Laporan Kemajuan 2",
                         created_at: "2026-04-01T00:00:00.000Z",
                         proposal: {
                           id: 12,
                           lead_researcher_id: 3,
+                          user: {
+                            id: 3,
+                            name: "Budi Santoso",
+                          },
                         },
                       },
                     ],
+                    statistics: {
+                      active: 12,
+                      completed: 5,
+                      delayed: 3,
+                    },
                     meta: {
                       totalData: 17,
                       totalPages: 4,
@@ -4740,17 +4755,52 @@ Mengambil daftar proyek pengabdian dengan dukungan pagination dan filter.
               description: "Validasi query gagal",
               content: {
                 "application/json": {
-                  example: {
-                    message: "Validasi query gagal.",
-                    errors: {
-                      page: ["page minimal 1."],
+                  examples: {
+                    invalidPage: {
+                      value: {
+                        message: "Query page harus berupa angka bulat >= 1.",
+                      },
+                    },
+                    invalidStatusFilter: {
+                      value: {
+                        message:
+                          "statusFilter tidak valid. Gunakan salah satu: PENDING, SEDANG_BERJALAN, SELESAI.",
+                      },
                     },
                   },
                 },
               },
             },
-            401: { description: "Unauthorized" },
-            403: { description: "Forbidden" },
+            401: {
+              description: "Unauthorized",
+              content: {
+                "application/json": {
+                  example: { message: "Unauthorized." },
+                },
+              },
+            },
+            403: {
+              description: "Forbidden — hanya ADMIN_LPPM",
+              content: {
+                "application/json": {
+                  example: {
+                    message:
+                      "You do not have permission to access this resource.",
+                  },
+                },
+              },
+            },
+            500: {
+              description: "Internal server error",
+              content: {
+                "application/json": {
+                  example: {
+                    message:
+                      "Terjadi kesalahan pada server saat mengambil monitoring proyek.",
+                  },
+                },
+              },
+            },
           },
         },
       },

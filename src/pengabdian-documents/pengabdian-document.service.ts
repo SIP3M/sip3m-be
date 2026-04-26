@@ -2,10 +2,12 @@ import { prisma } from "../prisma";
 import { supabase } from "../config/storage";
 import { HttpError } from "../common/errors/http-error";
 import {
+  PengabdianStatus,
   PengabdianDocumentType,
   DocumentVerificationStatus,
   PengabdianMilestoneStatus,
 } from "../generated/prisma/enums";
+import { Prisma } from "../generated/prisma/client";
 
 const SUPABASE_BUCKET = "lppm_documents";
 // const MILESTONE_DOCUMENT_BUCKET = "documents";
@@ -296,32 +298,194 @@ export const getDocumentsByProjectId = async (projectId: number) => {
 /**
  * Verifikasi dokumen (set status APPROVED atau REJECTED dengan opsional notes)
  */
-export const verifyDocument = async (
+export const approveDocument = async (
   documentId: number,
-  status: DocumentVerificationStatus,
+  statusTujuan: DocumentVerificationStatus,
   notes?: string,
 ) => {
-  const document = await prisma.pengabdianDocuments.findUnique({
-    where: { id: documentId },
-  });
+  try {
+    const approvedAt = new Date();
 
-  if (!document) {
+    const result = await prisma.$transaction(async (tx) => {
+      const document = await tx.pengabdianDocuments.findUnique({
+        where: { id: documentId },
+        include: {
+          milestone: {
+            select: {
+              id: true,
+              sequence: true,
+              project_id: true,
+            },
+          },
+          project: {
+            select: {
+              id: true,
+              proposal: {
+                select: {
+                  lead_researcher_id: true,
+                },
+              },
+            },
+          },
+        },
+      });
+
+      if (!document) {
+        throw new HttpError(
+          `Dokumen dengan ID ${documentId} tidak ditemukan.`,
+          404,
+        );
+      }
+
+      const updatedDocument = await tx.pengabdianDocuments.update({
+        where: { id: documentId },
+        data: {
+          verification_status: statusTujuan,
+          verification_notes: notes ?? null,
+        },
+      });
+
+      let updatedMilestone: {
+        id: number;
+        status: PengabdianMilestoneStatus;
+        completed_at: Date | null;
+      } | null = null;
+
+      let updatedProject: {
+        id: number;
+        status: PengabdianStatus;
+        overall_progress: number;
+        start_date: Date | null;
+        end_date: Date | null;
+      } | null = null;
+
+      let nextMilestone: {
+        id: number;
+        sequence: number;
+        status: PengabdianMilestoneStatus;
+        due_date: Date | null;
+      } | null = null;
+
+      if (statusTujuan === DocumentVerificationStatus.APPROVED) {
+        if (!document.milestone) {
+          throw new HttpError(
+            "Dokumen tidak terhubung ke milestone, tidak dapat melakukan proses persetujuan milestone.",
+            400,
+          );
+        }
+
+        updatedMilestone = await tx.pengabdianMilestones.update({
+          where: { id: document.milestone.id },
+          data: {
+            status: PengabdianMilestoneStatus.COMPLETED,
+            completed_at: approvedAt,
+          },
+          select: {
+            id: true,
+            status: true,
+            completed_at: true,
+          },
+        });
+
+        const projectUpdateData: Prisma.PengabdianProjectsUpdateInput = {};
+
+        if (document.milestone.sequence === 0) {
+          projectUpdateData.status = PengabdianStatus.SEDANG_BERJALAN;
+          projectUpdateData.start_date = approvedAt;
+        } else if (document.milestone.sequence === 1) {
+          projectUpdateData.overall_progress = 30;
+        } else if (document.milestone.sequence === 2) {
+          projectUpdateData.overall_progress = 70;
+        } else if (document.milestone.sequence === 3) {
+          projectUpdateData.overall_progress = 100;
+          projectUpdateData.status = PengabdianStatus.SELESAI;
+          projectUpdateData.end_date = approvedAt;
+        }
+
+        if (Object.keys(projectUpdateData).length > 0) {
+          updatedProject = await tx.pengabdianProjects.update({
+            where: { id: document.project_id },
+            data: projectUpdateData,
+            select: {
+              id: true,
+              status: true,
+              overall_progress: true,
+              start_date: true,
+              end_date: true,
+            },
+          });
+        }
+
+        const nextSequence = document.milestone.sequence + 1;
+        const dueDate = new Date(approvedAt);
+        dueDate.setDate(dueDate.getDate() + 40);
+
+        const nextMilestoneRaw = await tx.pengabdianMilestones.findUnique({
+          where: {
+            project_id_sequence: {
+              project_id: document.milestone.project_id,
+              sequence: nextSequence,
+            },
+          },
+          select: {
+            id: true,
+            sequence: true,
+          },
+        });
+
+        if (nextMilestoneRaw) {
+          nextMilestone = await tx.pengabdianMilestones.update({
+            where: { id: nextMilestoneRaw.id },
+            data: {
+              status: PengabdianMilestoneStatus.ONGOING,
+              due_date: dueDate,
+            },
+            select: {
+              id: true,
+              sequence: true,
+              status: true,
+              due_date: true,
+            },
+          });
+        }
+
+        const docName =
+          updatedDocument.title?.trim() || updatedDocument.document_type;
+
+        await tx.notifications.create({
+          data: {
+            user_id: document.project.proposal.lead_researcher_id,
+            title: "Dokumen Milestone Disetujui",
+            message: `Dokumen ${docName} telah disetujui.`,
+          },
+        });
+      }
+
+      return {
+        document: updatedDocument,
+        milestone: updatedMilestone,
+        project: updatedProject,
+        next_milestone: nextMilestone,
+      };
+    });
+
+    return {
+      message: `Dokumen berhasil diverifikasi dengan status ${statusTujuan}.`,
+      data: result,
+    };
+  } catch (error) {
+    if (error instanceof HttpError) {
+      throw error;
+    }
+
     throw new HttpError(
-      `Dokumen dengan ID ${documentId} tidak ditemukan.`,
-      404,
+      `Terjadi kesalahan saat memproses persetujuan dokumen milestone: ${error instanceof Error ? error.message : "Unknown error"}`,
+      500,
     );
   }
-
-  const updatedDocument = await prisma.pengabdianDocuments.update({
-    where: { id: documentId },
-    data: {
-      verification_status: status,
-      verification_notes: notes || null,
-    },
-  });
-
-  return updatedDocument;
 };
+
+export const verifyDocument = approveDocument;
 
 /**
  * Hapus dokumen dari Supabase Storage dan database

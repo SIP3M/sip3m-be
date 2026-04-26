@@ -32,9 +32,10 @@ export const uploadDocumentSchema = z.object({
 // =============================================
 export const verifyDocumentSchema = z.object({
   status: z.enum(
-    Object.values(DocumentVerificationStatus) as [string, ...string[]],
+    [DocumentVerificationStatus.APPROVED, DocumentVerificationStatus.REJECTED],
     {
-      message: `Status tidak valid. Status yang diperbolehkan: ${Object.values(DocumentVerificationStatus).join(", ")}.`,
+      message:
+        "Status tidak valid. Status yang diperbolehkan: APPROVED, REJECTED.",
     },
   ),
   notes: z.string().max(1000, "Notes maksimal 1000 karakter.").optional(),

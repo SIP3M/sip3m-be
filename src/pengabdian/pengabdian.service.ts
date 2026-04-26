@@ -34,28 +34,28 @@ const generateStandardMilestones = async (projectId: number): Promise<void> => {
       {
         project_id: projectId,
         title: "Tanda Tangan Kontrak",
-        sequence: 1,
+        sequence: 0, // KEMBALIKAN KE 0
         target_percentage: 0,
         status: PengabdianMilestoneStatus.PENDING,
       },
       {
         project_id: projectId,
         title: "Laporan Kemajuan 1",
-        sequence: 2,
+        sequence: 1, // KEMBALIKAN KE 1
         target_percentage: 30,
         status: PengabdianMilestoneStatus.PENDING,
       },
       {
         project_id: projectId,
-        title: "Laporan Kemajuan 3",
-        sequence: 3,
+        title: "Laporan Kemajuan 2", // UBAH JADI KEMAJUAN 2
+        sequence: 2, // KEMBALIKAN KE 2
         target_percentage: 70,
         status: PengabdianMilestoneStatus.PENDING,
       },
       {
         project_id: projectId,
         title: "Laporan Akhir",
-        sequence: 4,
+        sequence: 3, // TETAP 3
         target_percentage: 100,
         status: PengabdianMilestoneStatus.PENDING,
       },
@@ -205,14 +205,24 @@ export const getAllPengabdianProjects = async ({
   userRole,
 }: GetAllPengabdianProjectsParams) => {
   const skip = (page - 1) * limit;
+  const now = new Date();
 
-  const whereClause: Prisma.PengabdianProjectsWhereInput = {
+  const baseWhereClause: Prisma.PengabdianProjectsWhereInput = {
     ...(is_archived !== undefined ? { is_archived } : {}),
     ...(search
       ? {
           OR: [
             { title: { contains: search, mode: "insensitive" } },
             { project_code: { contains: search, mode: "insensitive" } },
+            {
+              proposal: {
+                user: {
+                  is: {
+                    name: { contains: search, mode: "insensitive" },
+                  },
+                },
+              },
+            },
           ],
         }
       : {}),
@@ -225,42 +235,112 @@ export const getAllPengabdianProjects = async ({
       : {}),
   };
 
-  const [totalData, projects] = await prisma.$transaction([
-    prisma.pengabdianProjects.count({
-      where: whereClause,
-    }),
-    prisma.pengabdianProjects.findMany({
-      where: whereClause,
-      include: {
-        proposal: {
-          select: {
-            id: true,
-            lead_researcher_id: true,
-          },
-        },
-        milestones: {
-          orderBy: {
-            sequence: "asc",
-          },
-          select: {
-            id: true,
-            sequence: true,
-            title: true,
-            target_percentage: true,
-            status: true,
-          },
+  const activeWhereClause: Prisma.PengabdianProjectsWhereInput = {
+    ...baseWhereClause,
+    status: PengabdianStatus.SEDANG_BERJALAN,
+  };
+
+  const completedWhereClause: Prisma.PengabdianProjectsWhereInput = {
+    ...baseWhereClause,
+    status: PengabdianStatus.SELESAI,
+  };
+
+  const delayedWhereClause: Prisma.PengabdianProjectsWhereInput = {
+    ...baseWhereClause,
+    status: PengabdianStatus.SEDANG_BERJALAN,
+    milestones: {
+      some: {
+        status: PengabdianMilestoneStatus.ONGOING,
+        due_date: {
+          lt: now,
         },
       },
-      orderBy: {
-        created_at: "desc",
-      },
-      skip,
-      take: limit,
-    }),
-  ]);
+    },
+  };
+
+  const listWhereClause: Prisma.PengabdianProjectsWhereInput = baseWhereClause;
+
+  const [totalData, activeCount, completedCount, delayedCount, projects] =
+    await prisma.$transaction([
+      prisma.pengabdianProjects.count({
+        where: listWhereClause,
+      }),
+      prisma.pengabdianProjects.count({
+        where: activeWhereClause,
+      }),
+      prisma.pengabdianProjects.count({
+        where: completedWhereClause,
+      }),
+      prisma.pengabdianProjects.count({
+        where: delayedWhereClause,
+      }),
+      prisma.pengabdianProjects.findMany({
+        where: listWhereClause,
+        select: {
+          id: true,
+          project_code: true,
+          title: true,
+          status: true,
+          is_archived: true,
+          overall_progress: true,
+          realized_amount: true,
+          created_at: true,
+          proposal: {
+            select: {
+              id: true,
+              lead_researcher_id: true,
+              user: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
+            },
+          },
+          milestones: {
+            where: {
+              status: PengabdianMilestoneStatus.ONGOING,
+            },
+            select: {
+              title: true,
+              due_date: true,
+            },
+            orderBy: {
+              sequence: "asc",
+            },
+            take: 1,
+          },
+        },
+        orderBy: {
+          created_at: "desc",
+        },
+        skip,
+        take: limit,
+      }),
+    ]);
+
+  const data = projects.map((project) => {
+    const { milestones, ...rest } = project;
+    const ongoingMilestone = milestones[0] ?? null;
+    const isDelayed =
+      ongoingMilestone?.due_date !== null &&
+      ongoingMilestone?.due_date !== undefined &&
+      ongoingMilestone.due_date < now;
+
+    return {
+      ...rest,
+      is_delayed: Boolean(isDelayed),
+      next_milestone: ongoingMilestone?.title ?? null,
+    };
+  });
 
   return {
-    data: projects,
+    data,
+    statistics: {
+      active: activeCount,
+      completed: completedCount,
+      delayed: delayedCount,
+    },
     meta: {
       totalData,
       totalPages: Math.max(1, Math.ceil(totalData / limit)),

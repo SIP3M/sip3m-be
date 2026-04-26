@@ -5,7 +5,7 @@ import {
   uploadDocument,
   uploadMilestoneDocuments,
   getDocumentsByProjectId,
-  verifyDocument,
+  approveDocument,
   deleteDocument,
 } from "./pengabdian-document.service";
 import {
@@ -251,19 +251,19 @@ export const verifyDocumentController = async (
     }
 
     // Validasi status adalah enum yang valid
-    const validStatuses = Object.values(DocumentVerificationStatus);
+    const validStatuses = [
+      DocumentVerificationStatus.APPROVED,
+      DocumentVerificationStatus.REJECTED,
+    ];
     if (!validStatuses.includes(status)) {
       return res.status(400).json({
         message: `Status tidak valid. Status yang diperbolehkan: ${validStatuses.join(", ")}.`,
       });
     }
 
-    const document = await verifyDocument(documentIdNum, status, notes);
+    const result = await approveDocument(documentIdNum, status, notes);
 
-    return res.status(200).json({
-      message: `Dokumen berhasil diverifikasi dengan status ${status}.`,
-      data: document,
-    });
+    return res.status(200).json(result);
   } catch (error) {
     if (error instanceof HttpError) {
       return res.status(error.statusCode).json({ message: error.message });
