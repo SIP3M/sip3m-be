@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ProposalStatus } from "../generated/prisma/enums";
+import { ProposalStatus, SkemaProposal } from "../generated/prisma/enums";
 
 // =============================================
 // Base Fields (DRY - reusable across schemas)
@@ -11,7 +11,33 @@ const titleField = z
 
 const facultyField = z.string().max(100, "Fakultas maksimal 100 karakter.");
 
-const skemaField = z.string().max(100, "Skema maksimal 100 karakter.");
+const skemaLabelToEnum: Record<string, SkemaProposal> = {
+  "Penelitian Pengembangan": SkemaProposal.PENELITIAN_PENGEMBANGAN,
+  "Penelitian Terapan": SkemaProposal.PENELITIAN_TERAPAN,
+  "Penelitian Kolaborasi": SkemaProposal.PENELITIAN_KOLABORASI,
+};
+
+const skemaField = z
+  .enum(
+    ["Penelitian Pengembangan", "Penelitian Terapan", "Penelitian Kolaborasi"],
+    {
+      message:
+        "Skema tidak valid. Pilihan: Penelitian Pengembangan, Penelitian Terapan, Penelitian Kolaborasi.",
+    },
+  )
+  .transform((value) => skemaLabelToEnum[value]);
+
+const sumberDataField = z
+  .string()
+  .trim()
+  .max(1000, "Sumber data penelitian maksimal 1000 karakter.")
+  .optional();
+
+const instansiField = z
+  .string()
+  .trim()
+  .max(255, "Instansi maksimal 255 karakter.")
+  .optional();
 
 const fundingField = z
   .union([z.string(), z.number()])
@@ -25,8 +51,10 @@ const isDraftField = z
 export const createProposalSchema = z.object({
   title: titleField,
   faculty: facultyField.optional(),
-  skema: skemaField.optional(),
+  skema: skemaField,
   funding_request_amount: fundingField.optional().default(0),
+  sumber_data_penelitian: sumberDataField,
+  instansi: instansiField,
   is_draft: isDraftField.optional().default(false),
 });
 
@@ -35,6 +63,8 @@ export const editProposalSchema = z.object({
   faculty: facultyField.optional(),
   skema: skemaField.optional(),
   funding_request_amount: fundingField.optional(),
+  sumber_data_penelitian: sumberDataField,
+  instansi: instansiField,
   is_draft: isDraftField.optional(),
 });
 

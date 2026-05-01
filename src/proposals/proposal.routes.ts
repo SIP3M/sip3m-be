@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { authMiddleware } from "../auth/middleware/auth.middleware";
 import { requireRole } from "../auth/middleware/role.middleware";
-import { uploadMiddleware } from "../config/storage";
+import { handleProposalUploadError, uploadMiddleware } from "../config/storage";
 import {
   assignReviewersController,
   createProposalController,
@@ -31,6 +31,7 @@ router.post(
     { name: "proposal_file", maxCount: 1 },
     { name: "rab_file", maxCount: 1 },
   ]),
+  handleProposalUploadError,
   createProposalController,
 );
 
@@ -76,7 +77,13 @@ router.get(
 router.get(
   "/proposals/:id",
   authMiddleware,
-  requireRole([ROLES.ADMIN_LPPM, ROLES.STAFF_LPPM, ROLES.REVIEWER]),
+  requireRole([
+    ROLES.ADMIN_LPPM,
+    ROLES.STAFF_LPPM,
+    ROLES.DOSEN,
+    ROLES.REVIEWER,
+    ROLES.REVIEWER_EKSTERNAL,
+  ]),
   getProposalByIdController,
 );
 
@@ -88,6 +95,7 @@ router.put(
     { name: "proposal_file", maxCount: 1 },
     { name: "rab_file", maxCount: 1 },
   ]),
+  handleProposalUploadError,
   editProposalController,
 );
 

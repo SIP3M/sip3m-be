@@ -205,7 +205,22 @@ export const getProposalByIdController = async (
       return res.status(400).json({ message: "ID proposal tidak valid." });
     }
 
+    const userId = Number(req.user.userId);
+    const userRole = String(
+      req.user.role ?? req.user.roles ?? "",
+    ).toUpperCase();
+    if (!userRole) {
+      throw new HttpError("Unauthorized", 401);
+    }
+
     const proposal = await getProposalById(proposalId);
+
+    if (userRole === "DOSEN" && proposal.lead_researcher_id !== userId) {
+      throw new HttpError(
+        "Anda tidak memiliki izin untuk melihat proposal ini.",
+        403,
+      );
+    }
 
     return res.status(200).json({
       message: "Berhasil mengambil proposal.",

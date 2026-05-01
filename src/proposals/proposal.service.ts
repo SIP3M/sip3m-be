@@ -2,7 +2,11 @@ import { supabase } from "../config/storage";
 import { Prisma } from "../generated/prisma/client";
 import { prisma } from "../prisma";
 import { HttpError } from "../common/errors/http-error";
-import { PengabdianStatus, ProposalStatus } from "../generated/prisma/enums";
+import {
+  PengabdianStatus,
+  ProposalStatus,
+  SkemaProposal,
+} from "../generated/prisma/enums";
 import type { ProposalFiles } from "./proposal.types";
 import type {
   CreateProposalInput,
@@ -16,6 +20,28 @@ const PROPOSALS_PER_PAGE = 5;
 
 const buildProjectCode = (proposalId: number): string => {
   return `PENG-${new Date().getFullYear()}-${proposalId}`;
+};
+
+const normalizeSkemaSearch = (value?: string): SkemaProposal | undefined => {
+  if (!value) {
+    return undefined;
+  }
+
+  const normalized = value.trim().toLowerCase();
+  const mapping: Record<string, SkemaProposal> = {
+    "penelitian pengembangan": SkemaProposal.PENELITIAN_PENGEMBANGAN,
+    "penelitian terapan": SkemaProposal.PENELITIAN_TERAPAN,
+    "penelitian kolaborasi": SkemaProposal.PENELITIAN_KOLABORASI,
+    penelitian_pengembangan: SkemaProposal.PENELITIAN_PENGEMBANGAN,
+    penelitian_terapan: SkemaProposal.PENELITIAN_TERAPAN,
+    penelitian_kolaborasi: SkemaProposal.PENELITIAN_KOLABORASI,
+  };
+
+  if (mapping[normalized]) {
+    return mapping[normalized];
+  }
+
+  return undefined;
 };
 
 const extractFileName = (pathOrUrl: string | null): string | null => {
@@ -102,6 +128,8 @@ export const createProposal = async (
       faculty: input.faculty,
       skema: input.skema,
       funding_request_amount: input.funding_request_amount,
+      sumber_data_penelitian: input.sumber_data_penelitian,
+      instansi: input.instansi,
       status,
       lead_researcher_id: userId,
       proposal_file_path: proposalFilePath,
@@ -126,53 +154,53 @@ export const getAllProposals = async ({
   status?: ProposalStatus;
 }) => {
   const skip = (page - 1) * PROPOSALS_PER_PAGE;
+  const skemaSearch = normalizeSkemaSearch(search);
+
+  const orFilters: Prisma.proposalsWhereInput[] = [];
+  if (search) {
+    orFilters.push(
+      {
+        title: {
+          contains: search,
+          mode: "insensitive",
+        },
+      },
+      {
+        faculty: {
+          contains: search,
+          mode: "insensitive",
+        },
+      },
+      {
+        user: {
+          is: {
+            name: {
+              contains: search,
+              mode: "insensitive",
+            },
+          },
+        },
+      },
+      {
+        user: {
+          is: {
+            nidn_nip: {
+              contains: search,
+              mode: "insensitive",
+            },
+          },
+        },
+      },
+    );
+  }
+
+  if (skemaSearch) {
+    orFilters.push({ skema: skemaSearch });
+  }
 
   const whereClause: Prisma.proposalsWhereInput = {
     ...(status ? { status } : {}),
-    ...(search
-      ? {
-        OR: [
-          {
-            title: {
-              contains: search,
-              mode: "insensitive",
-            },
-          },
-          {
-            skema: {
-              contains: search,
-              mode: "insensitive",
-            },
-          },
-          {
-            faculty: {
-              contains: search,
-              mode: "insensitive",
-            },
-          },
-          {
-            user: {
-              is: {
-                name: {
-                  contains: search,
-                  mode: "insensitive",
-                },
-              },
-            },
-          },
-          {
-            user: {
-              is: {
-                nidn_nip: {
-                  contains: search,
-                  mode: "insensitive",
-                },
-              },
-            },
-          },
-        ],
-      }
-      : {}),
+    ...(orFilters.length > 0 ? { OR: orFilters } : {}),
   };
 
   const [totalData, data] = await prisma.$transaction([
@@ -187,6 +215,8 @@ export const getAllProposals = async ({
         funding_request_amount: true,
         status: true,
         skema: true,
+        sumber_data_penelitian: true,
+        instansi: true,
         proposal_file_path: true,
         rab_file_path: true,
         submitted_at: true,
@@ -228,7 +258,50 @@ export const getAssignedProposalsForReviewer = async ({
   status?: ProposalStatus;
 }) => {
   const skip = (page - 1) * PROPOSALS_PER_PAGE;
+  const skemaSearch = normalizeSkemaSearch(search);
   const effectiveStatus = status ?? ProposalStatus.UNDER_REVIEW;
+
+  const orFilters: Prisma.proposalsWhereInput[] = [];
+  if (search) {
+    orFilters.push(
+      {
+        title: {
+          contains: search,
+          mode: "insensitive",
+        },
+      },
+      {
+        faculty: {
+          contains: search,
+          mode: "insensitive",
+        },
+      },
+      {
+        user: {
+          is: {
+            name: {
+              contains: search,
+              mode: "insensitive",
+            },
+          },
+        },
+      },
+      {
+        user: {
+          is: {
+            nidn_nip: {
+              contains: search,
+              mode: "insensitive",
+            },
+          },
+        },
+      },
+    );
+  }
+
+  if (skemaSearch) {
+    orFilters.push({ skema: skemaSearch });
+  }
 
   const whereClause: Prisma.proposalsWhereInput = {
     status: effectiveStatus,
@@ -237,50 +310,7 @@ export const getAssignedProposalsForReviewer = async ({
         reviewer_id: reviewerId,
       },
     },
-    ...(search
-      ? {
-        OR: [
-          {
-            title: {
-              contains: search,
-              mode: "insensitive",
-            },
-          },
-          {
-            skema: {
-              contains: search,
-              mode: "insensitive",
-            },
-          },
-          {
-            faculty: {
-              contains: search,
-              mode: "insensitive",
-            },
-          },
-          {
-            user: {
-              is: {
-                name: {
-                  contains: search,
-                  mode: "insensitive",
-                },
-              },
-            },
-          },
-          {
-            user: {
-              is: {
-                nidn_nip: {
-                  contains: search,
-                  mode: "insensitive",
-                },
-              },
-            },
-          },
-        ],
-      }
-      : {}),
+    ...(orFilters.length > 0 ? { OR: orFilters } : {}),
   };
 
   const [totalData, rawData] = await prisma.$transaction([
@@ -295,6 +325,8 @@ export const getAssignedProposalsForReviewer = async ({
         funding_request_amount: true,
         status: true,
         skema: true,
+        sumber_data_penelitian: true,
+        instansi: true,
         proposal_file_path: true,
         rab_file_path: true,
         submitted_at: true,
@@ -350,34 +382,34 @@ export const getMyProposals = async ({
   status?: ProposalStatus;
 }) => {
   const skip = (page - 1) * PROPOSALS_PER_PAGE;
+  const skemaSearch = normalizeSkemaSearch(search);
+
+  const orFilters: Prisma.proposalsWhereInput[] = [];
+  if (search) {
+    orFilters.push(
+      {
+        title: {
+          contains: search,
+          mode: "insensitive",
+        },
+      },
+      {
+        faculty: {
+          contains: search,
+          mode: "insensitive",
+        },
+      },
+    );
+  }
+
+  if (skemaSearch) {
+    orFilters.push({ skema: skemaSearch });
+  }
 
   const whereClause: Prisma.proposalsWhereInput = {
     lead_researcher_id: userId,
     ...(status ? { status } : {}),
-    ...(search
-      ? {
-        OR: [
-          {
-            title: {
-              contains: search,
-              mode: "insensitive",
-            },
-          },
-          {
-            skema: {
-              contains: search,
-              mode: "insensitive",
-            },
-          },
-          {
-            faculty: {
-              contains: search,
-              mode: "insensitive",
-            },
-          },
-        ],
-      }
-      : {}),
+    ...(orFilters.length > 0 ? { OR: orFilters } : {}),
   };
 
   const [totalData, data] = await prisma.$transaction([
@@ -392,6 +424,8 @@ export const getMyProposals = async ({
         funding_request_amount: true,
         status: true,
         skema: true,
+        sumber_data_penelitian: true,
+        instansi: true,
         proposal_file_path: true,
         rab_file_path: true,
         submitted_at: true,
@@ -432,6 +466,8 @@ export const getProposalById = async (proposalId: number) => {
       funding_request_amount: true,
       status: true,
       skema: true,
+      sumber_data_penelitian: true,
+      instansi: true,
       proposal_file_path: true,
       rab_file_path: true,
       submitted_at: true,
@@ -439,7 +475,9 @@ export const getProposalById = async (proposalId: number) => {
       updated_at: true,
       user: {
         select: {
+          id: true,
           name: true,
+          email: true,
           nidn_nip: true,
         },
       },
@@ -512,6 +550,10 @@ export const editProposal = async (
       ...(input.funding_request_amount !== undefined && {
         funding_request_amount: input.funding_request_amount,
       }),
+      ...(input.sumber_data_penelitian !== undefined && {
+        sumber_data_penelitian: input.sumber_data_penelitian,
+      }),
+      ...(input.instansi !== undefined && { instansi: input.instansi }),
       status: newStatus,
       proposal_file_path:
         proposalFilePath || existingProposal.proposal_file_path,
@@ -816,7 +858,6 @@ export const updateProposalStatus = async (
     return updatedProposal;
   });
 
-
   return {
     message: `Status proposal berhasil diubah dari ${currentStatus} ke ${newStatus}.${newStatus === ProposalStatus.ACCEPTED ? " Proyek pengabdian dan milestone default telah dibuat secara otomatis." : ""}`,
     data: result,
@@ -983,17 +1024,17 @@ export const evaluateProposal = async (
       score_luaran: input.score_luaran ?? existingReview?.score_luaran ?? null,
       total_score:
         input.score_perumusan !== undefined &&
-          input.score_tinjauan !== undefined &&
-          input.score_metode !== undefined &&
-          input.score_anggaran !== undefined &&
-          input.score_luaran !== undefined
+        input.score_tinjauan !== undefined &&
+        input.score_metode !== undefined &&
+        input.score_anggaran !== undefined &&
+        input.score_luaran !== undefined
           ? calculateTotalScore({
-            score_perumusan: input.score_perumusan,
-            score_tinjauan: input.score_tinjauan,
-            score_metode: input.score_metode,
-            score_anggaran: input.score_anggaran,
-            score_luaran: input.score_luaran,
-          })
+              score_perumusan: input.score_perumusan,
+              score_tinjauan: input.score_tinjauan,
+              score_metode: input.score_metode,
+              score_anggaran: input.score_anggaran,
+              score_luaran: input.score_luaran,
+            })
           : (existingReview?.total_score ?? null),
       kekuatan_proposal:
         input.kekuatan_proposal ?? existingReview?.kekuatan_proposal ?? null,
@@ -1005,9 +1046,9 @@ export const evaluateProposal = async (
 
     const savedDraft = existingReview
       ? await prisma.proposalReviews.update({
-        where: { id: existingReview.id },
-        data: draftData,
-      })
+          where: { id: existingReview.id },
+          data: draftData,
+        })
       : await prisma.proposalReviews.create({ data: draftData });
 
     return {
@@ -1050,9 +1091,9 @@ export const evaluateProposal = async (
 
     const review = existingReview
       ? await tx.proposalReviews.update({
-        where: { id: existingReview.id },
-        data: reviewData,
-      })
+          where: { id: existingReview.id },
+          data: reviewData,
+        })
       : await tx.proposalReviews.create({ data: reviewData });
 
     const updatedProposal = await tx.proposals.update({
