@@ -2107,6 +2107,8 @@ Endpoint untuk membuat proposal penelitian baru.
 - Request menggunakan **multipart/form-data** karena terdapat upload file proposal dan RAB.
 - Jika \`is_draft: true\`, file tidak wajib diunggah. Data disimpan sebagai draf.
 - Jika \`is_draft: false\` (submit), file **proposal** dan **RAB** wajib diunggah.
+- File \`proposal_file\` hanya boleh PDF.
+- File \`rab_file\` boleh PDF atau Excel.
 - Field \`funding_request_amount\` menerima string atau number, akan dikonversi ke number.
           `,
           security: [{ bearerAuth: [] }],
@@ -2115,7 +2117,7 @@ Endpoint untuk membuat proposal penelitian baru.
             content: {
               "multipart/form-data": {
                 schema: {
-                  required: ["title"],
+                  required: ["title", "skema"],
                   properties: {
                     title: {
                       type: "string",
@@ -2130,8 +2132,24 @@ Endpoint untuk membuat proposal penelitian baru.
                     },
                     skema: {
                       type: "string",
-                      example: "Penelitian Dasar",
-                      description: "Opsional, maks 100 karakter.",
+                      enum: [
+                        "Penelitian Pengembangan",
+                        "Penelitian Terapan",
+                        "Penelitian Kolaborasi",
+                      ],
+                      example: "Penelitian Pengembangan",
+                      description:
+                        "Wajib. Pilih salah satu dari 3 skema yang tersedia.",
+                    },
+                    sumber_data_penelitian: {
+                      type: "string",
+                      example: "Survei lapangan dan data BPS",
+                      description: "Opsional.",
+                    },
+                    instansi: {
+                      type: "string",
+                      example: "Kementerian Pertanian",
+                      description: "Opsional.",
                     },
                     funding_request_amount: {
                       type: "number",
@@ -2147,12 +2165,14 @@ Endpoint untuk membuat proposal penelitian baru.
                     proposal_file: {
                       type: "string",
                       format: "binary",
-                      description: "File proposal. Wajib jika bukan draf.",
+                      description:
+                        "File proposal (PDF). Wajib jika bukan draf.",
                     },
                     rab_file: {
                       type: "string",
                       format: "binary",
-                      description: "File RAB. Wajib jika bukan draf.",
+                      description:
+                        "File RAB (PDF atau Excel). Wajib jika bukan draf.",
                     },
                   },
                 },
@@ -2174,7 +2194,10 @@ Endpoint untuk membuat proposal penelitian baru.
                           title: "Penelitian AI untuk Pertanian",
                           lead_researcher_id: 3,
                           faculty: "Teknik",
-                          skema: "Penelitian Dasar",
+                          skema: "Penelitian Pengembangan",
+                          sumber_data_penelitian:
+                            "Survei lapangan dan data BPS",
+                          instansi: "Kementerian Pertanian",
                           funding_request_amount: 15000000,
                           status: "SUBMITTED",
                           proposal_file_path:
@@ -2196,7 +2219,10 @@ Endpoint untuk membuat proposal penelitian baru.
                           title: "Penelitian AI untuk Pertanian",
                           lead_researcher_id: 3,
                           faculty: "Teknik",
-                          skema: "Penelitian Dasar",
+                          skema: "Penelitian Pengembangan",
+                          sumber_data_penelitian:
+                            "Survei lapangan dan data BPS",
+                          instansi: "Kementerian Pertanian",
                           funding_request_amount: 15000000,
                           status: "DRAFT",
                           proposal_file_path: null,
@@ -2275,6 +2301,8 @@ Endpoint untuk mengambil daftar proposal dengan pagination.
 - ADMIN_LPPM
 - STAFF_LPPM
 - REVIEWER
+- REVIEWER_EKSTERNAL
+- DOSEN (hanya proposal miliknya)
 - REVIEWER_EKSTERNAL
 
 **Catatan:**
@@ -2654,7 +2682,9 @@ Endpoint untuk mengambil daftar proposal milik user yang sedang login (role DOSE
                           nidn_nip: "0123456789",
                         },
                         faculty: "Teknik",
-                        skema: "Penelitian Dasar",
+                        skema: "Penelitian Pengembangan",
+                        sumber_data_penelitian: "Survei lapangan dan data BPS",
+                        instansi: "Kementerian Pertanian",
                         funding_request_amount: 15000000,
                         status: "DRAFT",
                         proposal_file_path: null,
@@ -2906,11 +2936,15 @@ Endpoint untuk mengambil detail satu proposal berdasarkan ID.
                       title: "Penelitian AI untuk Pertanian",
                       lead_researcher_id: 3,
                       user: {
+                        id: 3,
                         name: "Dosen A",
+                        email: "dosen@kampus.ac.id",
                         nidn_nip: "0123456789",
                       },
                       faculty: "Teknik",
-                      skema: "Penelitian Dasar",
+                      skema: "Penelitian Pengembangan",
+                      sumber_data_penelitian: "Survei lapangan dan data BPS",
+                      instansi: "Kementerian Pertanian",
                       funding_request_amount: 15000000,
                       status: "SUBMITTED",
                       proposal_file_path:
@@ -2942,10 +2976,21 @@ Endpoint untuk mengambil detail satu proposal berdasarkan ID.
               },
             },
             403: {
-              description: "Forbidden — role tidak memiliki akses",
+              description:
+                "Forbidden — role tidak memiliki akses atau bukan pemilik proposal",
               content: {
                 "application/json": {
-                  example: { message: "Forbidden: insufficient role" },
+                  examples: {
+                    insufficientRole: {
+                      value: { message: "Forbidden: insufficient role" },
+                    },
+                    notOwner: {
+                      value: {
+                        message:
+                          "Anda tidak memiliki izin untuk melihat proposal ini.",
+                      },
+                    },
+                  },
                 },
               },
             },
@@ -6309,7 +6354,8 @@ Endpoint untuk mengambil daftar proyek pengabdian.
               in: "query",
               required: false,
               schema: { type: "boolean", example: false },
-              description: "Filter proyek yang diarsipkan (true) atau aktif (false).",
+              description:
+                "Filter proyek yang diarsipkan (true) atau aktif (false).",
             },
           ],
           responses: {
@@ -6373,7 +6419,8 @@ Endpoint untuk mengambil daftar proyek pengabdian.
               },
             },
             401: {
-              description: "Unauthorized — token tidak valid atau tidak dikirim",
+              description:
+                "Unauthorized — token tidak valid atau tidak dikirim",
               content: {
                 "application/json": {
                   example: { message: "Unauthorized" },

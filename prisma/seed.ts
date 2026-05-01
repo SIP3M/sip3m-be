@@ -1,82 +1,77 @@
-// prisma/seed.ts
-import { PrismaClient } from "../src/generated/prisma/client";
-import bcrypt from "bcrypt";
-
-type Role = {
-  id: number;
-  roles: string;
-};
+import { PrismaClient } from '../src/generated/prisma/client'; 
+import * as bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log("🔥 SEED SCRIPT STARTED");
+  const saltRounds = 10;
+  const commonPassword = await bcrypt.hash('password123', saltRounds);
 
-  const passwordHash = await bcrypt.hash("password123", 10);
+  console.log('Sedang menghapus data lama...');
+  // Hapus users terlebih dahulu sebelum roles untuk menghindari error Foreign Key
+  await prisma.users.deleteMany();
+  await prisma.roles.deleteMany();
 
-  const roles = (await prisma.roles.findMany()) as Role[];
+  console.log('Membuat data roles...');
+  const adminRole = await prisma.roles.create({ data: { roles: 'ADMIN_LPPM' } });
+  const staffRole = await prisma.roles.create({ data: { roles: 'STAFF_LPPM' } });
+  const reviewerRole = await prisma.roles.create({ data: { roles: 'REVIEWER' } });
+  const reviewerEksRole = await prisma.roles.create({ data: { roles: 'REVIEWER_EKSTERNAL' } });
+  const dosenRole = await prisma.roles.create({ data: { roles: 'DOSEN' } });
 
-  if (roles.length === 0) {
-    throw new Error("Roles table is empty. Seed roles first.");
-  }
-
+  console.log('Menyiapkan data user dummy...');
   const users = [
     {
-      name: "Admin LPPM",
-      email: "admin@lppm.ac.id",
-      role: "ADMIN_LPPM",
+      name: 'Admin LPPM Utama',
+      email: 'admin@lppm.ac.id',
+      password_hash: commonPassword,
+      role_id: adminRole.id,
+      nidn_nip: '1111111111',
     },
     {
-      name: "Staff LPPM",
-      email: "staff@lppm.ac.id",
-      role: "STAFF_LPPM",
+      name: 'Staff LPPM',
+      email: 'staff@lppm.ac.id',
+      password_hash: commonPassword,
+      role_id: staffRole.id,
+      nidn_nip: '2222222222',
     },
     {
-      name: "Dosen Dummy",
-      email: "dosen@kampus.ac.id",
-      role: "DOSEN",
-      nidn_nip: "1234567890",
-      fakultas: "Teknik",
+      name: 'Reviewer Internal',
+      email: 'reviewer@lppm.ac.id',
+      password_hash: commonPassword,
+      role_id: reviewerRole.id,
+      nidn_nip: '3333333333',
     },
     {
-      name: "Reviewer Dummy",
-      email: "reviewer@kampus.ac.id",
-      role: "REVIEWER",
+      name: 'Reviewer Luar',
+      email: 'external@gmail.com',
+      password_hash: commonPassword,
+      role_id: reviewerEksRole.id,
+      nidn_nip: '4444444444',
     },
     {
-      name: "Pihak Eksternal",
-      email: "eksternal@mitra.ac.id",
-      role: "PIHAK EKSTERNAL",
+      name: 'Dosen Pengusul',
+      email: 'dosen@lppm.ac.id',
+      password_hash: commonPassword,
+      role_id: dosenRole.id,
+      nidn_nip: '0123456789',
     },
   ];
 
+  console.log('Memasukkan data user ke database...');
   for (const u of users) {
-    const role = roles.find((r: Role) => r.roles === u.role);
-
-    if (!role) {
-      console.warn(`⚠️ Role ${u.role} not found, skipping`);
-      continue;
-    }
-
-    await prisma.users.upsert({
-      where: { email: u.email },
-      update: {},
-      create: {
-        name: u.name,
-        email: u.email,
-        password_hash: passwordHash,
-        role_id: role.id,
-        is_active: true,
-      },
+    const user = await prisma.users.create({
+      data: u,
     });
+    console.log(`Dibuat user: ${user.email} (Role ID: ${user.role_id})`);
   }
 
-  console.log("✅ Dummy users seeded successfully");
+  console.log('Seeding berhasil dan selesai!');
 }
 
 main()
-  .catch((e: unknown) => {
-    console.error("❌ SEED ERROR:", e);
+  .catch((e) => {
+    console.error('Terjadi kesalahan saat seeding:', e);
     process.exit(1);
   })
   .finally(async () => {

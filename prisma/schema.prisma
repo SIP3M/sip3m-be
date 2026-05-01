@@ -16,6 +16,12 @@ enum StatusPencairanDana {
   DITOLAK
 }
 
+enum SkemaProposal {
+  PENELITIAN_PENGEMBANGAN @map("Penelitian Pengembangan")
+  PENELITIAN_TERAPAN      @map("Penelitian Terapan")
+  PENELITIAN_KOLABORASI   @map("Penelitian Kolaborasi")
+}
+
 enum ProposalStatus {
   DRAFT
   SUBMITTED
@@ -64,9 +70,12 @@ model proposals {
   funding_request_amount Int            @db.Integer
   status                 ProposalStatus @default(DRAFT)
 
-  skema              String? @db.VarChar(100)
+  skema              SkemaProposal
   proposal_file_path String? @db.VarChar(255)
   rab_file_path      String? @db.VarChar(255)
+
+  sumber_data_penelitian String?        @db.Text
+  instansi               String?        @db.VarChar(255)
 
   submitted_at DateTime?
   created_at   DateTime  @default(now())
