@@ -208,7 +208,7 @@ export const updatePengabdianStatus = async (
     await prisma.pengabdianMilestones.updateMany({
       where: {
         project_id: projectId,
-        sequence: 1
+        sequence: 2
       },
       data: {
         status: PengabdianMilestoneStatus.ONGOING
