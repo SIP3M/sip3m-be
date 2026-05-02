@@ -187,27 +187,24 @@ export const updatePengabdianStatus = async (
     },
   });
 
-  if (newStatus === PengabdianStatus.SEDANG_BERJALAN) {
+if (newStatus === PengabdianStatus.SEDANG_BERJALAN) {
     await generateStandardMilestones(projectId);
 
     await prisma.$transaction([
+      // 1. Jadikan Kontrak (Sequence 1) menjadi COMPLETED
       prisma.pengabdianMilestones.updateMany({
         where: {
           project_id: projectId,
-          OR: [
-            { sequence: 0 },
-            { title: { contains: "Kontrak", mode: "insensitive" } },
-          ],
+          sequence: 1, 
         },
         data: { status: PengabdianMilestoneStatus.COMPLETED },
       }),
+      
+      // 2. Jadikan Laporan Kemajuan 1 (Sequence 2) menjadi ONGOING
       prisma.pengabdianMilestones.updateMany({
         where: {
           project_id: projectId,
-          OR: [
-            { sequence: 1 },
-            { title: { contains: "Laporan Kemajuan 1", mode: "insensitive" } },
-          ],
+          sequence: 2, 
         },
         data: { status: PengabdianMilestoneStatus.ONGOING },
       }),
