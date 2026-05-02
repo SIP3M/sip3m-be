@@ -136,6 +136,7 @@ export const getPengabdianProjectByProposalId = async (proposalId: number) => {
   };
 };
 
+// ...existing code...
 export const updatePengabdianStatus = async (
   projectId: number,
   newStatus: PengabdianStatus,
@@ -186,34 +187,31 @@ export const updatePengabdianStatus = async (
     },
   });
 
-  // JIKA ADMIN MULAI PROYEK (Artinya Kontrak Fisik Sudah Ditandatangani)
   if (newStatus === PengabdianStatus.SEDANG_BERJALAN) {
-    // 1. Generate milestone (kalau belum ada)
     await generateStandardMilestones(projectId);
-    
-    // 2. OTOMATIS ubah milestone kontrak (sequence 0) menjadi COMPLETED
-    // karena tombol ini ditekan admin setelah tanda tangan offline
-    await prisma.pengabdianMilestones.updateMany({
-      where: { 
-        project_id: projectId,
-        sequence: 0 // Pastikan ini sequence untuk Tanda Tangan Kontrak
-      },
-      data: {
-        status: PengabdianMilestoneStatus.COMPLETED
-      }
-    });
 
-    // 3. (Opsional tapi direkomendasikan) Ubah milestone Laporan Kemajuan 1 (sequence 1) 
-    // menjadi ONGOING agar dosen tahu ini tahapan yang aktif sekarang
-    await prisma.pengabdianMilestones.updateMany({
-      where: {
-        project_id: projectId,
-        sequence: 1
-      },
-      data: {
-        status: PengabdianMilestoneStatus.ONGOING
-      }
-    });
+    await prisma.$transaction([
+      prisma.pengabdianMilestones.updateMany({
+        where: {
+          project_id: projectId,
+          OR: [
+            { sequence: 0 },
+            { title: { contains: "Kontrak", mode: "insensitive" } },
+          ],
+        },
+        data: { status: PengabdianMilestoneStatus.COMPLETED },
+      }),
+      prisma.pengabdianMilestones.updateMany({
+        where: {
+          project_id: projectId,
+          OR: [
+            { sequence: 1 },
+            { title: { contains: "Laporan Kemajuan 1", mode: "insensitive" } },
+          ],
+        },
+        data: { status: PengabdianMilestoneStatus.ONGOING },
+      }),
+    ]);
   }
 
   return {
@@ -221,6 +219,7 @@ export const updatePengabdianStatus = async (
     data: updatedProject,
   };
 };
+// ...existing code...
 
 export const getAllPengabdianProjects = async ({
   page,
