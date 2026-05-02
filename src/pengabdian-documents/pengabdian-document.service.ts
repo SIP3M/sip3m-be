@@ -227,24 +227,23 @@ export const uploadMilestoneDocuments = async (
 
   const uploadedDocuments = await Promise.all(uploadTasks);
 
-  // Setelah semua dokumen berhasil diunggah, update milestone & project progress secara atomik
+  // Setelah semua dokumen berhasil diunggah:
+  // - Jangan set milestone COMPLETED saat upload.
+  // - Milestone tetap/diatur ke ONGOING sampai dokumen disetujui admin.
   if (!isDraft) {
-    await prisma.$transaction([
-      // a. Ubah status milestone menjadi COMPLETED
-      prisma.pengabdianMilestones.update({
-        where: { id: milestoneId },
-        data: { status: PengabdianMilestoneStatus.COMPLETED },
-      }),
-      // b. Timpa overall_progress proyek dengan target_percentage milestone ini
-      prisma.pengabdianProjects.update({
-        where: { id: projectId },
-        data: { overall_progress: milestone.target_percentage },
-      }),
-    ]);
+    await prisma.pengabdianMilestones.updateMany({
+      where: {
+        id: milestoneId,
+        status: { not: PengabdianMilestoneStatus.COMPLETED },
+      },
+      data: { status: PengabdianMilestoneStatus.ONGOING },
+    });
   } else {
-    // Draft: tandai milestone sebagai ONGOING agar progress bar bisa me-render status
-    await prisma.pengabdianMilestones.update({
-      where: { id: milestoneId },
+    await prisma.pengabdianMilestones.updateMany({
+      where: {
+        id: milestoneId,
+        status: { not: PengabdianMilestoneStatus.COMPLETED },
+      },
       data: { status: PengabdianMilestoneStatus.ONGOING },
     });
   }
