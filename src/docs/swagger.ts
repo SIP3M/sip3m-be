@@ -53,7 +53,23 @@ export const swaggerSpec = swaggerJSDoc({
             title: { type: "string", example: "Penelitian AI untuk Pertanian" },
             lead_researcher_id: { type: "number", example: 3 },
             faculty: { type: ["string", "null"], example: "Teknik" },
-            skema: { type: ["string", "null"], example: "Penelitian Dasar" },
+            skema: {
+              type: ["string", "null"],
+              enum: [
+                "PENELITIAN_PENGEMBANGAN",
+                "PENELITIAN_TERAPAN",
+                "PENELITIAN_KOLABORASI",
+              ],
+              example: "PENELITIAN_PENGEMBANGAN",
+            },
+            sumber_data_penelitian: {
+              type: ["string", "null"],
+              example: "Survei lapangan dan data BPS",
+            },
+            instansi: {
+              type: ["string", "null"],
+              example: "Kementerian Pertanian",
+            },
             funding_request_amount: {
               type: ["number", "null"],
               example: 15000000,
@@ -2905,11 +2921,14 @@ Endpoint untuk mengambil detail satu proposal berdasarkan ID.
 **Role akses:**
 - ADMIN_LPPM
 - STAFF_LPPM
+- DOSEN (hanya pemilik proposal)
 - REVIEWER
+- REVIEWER_EKSTERNAL
 
 **Catatan:**
 - Parameter \`id\` harus berupa angka valid.
 - Jika proposal tidak ditemukan, mengembalikan 404.
+- Role DOSEN hanya dapat melihat proposal miliknya sendiri.
           `,
           security: [{ bearerAuth: [] }],
           parameters: [
@@ -2942,7 +2961,7 @@ Endpoint untuk mengambil detail satu proposal berdasarkan ID.
                         nidn_nip: "0123456789",
                       },
                       faculty: "Teknik",
-                      skema: "Penelitian Pengembangan",
+                      skema: "PENELITIAN_PENGEMBANGAN",
                       sumber_data_penelitian: "Survei lapangan dan data BPS",
                       instansi: "Kementerian Pertanian",
                       funding_request_amount: 15000000,
