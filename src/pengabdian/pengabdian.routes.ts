@@ -45,7 +45,7 @@ router.get(
 router.patch(
   "/pengabdian/projects/:projectId/status",
   authMiddleware,
-  requireRole([ROLES.ADMIN_LPPM, ROLES.STAFF_LPPM, ROLES.DOSEN]),
+  requireRole([ROLES.ADMIN_LPPM, ROLES.STAFF_LPPM]),
   updatePengabdianStatusController,
 );
 
