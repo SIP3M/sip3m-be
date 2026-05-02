@@ -196,7 +196,7 @@ export const updatePengabdianStatus = async (
     await prisma.pengabdianMilestones.updateMany({
       where: { 
         project_id: projectId,
-        sequence: 0 // Pastikan ini sequence untuk Tanda Tangan Kontrak
+        sequence: 1 // Pastikan ini sequence untuk Tanda Tangan Kontrak
       },
       data: {
         status: PengabdianMilestoneStatus.COMPLETED
