@@ -74,6 +74,11 @@ model proposals {
   proposal_file_path String? @db.VarChar(255)
   rab_file_path      String? @db.VarChar(255)
 
+  dosen_terlibat         String?        @db.Text 
+  nidn_dosen_terlibat    String?        @db.Text
+  nama_anggota           String?        @db.Text
+  nim_anggota            String?        @db.Text
+
   sumber_data_penelitian String?        @db.Text
   instansi               String?        @db.VarChar(255)
 
