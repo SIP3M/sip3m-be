@@ -27,6 +27,11 @@ const skemaField = z
   )
   .transform((value) => skemaLabelToEnum[value]);
 
+const dosenTerlibatField = z.string().trim().max(1000).optional();
+const nidnDosenField = z.string().trim().max(1000).optional(); 
+const namaAnggotaField = z.string().trim().max(1000).optional();
+const nimAnggotaField = z.string().trim().max(1000).optional(); 
+
 const sumberDataField = z
   .string()
   .trim()
@@ -55,6 +60,12 @@ export const createProposalSchema = z.object({
   funding_request_amount: fundingField.optional().default(0),
   sumber_data_penelitian: sumberDataField,
   instansi: instansiField,
+
+  dosen_terlibat: dosenTerlibatField,
+  nidn_dosen_terlibat: nidnDosenField,
+  nama_anggota: namaAnggotaField,
+  nim_anggota: nimAnggotaField,
+
   is_draft: isDraftField.optional().default(false),
 });
 
@@ -65,6 +76,12 @@ export const editProposalSchema = z.object({
   funding_request_amount: fundingField.optional(),
   sumber_data_penelitian: sumberDataField,
   instansi: instansiField,
+
+  dosen_terlibat: dosenTerlibatField,
+  nidn_dosen_terlibat: nidnDosenField,
+  nama_anggota: namaAnggotaField,
+  nim_anggota: nimAnggotaField,
+
   is_draft: isDraftField.optional(),
 });
 

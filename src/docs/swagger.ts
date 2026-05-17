@@ -70,6 +70,26 @@ export const swaggerSpec = swaggerJSDoc({
               type: ["string", "null"],
               example: "Kementerian Pertanian",
             },
+            dosen_terlibat: {
+              type: ["string", "null"],
+              example: "Dr. Budi, Dr. Sari",
+              description: "Daftar dosen terlibat (teks bebas).",
+            },
+            nidn_dosen_terlibat: {
+              type: ["string", "null"],
+              example: "0123456789, 9876543210",
+              description: "Daftar NIDN dosen terlibat (teks bebas).",
+            },
+            nama_anggota: {
+              type: ["string", "null"],
+              example: "Andi, Bunga",
+              description: "Daftar nama anggota mahasiswa (teks bebas).",
+            },
+            nim_anggota: {
+              type: ["string", "null"],
+              example: "2020123456, 2020123457",
+              description: "Daftar NIM anggota mahasiswa (teks bebas).",
+            },
             funding_request_amount: {
               type: ["number", "null"],
               example: 15000000,
@@ -2155,7 +2175,7 @@ Endpoint untuk membuat proposal penelitian baru.
                       ],
                       example: "Penelitian Pengembangan",
                       description:
-                        "Wajib. Pilih salah satu dari 3 skema yang tersedia.",
+                        "Wajib. Kirim label skema (akan dipetakan ke enum di backend).",
                     },
                     sumber_data_penelitian: {
                       type: "string",
@@ -2166,6 +2186,26 @@ Endpoint untuk membuat proposal penelitian baru.
                       type: "string",
                       example: "Kementerian Pertanian",
                       description: "Opsional.",
+                    },
+                    dosen_terlibat: {
+                      type: "string",
+                      example: "Dr. Budi, Dr. Sari",
+                      description: "Opsional. Daftar dosen terlibat.",
+                    },
+                    nidn_dosen_terlibat: {
+                      type: "string",
+                      example: "0123456789, 9876543210",
+                      description: "Opsional. Daftar NIDN dosen terlibat.",
+                    },
+                    nama_anggota: {
+                      type: "string",
+                      example: "Andi, Bunga",
+                      description: "Opsional. Daftar nama anggota mahasiswa.",
+                    },
+                    nim_anggota: {
+                      type: "string",
+                      example: "2020123456, 2020123457",
+                      description: "Opsional. Daftar NIM anggota mahasiswa.",
                     },
                     funding_request_amount: {
                       type: "number",
@@ -2210,10 +2250,14 @@ Endpoint untuk membuat proposal penelitian baru.
                           title: "Penelitian AI untuk Pertanian",
                           lead_researcher_id: 3,
                           faculty: "Teknik",
-                          skema: "Penelitian Pengembangan",
+                          skema: "PENELITIAN_PENGEMBANGAN",
                           sumber_data_penelitian:
                             "Survei lapangan dan data BPS",
                           instansi: "Kementerian Pertanian",
+                          dosen_terlibat: "Dr. Budi, Dr. Sari",
+                          nidn_dosen_terlibat: "0123456789, 9876543210",
+                          nama_anggota: "Andi, Bunga",
+                          nim_anggota: "2020123456, 2020123457",
                           funding_request_amount: 15000000,
                           status: "SUBMITTED",
                           proposal_file_path:
@@ -2235,10 +2279,14 @@ Endpoint untuk membuat proposal penelitian baru.
                           title: "Penelitian AI untuk Pertanian",
                           lead_researcher_id: 3,
                           faculty: "Teknik",
-                          skema: "Penelitian Pengembangan",
+                          skema: "PENELITIAN_PENGEMBANGAN",
                           sumber_data_penelitian:
                             "Survei lapangan dan data BPS",
                           instansi: "Kementerian Pertanian",
+                          dosen_terlibat: "Dr. Budi, Dr. Sari",
+                          nidn_dosen_terlibat: "0123456789, 9876543210",
+                          nama_anggota: "Andi, Bunga",
+                          nim_anggota: "2020123456, 2020123457",
                           funding_request_amount: 15000000,
                           status: "DRAFT",
                           proposal_file_path: null,
@@ -2389,7 +2437,7 @@ Endpoint untuk mengambil daftar proposal dengan pagination.
                           nidn_nip: "0123456789",
                         },
                         faculty: "Teknik",
-                        skema: "Penelitian Dasar",
+                        skema: "PENELITIAN_PENGEMBANGAN",
                         funding_request_amount: 15000000,
                         status: "SUBMITTED",
                         proposal_file_path:
@@ -2538,7 +2586,7 @@ Endpoint untuk mengambil daftar proposal dengan pagination.
                           nidn_nip: "0123456789",
                         },
                         faculty: "Teknik",
-                        skema: "Penelitian Dasar",
+                        skema: "PENELITIAN_PENGEMBANGAN",
                         funding_request_amount: 15000000,
                         status: "SUBMITTED",
                         proposal_file_path:
@@ -2558,7 +2606,7 @@ Endpoint untuk mengambil daftar proposal dengan pagination.
                           nidn_nip: "9876543210",
                         },
                         faculty: "MIPA",
-                        skema: "Penelitian Terapan",
+                        skema: "PENELITIAN_TERAPAN",
                         funding_request_amount: 20000000,
                         status: "DRAFT",
                         proposal_file_path: null,
@@ -2698,7 +2746,7 @@ Endpoint untuk mengambil daftar proposal milik user yang sedang login (role DOSE
                           nidn_nip: "0123456789",
                         },
                         faculty: "Teknik",
-                        skema: "Penelitian Pengembangan",
+                        skema: "PENELITIAN_PENGEMBANGAN",
                         sumber_data_penelitian: "Survei lapangan dan data BPS",
                         instansi: "Kementerian Pertanian",
                         funding_request_amount: 15000000,
@@ -2844,7 +2892,7 @@ Endpoint untuk mengambil daftar proposal yang **ditugaskan** ke reviewer yang se
                           nidn_nip: "0123456789",
                         },
                         faculty: "Teknik",
-                        skema: "Penelitian Dasar",
+                        skema: "PENELITIAN_PENGEMBANGAN",
                         funding_request_amount: 15000000,
                         status: "UNDER_REVIEW",
                         proposal_file_path:
@@ -2964,6 +3012,10 @@ Endpoint untuk mengambil detail satu proposal berdasarkan ID.
                       skema: "PENELITIAN_PENGEMBANGAN",
                       sumber_data_penelitian: "Survei lapangan dan data BPS",
                       instansi: "Kementerian Pertanian",
+                      dosen_terlibat: "Dr. Budi, Dr. Sari",
+                      nidn_dosen_terlibat: "0123456789, 9876543210",
+                      nama_anggota: "Andi, Bunga",
+                      nim_anggota: "2020123456, 2020123457",
                       funding_request_amount: 15000000,
                       status: "SUBMITTED",
                       proposal_file_path:
@@ -3079,13 +3131,34 @@ Endpoint untuk mengedit proposal yang sudah ada.
                     },
                     skema: {
                       type: "string",
-                      example: "Penelitian Dasar",
-                      description: "Opsional, maks 100 karakter.",
+                      example: "Penelitian Pengembangan",
+                      description:
+                        "Opsional. Kirim label skema (akan dipetakan ke enum di backend).",
                     },
                     funding_request_amount: {
                       type: "number",
                       example: 20000000,
                       description: "Opsional. Jumlah pendanaan yang diminta.",
+                    },
+                    dosen_terlibat: {
+                      type: "string",
+                      example: "Dr. Budi, Dr. Sari",
+                      description: "Opsional. Daftar dosen terlibat.",
+                    },
+                    nidn_dosen_terlibat: {
+                      type: "string",
+                      example: "0123456789, 9876543210",
+                      description: "Opsional. Daftar NIDN dosen terlibat.",
+                    },
+                    nama_anggota: {
+                      type: "string",
+                      example: "Andi, Bunga",
+                      description: "Opsional. Daftar nama anggota mahasiswa.",
+                    },
+                    nim_anggota: {
+                      type: "string",
+                      example: "2020123456, 2020123457",
+                      description: "Opsional. Daftar NIM anggota mahasiswa.",
                     },
                     is_draft: {
                       type: "boolean",
@@ -3123,7 +3196,11 @@ Endpoint untuk mengedit proposal yang sudah ada.
                           title: "Penelitian AI untuk Pertanian (Revisi)",
                           lead_researcher_id: 3,
                           faculty: "Teknik",
-                          skema: "Penelitian Dasar",
+                          skema: "PENELITIAN_PENGEMBANGAN",
+                          dosen_terlibat: "Dr. Budi, Dr. Sari",
+                          nidn_dosen_terlibat: "0123456789, 9876543210",
+                          nama_anggota: "Andi, Bunga",
+                          nim_anggota: "2020123456, 2020123457",
                           funding_request_amount: 20000000,
                           status: "DRAFT",
                           proposal_file_path: null,
@@ -3163,7 +3240,11 @@ Endpoint untuk mengedit proposal yang sudah ada.
                           title: "Penelitian AI untuk Pertanian (Revisi)",
                           lead_researcher_id: 3,
                           faculty: "Teknik",
-                          skema: "Penelitian Dasar",
+                          skema: "PENELITIAN_PENGEMBANGAN",
+                          dosen_terlibat: "Dr. Budi, Dr. Sari",
+                          nidn_dosen_terlibat: "0123456789, 9876543210",
+                          nama_anggota: "Andi, Bunga",
+                          nim_anggota: "2020123456, 2020123457",
                           funding_request_amount: 20000000,
                           status: "SUBMITTED",
                           proposal_file_path:
@@ -3433,7 +3514,7 @@ Endpoint untuk mengirim (submit) proposal ke pihak Admin/Reviewer.
                       title: "Penelitian AI untuk Pertanian",
                       lead_researcher_id: 3,
                       faculty: "Teknik",
-                      skema: "Penelitian Dasar",
+                      skema: "PENELITIAN_PENGEMBANGAN",
                       funding_request_amount: 15000000,
                       status: "SUBMITTED",
                       proposal_file_path:
@@ -3603,7 +3684,7 @@ Endpoint untuk mengubah status proposal oleh Admin atau Reviewer.
                           title: "Penelitian AI untuk Pertanian",
                           lead_researcher_id: 3,
                           faculty: "Teknik",
-                          skema: "Penelitian Dasar",
+                          skema: "PENELITIAN_PENGEMBANGAN",
                           funding_request_amount: 15000000,
                           status: "ADMIN_VERIFIED",
                           proposal_file_path:
@@ -3626,7 +3707,7 @@ Endpoint untuk mengubah status proposal oleh Admin atau Reviewer.
                           title: "Penelitian AI untuk Pertanian",
                           lead_researcher_id: 3,
                           faculty: "Teknik",
-                          skema: "Penelitian Dasar",
+                          skema: "PENELITIAN_PENGEMBANGAN",
                           funding_request_amount: 15000000,
                           status: "ACCEPTED",
                           proposal_file_path:
@@ -3986,7 +4067,7 @@ Endpoint untuk reviewer melakukan penilaian proposal.
                             title: "Penelitian AI untuk Pertanian",
                             lead_researcher_id: 3,
                             faculty: "Teknik",
-                            skema: "Penelitian Dasar",
+                            skema: "PENELITIAN_PENGEMBANGAN",
                             funding_request_amount: 15000000,
                             status: "ACCEPTED",
                             proposal_file_path:
@@ -4316,7 +4397,7 @@ Endpoint untuk menugaskan 1 atau 2 reviewer ke sebuah proposal.
                       title: "Penelitian AI untuk Pertanian",
                       lead_researcher_id: 3,
                       faculty: "Teknik",
-                      skema: "Penelitian Dasar",
+                      skema: "PENELITIAN_PENGEMBANGAN",
                       funding_request_amount: 15000000,
                       status: "UNDER_REVIEW",
                       proposal_file_path:
@@ -5853,8 +5934,8 @@ Struktur data mencakup:
                         { status: "REJECTED", jumlah: 5 },
                       ],
                       kategoriChart: [
-                        { skema: "Penelitian Dasar", jumlah: 17 },
-                        { skema: "Penelitian Terapan", jumlah: 14 },
+                        { skema: "PENELITIAN_PENGEMBANGAN", jumlah: 17 },
+                        { skema: "PENELITIAN_TERAPAN", jumlah: 14 },
                         { skema: "Tanpa Skema", jumlah: 11 },
                       ],
                       trendBulanan: [
