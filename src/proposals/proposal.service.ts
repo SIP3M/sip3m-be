@@ -872,11 +872,8 @@ export const updateProposalStatus = async (
   };
 };
 
-export const assignReviewersService = async (
-  proposalId: number,
-  reviewerIds: number[],
-) => {
-  // 1. Cek proposal & pastikan statusnya ADMIN_VERIFIED
+export const autoAssignReviewerService = async (proposalId: number) => {
+  // 1. Cek proposal & pastikan statusnya SUBMITTED
   const proposal = await prisma.proposals.findUnique({
     where: { id: proposalId },
   });
@@ -885,41 +882,79 @@ export const assignReviewersService = async (
     throw new HttpError("Proposal tidak ditemukan.", 404);
   }
 
-  if (proposal.status !== ProposalStatus.ADMIN_VERIFIED) {
+  // Sesuai flow baru: langsung dari SUBMITTED
+  if (proposal.status !== ProposalStatus.SUBMITTED) {
     throw new HttpError(
-      `Reviewer hanya dapat ditugaskan pada proposal berstatus ADMIN_VERIFIED. Status saat ini: ${proposal.status}.`,
+      `Reviewer hanya dapat ditugaskan pada proposal berstatus SUBMITTED. Status saat ini: ${proposal.status}.`,
       400,
     );
   }
 
-  // 2. Validasi reviewer terpilih: harus ada & memiliki role REVIEWER / REVIEWER_EKSTERNAL
-  const reviewers = await prisma.users.findMany({
+  if (!proposal.faculty) {
+    throw new HttpError(
+      "Fakultas pada proposal tidak ditemukan, sistem tidak dapat mencari reviewer sebidang.",
+      400,
+    );
+  }
+
+  // 2. FILTER 1 & 2a: Cari reviewer aktif, sebidang (fakultas sama), dan bukan ketua peneliti
+  const candidateReviewers = await prisma.users.findMany({
     where: {
-      id: { in: reviewerIds },
       roles: {
         roles: { in: ["REVIEWER", "REVIEWER_EKSTERNAL"] },
       },
+      fakultas: proposal.faculty, // Filter 1: Harus sebidang
+      id: { not: proposal.lead_researcher_id }, // Filter 2a: Bukan ketua peneliti
+      is_active: true,
     },
-    select: { id: true, name: true },
+    select: {
+      id: true,
+      name: true,
+      // Menghitung berapa banyak proposal yang sudah di-assign ke reviewer ini
+      _count: {
+        select: { reviewers: true },
+      },
+    },
   });
 
-  if (reviewers.length !== reviewerIds.length) {
-    const foundIds = reviewers.map((r) => r.id);
-    const invalidIds = reviewerIds.filter((id) => !foundIds.includes(id));
+  if (candidateReviewers.length === 0) {
     throw new HttpError(
-      `Reviewer dengan ID ${invalidIds.join(", ")} tidak ditemukan atau bukan reviewer.`,
+      `Sistem gagal mencari: Tidak ada reviewer yang tersedia dari Fakultas ${proposal.faculty}.`,
+      404,
+    );
+  }
+
+  // 3. FILTER 2b (Conflict of Interest): Pastikan nama reviewer tidak ada di daftar anggota
+  const dosenTerlibat = (proposal.dosen_terlibat || "").toLowerCase();
+  const namaAnggota = (proposal.nama_anggota || "").toLowerCase();
+  const allTeamNames = `${dosenTerlibat}\n${namaAnggota}`;
+
+  const safeReviewers = candidateReviewers.filter((reviewer) => {
+    // Jika nama reviewer ada di dalam teks daftar tim peneliti, maka reviewer ini diabaikan (konflik)
+    return !allTeamNames.includes(reviewer.name.toLowerCase());
+  });
+
+  if (safeReviewers.length === 0) {
+    throw new HttpError(
+      "Semua reviewer yang sebidang memiliki konflik kepentingan (terlibat dalam proposal ini sebagai anggota).",
       400,
     );
   }
 
-  // 3. Jalankan semua operasi dalam satu transaksi
+  // 4. FILTER 3 (Load Balancing): Urutkan dari beban kerja paling sedikit ke paling banyak
+  safeReviewers.sort((a, b) => a._count.reviewers - b._count.reviewers);
+
+  // Karena butuh 1 reviewer, kita ambil array indeks [0] (Tugas paling sedikit)
+  const selectedReviewer = safeReviewers[0];
+
+  // 5. Jalankan transaksi Database
   const result = await prisma.$transaction(async (tx) => {
-    // a. Insert ke ProposalReviewers
-    await tx.proposalReviewers.createMany({
-      data: reviewerIds.map((reviewerId) => ({
+    // a. Insert ke ProposalReviewers (pakai .create karena cuma 1 orang)
+    await tx.proposalReviewers.create({
+      data: {
         proposal_id: proposalId,
-        reviewer_id: reviewerId,
-      })),
+        reviewer_id: selectedReviewer.id,
+      },
     });
 
     // b. Update status proposal → UNDER_REVIEW
@@ -928,21 +963,21 @@ export const assignReviewersService = async (
       data: { status: ProposalStatus.UNDER_REVIEW },
     });
 
-    // c. Notifikasi untuk reviewer yang ditugaskan (1 atau 2 reviewer)
-    await tx.notifications.createMany({
-      data: reviewerIds.map((reviewerId) => ({
-        user_id: reviewerId,
+    // c. Notifikasi untuk reviewer terpilih
+    await tx.notifications.create({
+      data: {
+        user_id: selectedReviewer.id,
         title: "Penugasan Review Proposal",
-        message: `Anda ditugaskan mereview proposal "${proposal.title}".`,
-      })),
+        message: `Sistem menugaskan Anda mereview proposal "${proposal.title}".`,
+      },
     });
 
-    // d. Notifikasi untuk pemilik proposal (lead researcher)
+    // d. Notifikasi untuk pemilik proposal
     await tx.notifications.create({
       data: {
         user_id: proposal.lead_researcher_id,
         title: "Proposal Sedang Ditinjau",
-        message: "Proposal Anda sedang ditinjau oleh reviewer.",
+        message: "Proposal Anda sedang ditinjau oleh Reviewer.",
       },
     });
 
@@ -950,8 +985,7 @@ export const assignReviewersService = async (
   });
 
   return {
-    message:
-      "Reviewer berhasil ditugaskan (1-2 reviewer) dan status proposal diubah menjadi UNDER_REVIEW.",
+    message: `Proposal berhasil ditugaskan secara otomatis kepada Reviewer: ${selectedReviewer.name}.`,
     data: result,
   };
 };

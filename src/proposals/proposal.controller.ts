@@ -23,7 +23,7 @@ import {
   evaluateProposal as evaluateProposalService,
   submitProposal,
   updateProposalStatus,
-  assignReviewersService,
+  autoAssignReviewerService,
 } from "./proposal.service";
 import type { ProposalFiles } from "./proposal.types";
 
@@ -403,18 +403,10 @@ export const assignReviewersController = async (
       return res.status(400).json({ message: "ID proposal tidak valid." });
     }
 
-    const validation = assignReviewerSchema.safeParse(req.body);
-    if (!validation.success) {
-      return res.status(400).json({
-        message: "Validasi data gagal.",
-        errors: validation.error.flatten().fieldErrors,
-      });
-    }
+    // HAPUS bagian validasi Zod assignReviewerSchema, karena Frontend cukup memanggil API tanpa Body.
 
-    const result = await assignReviewersService(
-      proposalId,
-      validation.data.reviewerIds,
-    );
+    // Panggil Service Auto-Assign
+    const result = await autoAssignReviewerService(proposalId);
 
     return res.status(200).json(result);
   } catch (error) {
@@ -422,9 +414,9 @@ export const assignReviewersController = async (
       return res.status(error.statusCode).json({ message: error.message });
     }
 
-    console.error("[ASSIGN_REVIEWERS_ERROR]", error);
+    console.error("[AUTO_ASSIGN_REVIEWER_ERROR]", error);
     return res.status(500).json({
-      message: "Terjadi kesalahan pada server saat menugaskan reviewer.",
+      message: "Terjadi kesalahan pada server saat melakukan auto-assign reviewer.",
     });
   }
 };
