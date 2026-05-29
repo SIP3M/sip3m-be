@@ -97,14 +97,9 @@ export const updateProposalStatusSchema = z.object({
 });
 
 export const assignReviewerSchema = z.object({
-  reviewerIds: z
-    .array(z.number({ message: "Setiap ID reviewer harus berupa angka." }))
-    .min(1, "Minimal memilih 1 reviewer.")
-    .max(2, "Maksimal memilih 2 reviewer.")
-    .refine(
-      (ids) => new Set(ids).size === ids.length,
-      "ID reviewer tidak boleh sama.",
-    ),
+  proposalIds: z
+    .array(z.number({ message: "Setiap ID proposal harus berupa angka." }))
+    .min(1, "Minimal memilih 1 proposal untuk diproses."),
 });
 
 const scoreField = z
