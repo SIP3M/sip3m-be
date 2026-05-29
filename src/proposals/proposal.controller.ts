@@ -3,6 +3,7 @@ import { AuthenticatedRequest } from "../auth/types/auth.jwt.types";
 import { HttpError } from "../common/errors/http-error";
 import type { ProposalStatus } from "../generated/prisma/enums";
 import { Prisma } from "../generated/prisma/client";
+import { z } from "zod";
 import {
   createProposalSchema,
   evaluateProposalSchema,
@@ -26,6 +27,7 @@ import {
   autoAssignReviewerService,
 } from "./proposal.service";
 import type { ProposalFiles } from "./proposal.types";
+
 
 export const createProposalController = async (
   req: AuthenticatedRequest,
@@ -398,25 +400,31 @@ export const assignReviewersController = async (
       throw new HttpError("Unauthorized", 401);
     }
 
-    const proposalId = Number(req.params.id);
-    if (isNaN(proposalId)) {
-      return res.status(400).json({ message: "ID proposal tidak valid." });
-    }
+    // Tangkap dan validasi body request yang berisi array proposalIds
+    const validatedData = assignReviewerSchema.parse(req.body);
 
-    // HAPUS bagian validasi Zod assignReviewerSchema, karena Frontend cukup memanggil API tanpa Body.
-
-    // Panggil Service Auto-Assign
-    const result = await autoAssignReviewerService(proposalId);
+    // Panggil Service Bulk Auto-Assign
+    const result = await autoAssignReviewerService(validatedData.proposalIds);
 
     return res.status(200).json(result);
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      // Tegaskan kepada TypeScript bahwa 'error' ini adalah ZodError bawaan Zod
+      const zodError = error as z.ZodError;
+      
+      return res.status(400).json({
+        message: "Validasi gagal.",
+        errors: zodError.issues, // Menggunakan .issues yang didukung penuh oleh TypeScript
+      });
+    }
+
     if (error instanceof HttpError) {
       return res.status(error.statusCode).json({ message: error.message });
     }
 
-    console.error("[AUTO_ASSIGN_REVIEWER_ERROR]", error);
+    console.error("[BULK_AUTO_ASSIGN_REVIEWER_ERROR]", error);
     return res.status(500).json({
-      message: "Terjadi kesalahan pada server saat melakukan auto-assign reviewer.",
+      message: "Terjadi kesalahan pada server saat melakukan auto-assign massal.",
     });
   }
 };

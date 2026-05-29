@@ -131,14 +131,13 @@ router.patch(
   updateProposalStatusController,
 );
 
-// Admin/Staff LPPM: assign 1-2 reviewers → UNDER_REVIEW
+// Admin/Staff LPPM: Bulk assign reviewers secara otomatis
 router.post(
-  "/proposals/:id/assign-reviewers",
+  "/proposals/bulk-assign-reviewers",
   authMiddleware,
   requireRole([ROLES.ADMIN_LPPM, ROLES.STAFF_LPPM]),
   assignReviewersController,
 );
-
 router.put(
   "/proposals/:id/evaluate",
   authMiddleware,
