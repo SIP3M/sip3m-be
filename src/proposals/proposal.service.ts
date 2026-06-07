@@ -489,6 +489,24 @@ export const getProposalById = async (proposalId: number) => {
           nidn_nip: true,
         },
       },
+      // === TAMBAHAN BARU: Ambil hasil review beserta catatan revisinya ===
+      // Catatan: Jika tulisan "proposalReviews" error/merah di kodemu, 
+      // coba ganti huruf P depannya menjadi kapital ("ProposalReviews") sesuai nama relasi di schema.prisma kamu.
+      reviews: {
+        select: {
+          id: true,
+          status: true,
+          kekuatan_proposal: true,
+          kelemahan_proposal: true,
+          rekomendasi_akhir: true,
+          notes: true,
+          created_at: true,
+          reviewer: {
+            select: { name: true }
+          }
+        },
+        orderBy: { created_at: "desc" }, // Ambil revisi yang paling baru di urutan teratas
+      }
     },
   });
 
@@ -520,9 +538,13 @@ export const editProposal = async (
     );
   }
 
-  if (existingProposal.status !== ProposalStatus.DRAFT) {
+  // === PERUBAHAN 1: Izinkan edit untuk DRAFT dan REVISION ===
+  if (
+    existingProposal.status !== ProposalStatus.DRAFT &&
+    existingProposal.status !== ProposalStatus.REVISION
+  ) {
     throw new HttpError(
-      "Hanya proposal dengan status DRAFT yang dapat diedit.",
+      "Hanya proposal dengan status DRAFT atau REVISION yang dapat diedit.",
       400,
     );
   }
@@ -532,9 +554,12 @@ export const editProposal = async (
     userId,
   );
 
-  const isDraft =
-    input.is_draft ?? existingProposal.status === ProposalStatus.DRAFT;
-  const newStatus = isDraft ? ProposalStatus.DRAFT : ProposalStatus.SUBMITTED;
+  // === PERUBAHAN 2: Perbaiki logika penentuan status ===
+  // Jika input.is_draft bernilai true (hanya simpan/edit, tidak submit),
+  // maka statusnya tetap menggunakan status yang sekarang (DRAFT atau REVISION).
+  // Jika bernilai false (tombol submit ditekan), ubah menjadi SUBMITTED.
+  const isDraft = input.is_draft ?? true; 
+  const newStatus = isDraft ? existingProposal.status : ProposalStatus.SUBMITTED;
 
   // Jika submit (bukan draft), pastikan file tersedia
   if (!isDraft) {
@@ -573,22 +598,22 @@ export const editProposal = async (
   return {
     message: isDraft
       ? "Proposal berhasil diperbarui."
-      : "Proposal berhasil diperbarui dan dikirim.",
+      : "Proposal berhasil diperbarui dan dikirim ulang.",
     data: {
       ...updatedProposal,
       file_info: {
         proposal_file: {
           previous_path: existingProposal.proposal_file_path,
-          previous_name: extractFileName(existingProposal.proposal_file_path),
+          previous_name: extractFileName(existingProposal.proposal_file_path || ""),
           current_path: updatedProposal.proposal_file_path,
-          current_name: extractFileName(updatedProposal.proposal_file_path),
+          current_name: extractFileName(updatedProposal.proposal_file_path || ""),
           replaced: Boolean(proposalFilePath),
         },
         rab_file: {
           previous_path: existingProposal.rab_file_path,
-          previous_name: extractFileName(existingProposal.rab_file_path),
+          previous_name: extractFileName(existingProposal.rab_file_path || ""),
           current_path: updatedProposal.rab_file_path,
-          current_name: extractFileName(updatedProposal.rab_file_path),
+          current_name: extractFileName(updatedProposal.rab_file_path || ""),
           replaced: Boolean(rabFilePath),
         },
       },
