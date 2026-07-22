@@ -3,6 +3,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 
 import authRoute from "./auth/auth.routes";
+import master from "./master/master.routes";
 import usersRoute from "./users/users.routes";
 import dosenRoute from "./dosen/dosen.routes";
 import pengabdianRoute from "./pengabdian/pengabdian.routes";
@@ -84,6 +85,7 @@ app.use("/api", publicRepositoryRoute);
 app.use("/api", exportRoute);
 app.use("/api", dashboardRoute);
 app.use("/api", monitoringRoute);
+app.use("/api", master)
 
 // health check (penting buat test)
 app.get("/health", (_req, res) => {
