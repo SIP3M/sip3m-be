@@ -103,7 +103,7 @@ export const getUsers = async (
           name: true,
           email: true,
           nidn_nip: true,
-          fakultas: true,
+          Fakultas: true,
           is_active: true,
           created_at: true,
           roles: {
@@ -130,7 +130,7 @@ export const getUsers = async (
         name: user.name,
         email: user.email,
         nidn: user.nidn_nip,
-        fakultas: user.fakultas,
+        fakultas: user.Fakultas,
         is_active: user.is_active,
         created_at: user.created_at,
         roles: {
@@ -172,8 +172,8 @@ export const getUserById = async (
       email: true,
       username: true,
       nidn_nip: true,
-      fakultas: true,
-      program_studi: true,
+      Fakultas: true,
+      program_studi_id: true,
       tempat_lahir: true,
       tanggal_lahir: true,
       jenis_kelamin: true,
@@ -202,8 +202,8 @@ export const getUserById = async (
       email: user.email,
       username: user.username,
       nidn: user.nidn_nip,
-      fakultas: user.fakultas,
-      program_studi: user.program_studi,
+      fakultas: user.Fakultas,
+      program_studi: user.program_studi_id,
       tempat_lahir: user.tempat_lahir,
       tanggal_lahir: user.tanggal_lahir,
       jenis_kelamin: user.jenis_kelamin,
@@ -260,7 +260,7 @@ export const updateUserRole = async (
       name: true,
       email: true,
       nidn_nip: true,
-      fakultas: true,
+      Fakultas: true,
       roles: {
         select: {
           id: true,
@@ -277,7 +277,7 @@ export const updateUserRole = async (
       name: updatedUser.name,
       email: updatedUser.email,
       nidn: updatedUser.nidn_nip,
-      fakultas: updatedUser.fakultas,
+      fakultas: updatedUser.Fakultas,
       roles: {
         id: updatedUser.roles.id,
         roles: updatedUser.roles.roles,
@@ -314,7 +314,7 @@ export const updateUserStatus = async (
       name: true,
       email: true,
       nidn_nip: true,
-      fakultas: true,
+      Fakultas: true,
       is_active: true,
       roles: {
         select: {
@@ -332,7 +332,7 @@ export const updateUserStatus = async (
       name: updatedUser.name,
       email: updatedUser.email,
       nidn: updatedUser.nidn_nip,
-      fakultas: updatedUser.fakultas,
+      fakultas: updatedUser.Fakultas,
       is_active: updatedUser.is_active,
       roles: {
         id: updatedUser.roles.id,
@@ -419,8 +419,15 @@ export const createUser = async (
         password_hash: passwordHash,
         role_id: roleRecord.id,
         nidn_nip: body.nidn_nip ?? null,
-        fakultas: body.fakultas ?? null,
-        program_studi: body.program_studi ?? null,
+
+        // 1. PERBAIKAN DI SINI:
+        // Gunakan field 'fakultas_id', bukan relasi 'Fakultas'.
+        // Jangan lupa di-parse ke Number() karena tipe datanya Int.
+        fakultas_id: body.fakultas ? Number(body.fakultas) : null,
+        program_studi_id: body.program_studi
+          ? Number(body.program_studi)
+          : null,
+
         tempat_lahir: body.tempat_lahir ?? null,
         tanggal_lahir: body.tanggal_lahir ? new Date(body.tanggal_lahir) : null,
         jenis_kelamin: body.jenis_kelamin ?? null,
@@ -434,7 +441,15 @@ export const createUser = async (
         email: true,
         username: true,
         nidn_nip: true,
-        fakultas: true,
+
+        // 2. PERBAIKAN DI SINI:
+        // Kolom 'fakultas' string sudah tidak ada. Kamu bisa me-return ID-nya...
+        fakultas_id: true,
+
+        // ...Atau menarik teks namanya langsung dari tabel master:
+        Fakultas: { select: { nama: true } },
+        ProgramStudi: { select: { nama: true } },
+
         is_active: true,
         created_at: true,
         roles: { select: { id: true, roles: true } },
@@ -449,7 +464,7 @@ export const createUser = async (
         email: newUser.email,
         username: newUser.username,
         nidn: newUser.nidn_nip,
-        fakultas: newUser.fakultas,
+        fakultas: newUser.Fakultas,
         is_active: newUser.is_active,
         created_at: newUser.created_at,
         roles: { id: newUser.roles.id, roles: newUser.roles.roles },
@@ -570,9 +585,29 @@ export const updateUser = async (
     if (body.password)
       updatedData.password_hash = await bcrypt.hash(body.password, 10);
     if (body.nidn_nip !== undefined) updatedData.nidn_nip = body.nidn_nip;
-    if (body.fakultas !== undefined) updatedData.fakultas = body.fakultas;
-    if (body.program_studi !== undefined)
-      updatedData.program_studi = body.program_studi;
+    // Untuk Fakultas
+    if (body.fakultas !== undefined) {
+      if (body.fakultas) {
+        // Jika ada valuenya, hubungkan (connect) dengan ID tersebut
+        updatedData.Fakultas = { connect: { id: Number(body.fakultas) } };
+      } else {
+        // Jika valuenya null/kosong, putuskan relasinya (disconnect)
+        updatedData.Fakultas = { disconnect: true };
+      }
+    }
+
+    // Untuk Program Studi
+    if (body.program_studi !== undefined) {
+      if (body.program_studi) {
+        // Jika ada valuenya, hubungkan (connect) dengan ID tersebut
+        updatedData.ProgramStudi = {
+          connect: { id: Number(body.program_studi) },
+        };
+      } else {
+        // Jika valuenya null/kosong, putuskan relasinya (disconnect)
+        updatedData.ProgramStudi = { disconnect: true };
+      }
+    }
     if (body.tempat_lahir !== undefined)
       updatedData.tempat_lahir = body.tempat_lahir;
     if (body.tanggal_lahir !== undefined)
@@ -592,7 +627,7 @@ export const updateUser = async (
         email: true,
         username: true,
         nidn_nip: true,
-        fakultas: true,
+        Fakultas: true,
         is_active: true,
         created_at: true,
         updated_at: true,
@@ -608,7 +643,7 @@ export const updateUser = async (
         email: updatedUser.email,
         username: updatedUser.username,
         nidn: updatedUser.nidn_nip,
-        fakultas: updatedUser.fakultas,
+        fakultas: updatedUser.Fakultas,
         is_active: updatedUser.is_active,
         created_at: updatedUser.created_at,
         updated_at: updatedUser.updated_at,

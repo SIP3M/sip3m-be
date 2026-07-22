@@ -140,6 +140,25 @@ model schema_migrations {
   dirty   Boolean
 }
 
+model Fakultas {
+  id            Int            @id @default(autoincrement())
+  nama          String         @unique @db.VarChar(100)
+  program_studi ProgramStudi[]
+  
+  // Relasi opsional jika user langsung di-bind ke ID fakultas
+  users users[] 
+}
+
+model ProgramStudi {
+  id          Int      @id @default(autoincrement())
+  nama        String   @db.VarChar(100)
+  fakultas_id Int
+  fakultas    Fakultas @relation(fields: [fakultas_id], references: [id], onDelete: Cascade)
+  
+  // Relasi opsional jika user langsung di-bind ke ID prodi
+  users users[]
+}
+
 model users {
   id            Int     @id @default(autoincrement())
   name          String  @db.VarChar(100)
@@ -149,8 +168,14 @@ model users {
   role_id       Int
 
   nidn_nip      String? @unique @db.VarChar(30)
-  fakultas      String? @db.VarChar(100)
-  program_studi String? @db.VarChar(100)
+  // fakultas      String? @db.VarChar(100)
+  // program_studi String? @db.VarChar(100)
+
+  fakultas_id      Int?
+  program_studi_id Int?
+
+  Fakultas     Fakultas?     @relation(fields: [fakultas_id], references: [id])
+  ProgramStudi ProgramStudi? @relation(fields: [program_studi_id], references: [id])
 
   tempat_lahir  String?   @db.VarChar(100)
   tanggal_lahir DateTime? @db.Date

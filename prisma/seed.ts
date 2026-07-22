@@ -1,77 +1,91 @@
-import { PrismaClient } from '../src/generated/prisma/client'; 
-import * as bcrypt from 'bcrypt';
+import { PrismaClient } from "../src/generated/prisma/client";
 
 const prisma = new PrismaClient();
 
 async function main() {
-  const saltRounds = 10;
-  const commonPassword = await bcrypt.hash('password123', saltRounds);
+  console.log("🌱 Memulai seeding data Fakultas dan Program Studi...");
 
-  console.log('Sedang menghapus data lama...');
-  // Hapus users terlebih dahulu sebelum roles untuk menghindari error Foreign Key
-  await prisma.users.deleteMany();
-  await prisma.roles.deleteMany();
-
-  console.log('Membuat data roles...');
-  const adminRole = await prisma.roles.create({ data: { roles: 'ADMIN_LPPM' } });
-  const staffRole = await prisma.roles.create({ data: { roles: 'STAFF_LPPM' } });
-  const reviewerRole = await prisma.roles.create({ data: { roles: 'REVIEWER' } });
-  const reviewerEksRole = await prisma.roles.create({ data: { roles: 'REVIEWER_EKSTERNAL' } });
-  const dosenRole = await prisma.roles.create({ data: { roles: 'DOSEN' } });
-
-  console.log('Menyiapkan data user dummy...');
-  const users = [
+  // Data master Fakultas dan Prodinya
+  const dataFakultas = [
     {
-      name: 'Admin LPPM Utama',
-      email: 'admin@lppm.ac.id',
-      password_hash: commonPassword,
-      role_id: adminRole.id,
-      nidn_nip: '1111111111',
+      nama: "Fakultas Teknik",
+      prodi: [
+        "S1 Teknik Informatika",
+        "S1 Teknik Industri",
+        "D3 Teknik Informatika",
+        "S1 Teknik Peternakan",
+      ],
     },
     {
-      name: 'Staff LPPM',
-      email: 'staff@lppm.ac.id',
-      password_hash: commonPassword,
-      role_id: staffRole.id,
-      nidn_nip: '2222222222',
+      nama: "Fakultas Ekonomi dan Bisnis",
+      prodi: ["S1 Manajemen", "S1 Akuntansi"],
     },
     {
-      name: 'Reviewer Internal',
-      email: 'reviewer@lppm.ac.id',
-      password_hash: commonPassword,
-      role_id: reviewerRole.id,
-      nidn_nip: '3333333333',
+      nama: "Fakultas Keguruan dan Ilmu Pendidikan",
+      prodi: [
+        "S1 Pendidikan Guru Sekolah Dasar",
+        "S1 Pendidikan Guru Pendidikan Anak Usia Dini",
+        "S1 Pendidikan Bahasa Inggris",
+        "S1 Pendidikan Matematika",
+        "S1 Pendidikan IPA",
+        "S1 Pendidikan Kimia",
+      ],
     },
     {
-      name: 'Reviewer Luar',
-      email: 'external@gmail.com',
-      password_hash: commonPassword,
-      role_id: reviewerEksRole.id,
-      nidn_nip: '4444444444',
+      nama: "Fakultas Ilmu Kesehatan",
+      prodi: ["S1 Ilmu Keperawatan", "S1 Ilmu Gizi", "S1 Ilmu Keolahragaan", "Profesi Ners"],
     },
     {
-      name: 'Dosen Pengusul',
-      email: 'dosen@lppm.ac.id',
-      password_hash: commonPassword,
-      role_id: dosenRole.id,
-      nidn_nip: '0123456789',
+      nama: "Fakultas Hukum",
+      prodi: ["S1 Ilmu Hukum"],
+    }, 
+    {
+      nama: "Fakultas Ilmu Sosial dan Ilmu Politik",
+      prodi: ["S1 Ilmu Komunikasi", "D3 Hubungan Masyarakat (Humas)"],
     },
+    {
+      nama: "Fakultas Agama Islam",
+      prodi: ["S1 Ilmu Al-Qur'an dan Tafsir", "S1 Tasawuf dan Psikoterapi"],
+    }
   ];
 
-  console.log('Memasukkan data user ke database...');
-  for (const u of users) {
-    const user = await prisma.users.create({
-      data: u,
+  for (const item of dataFakultas) {
+    // 1. Simpan atau pastikan Fakultas ada di DB
+    const fakultas = await prisma.fakultas.upsert({
+      where: { nama: item.nama },
+      update: {}, // Jika sudah ada, jangan ubah
+      create: { nama: item.nama },
     });
-    console.log(`Dibuat user: ${user.email} (Role ID: ${user.role_id})`);
+
+    // 2. Simpan semua prodi yang terkait dengan Fakultas tersebut
+    for (const namaProdi of item.prodi) {
+      // Cari apakah prodi sudah terdaftar di fakultas tersebut
+      const existingProdi = await prisma.programStudi.findFirst({
+        where: {
+          nama: namaProdi,
+          fakultas_id: fakultas.id,
+        },
+      });
+
+      if (!existingProdi) {
+        await prisma.programStudi.create({
+          data: {
+            nama: namaProdi,
+            fakultas_id: fakultas.id,
+          },
+        });
+      }
+    }
   }
 
-  console.log('Seeding berhasil dan selesai!');
+  console.log(
+    "✅ Seeding selesai! Data Fakultas & Prodi berhasil ditambahkan.",
+  );
 }
 
 main()
   .catch((e) => {
-    console.error('Terjadi kesalahan saat seeding:', e);
+    console.error("❌ Seeding gagal:", e);
     process.exit(1);
   })
   .finally(async () => {

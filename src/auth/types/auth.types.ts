@@ -28,8 +28,8 @@ export interface RegisterDosenInput {
   alamat?: string;
   nomor_hp: string;
   nidn: string;
-  fakultas: string;
-  program_studi: string;
+fakultas_id: number;
+  program_studi_id: number;
   username: string;
   password: string;
 }
@@ -84,7 +84,7 @@ export interface LoginResult {
     name: string;
     email: string;
     nidn: string | null;
-    fakultas: string | null;
+    fakultas_id: number | null;
     roles: {
       id: number;
       roles: string;

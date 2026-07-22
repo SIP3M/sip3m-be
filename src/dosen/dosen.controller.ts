@@ -23,7 +23,7 @@ export const getProfile = async (
       name: true,
       email: true,
       nidn_nip: true,
-      fakultas: true,
+      Fakultas: true,
       created_at: true,
       roles: {
         select: {
@@ -43,7 +43,7 @@ export const getProfile = async (
       name: user.name,
       email: user.email,
       nidn: user.nidn_nip,
-      fakultas: user.fakultas,
+      fakultas: user.Fakultas,
       roles: user.roles.roles,
       created_at: user.created_at,
     },
@@ -68,19 +68,22 @@ export const updateProfile = async (
     fakultas?: string;
   };
 
-  const updated = await prisma.users.update({
+const updated = await prisma.users.update({
     where: { id: userId },
     data: {
       name,
       nidn_nip: nidn,
-      fakultas,
+      // 1. Hubungkan ke relasi Fakultas menggunakan ID (pastikan dikonversi ke Number)
+      Fakultas: fakultas ? { connect: { id: Number(fakultas) } } : undefined,
     },
     select: {
       id: true,
       name: true,
       email: true,
       nidn_nip: true,
-      fakultas: true,
+      // 2. Ganti fakultas: true menjadi fakultas_id atau relasi Fakultas
+      fakultas_id: true,
+      Fakultas: { select: { nama: true } }, // Asumsi kolom di tabel master adalah 'nama'
       roles: {
         select: { roles: true },
       },
@@ -94,8 +97,10 @@ export const updateProfile = async (
       name: updated.name,
       email: updated.email,
       nidn: updated.nidn_nip,
-      fakultas: updated.fakultas,
-      roles: updated.roles.roles,
+      // 3. Panggil properti yang benar sesuai hasil select di atas
+      fakultas_id: updated.fakultas_id,
+      nama_fakultas: updated.Fakultas?.nama,
+      roles: updated.roles?.roles,
     },
   });
 };

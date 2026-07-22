@@ -36,14 +36,13 @@ export const registerDosenSchema = z
       .string()
       .min(1, "NIDN wajib diisi.")
       .max(20, "NIDN hanya boleh maksimal 20 karakter."),
-    fakultas: z
-      .string()
-      .min(1, "Fakultas wajib diisi.")
-      .max(100, "Fakultas hanya boleh maksimal 100 karakter."),
-    program_studi: z
-      .string()
-      .min(1, "Program studi wajib diisi.")
-      .max(100, "Program studi hanya boleh maksimal 100 karakter."),
+fakultas_id: z.coerce
+    .number({ message: "Fakultas tidak valid." })
+    .min(1, { message: "Fakultas wajib dipilih." }),
+
+  program_studi_id: z.coerce
+    .number({ message: "Program Studi tidak valid." })
+    .min(1, { message: "Program Studi wajib dipilih." }),
 
     // step 3
     username: z
