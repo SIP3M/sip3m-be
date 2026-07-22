@@ -27,14 +27,25 @@ export const createUserSchema = z.object({
     ROLES.REVIEWER,
     ROLES.REVIEWER_EKSTERNAL,
   ]),
-  nidn_nip: z.string().max(30).optional(),
+  nidn_nip: z
+    .string()
+    .regex(/^\d+$/, "NIDN/NIP hanya boleh berisi angka")
+    .max(30)
+    .optional(),
   fakultas: z.string().max(100).optional(),
   program_studi: z.string().max(100).optional(),
   tempat_lahir: z.string().max(100).optional(),
-  tanggal_lahir: z.string().optional(),
+  tanggal_lahir: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Format tanggal harus YYYY-MM-DD"),
   jenis_kelamin: z.string().max(15).optional(),
   alamat: z.string().optional(),
-  nomor_hp: z.string().max(20).optional(),
+  nomor_hp: z
+    .string()
+    .regex(/^\d+$/, "Nomor HP hanya boleh berisi angka")
+    .min(10)
+    .max(15)
+    .optional(),
   is_active: z.boolean().optional(),
 });
 
@@ -52,13 +63,24 @@ export const updateUserSchema = z.object({
       ROLES.REVIEWER_EKSTERNAL,
     ])
     .optional(),
-  nidn_nip: z.string().max(30).optional(),
+  nidn_nip: z
+    .string()
+    .regex(/^\d+$/, "NIDN/NIP hanya boleh berisi angka")
+    .max(30)
+    .optional(),
   fakultas: z.string().max(100).optional(),
   program_studi: z.string().max(100).optional(),
   tempat_lahir: z.string().max(100).optional(),
-  tanggal_lahir: z.string().optional(),
+  tanggal_lahir: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Format tanggal harus YYYY-MM-DD"),
   jenis_kelamin: z.string().max(15).optional(),
   alamat: z.string().optional(),
-  nomor_hp: z.string().max(20).optional(),
+  nomor_hp: z
+    .string()
+    .regex(/^\d+$/, "Nomor HP hanya boleh berisi angka")
+    .min(10)
+    .max(15)
+    .optional(),
   is_active: z.boolean().optional(),
 });
