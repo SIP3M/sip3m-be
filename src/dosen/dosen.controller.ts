@@ -97,7 +97,6 @@ const updated = await prisma.users.update({
       name: updated.name,
       email: updated.email,
       nidn: updated.nidn_nip,
-      // 3. Panggil properti yang benar sesuai hasil select di atas
       fakultas_id: updated.fakultas_id,
       nama_fakultas: updated.Fakultas?.nama,
       roles: updated.roles?.roles,
