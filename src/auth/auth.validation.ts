@@ -26,6 +26,7 @@ export const registerDosenSchema = z
       .string()
       .min(1, "Nomor HP wajib diisi.")
       .max(20, "Nomor HP hanya bisa maksimal 20 characters."),
+
     email: z
       .string()
       .min(1, "Email wajib diisi.")
@@ -35,14 +36,16 @@ export const registerDosenSchema = z
     nidn: z
       .string()
       .min(1, "NIDN wajib diisi.")
-      .max(20, "NIDN hanya boleh maksimal 20 karakter."),
-fakultas_id: z.coerce
-    .number({ message: "Fakultas tidak valid." })
-    .min(1, { message: "Fakultas wajib dipilih." }),
+      .max(20, "NIDN hanya boleh maksimal 20 karakter.")
+      .regex(/^\d+$/, "NIDN hanya boleh berisi angka"),
+      
+    fakultas_id: z.coerce
+      .number({ message: "Fakultas tidak valid." })
+      .min(1, { message: "Fakultas wajib dipilih." }),
 
-  program_studi_id: z.coerce
-    .number({ message: "Program Studi tidak valid." })
-    .min(1, { message: "Program Studi wajib dipilih." }),
+    program_studi_id: z.coerce
+      .number({ message: "Program Studi tidak valid." })
+      .min(1, { message: "Program Studi wajib dipilih." }),
 
     // step 3
     username: z
