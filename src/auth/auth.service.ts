@@ -50,8 +50,8 @@ export const registerDosen = async (
       username: data.username,
       password_hash: passwordHash,
       nidn_nip: data.nidn,
-      fakultas: data.fakultas,
-      program_studi: data.program_studi,
+      fakultas_id: data.fakultas_id,
+      program_studi_id: data.program_studi_id,
       tempat_lahir: data.tempat_lahir,
       tanggal_lahir: new Date(data.tanggal_lahir),
       jenis_kelamin: data.jenis_kelamin,
@@ -148,7 +148,7 @@ export const loginUser = async (data: LoginInput): Promise<LoginResult> => {
       name: true,
       email: true,
       nidn_nip: true,
-      fakultas: true,
+      fakultas_id: true,
       password_hash: true,
       is_active: true,
       roles: {
@@ -210,7 +210,8 @@ export const loginUser = async (data: LoginInput): Promise<LoginResult> => {
         roles: user.roles.roles,
       },
       nidn: user.nidn_nip,
-      fakultas: user.fakultas,
+      fakultas_id: user.fakultas_id,
     },
   };
 };
+  

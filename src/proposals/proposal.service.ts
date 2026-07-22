@@ -490,7 +490,7 @@ export const getProposalById = async (proposalId: number) => {
         },
       },
       // === TAMBAHAN BARU: Ambil hasil review beserta catatan revisinya ===
-      // Catatan: Jika tulisan "proposalReviews" error/merah di kodemu, 
+      // Catatan: Jika tulisan "proposalReviews" error/merah di kodemu,
       // coba ganti huruf P depannya menjadi kapital ("ProposalReviews") sesuai nama relasi di schema.prisma kamu.
       reviews: {
         select: {
@@ -502,11 +502,11 @@ export const getProposalById = async (proposalId: number) => {
           notes: true,
           created_at: true,
           reviewer: {
-            select: { name: true }
-          }
+            select: { name: true },
+          },
         },
         orderBy: { created_at: "desc" }, // Ambil revisi yang paling baru di urutan teratas
-      }
+      },
     },
   });
 
@@ -558,8 +558,10 @@ export const editProposal = async (
   // Jika input.is_draft bernilai true (hanya simpan/edit, tidak submit),
   // maka statusnya tetap menggunakan status yang sekarang (DRAFT atau REVISION).
   // Jika bernilai false (tombol submit ditekan), ubah menjadi SUBMITTED.
-  const isDraft = input.is_draft ?? true; 
-  const newStatus = isDraft ? existingProposal.status : ProposalStatus.SUBMITTED;
+  const isDraft = input.is_draft ?? true;
+  const newStatus = isDraft
+    ? existingProposal.status
+    : ProposalStatus.SUBMITTED;
 
   // Jika submit (bukan draft), pastikan file tersedia
   if (!isDraft) {
@@ -604,9 +606,13 @@ export const editProposal = async (
       file_info: {
         proposal_file: {
           previous_path: existingProposal.proposal_file_path,
-          previous_name: extractFileName(existingProposal.proposal_file_path || ""),
+          previous_name: extractFileName(
+            existingProposal.proposal_file_path || "",
+          ),
           current_path: updatedProposal.proposal_file_path,
-          current_name: extractFileName(updatedProposal.proposal_file_path || ""),
+          current_name: extractFileName(
+            updatedProposal.proposal_file_path || "",
+          ),
           replaced: Boolean(proposalFilePath),
         },
         rab_file: {
@@ -918,14 +924,18 @@ export const autoAssignReviewerService = async (proposalIds: number[]) => {
       }
 
       if (!proposal.faculty) {
-        throw new Error(`Proposal ID ${proposalId} tidak memiliki data fakultas.`);
+        throw new Error(
+          `Proposal ID ${proposalId} tidak memiliki data fakultas.`,
+        );
       }
 
       // 2. Cari candidate reviewer aktif, sebidang, dan bukan ketua
       const candidateReviewers = await prisma.users.findMany({
         where: {
           roles: { roles: { in: ["REVIEWER", "REVIEWER_EKSTERNAL"] } },
-          fakultas: proposal.faculty,
+          Fakultas: {
+            nama: proposal.faculty, // Mencocokkan teks string dari proposal ke tabel master
+          },
           id: { not: proposal.lead_researcher_id },
           is_active: true,
         },
@@ -937,7 +947,9 @@ export const autoAssignReviewerService = async (proposalIds: number[]) => {
       });
 
       if (candidateReviewers.length === 0) {
-        throw new Error(`Tidak ada reviewer tersedia untuk Fakultas ${proposal.faculty}.`);
+        throw new Error(
+          `Tidak ada reviewer tersedia untuk Fakultas ${proposal.faculty}.`,
+        );
       }
 
       // 3. Filter Konflik Kepentingan (Anggota tim)
@@ -950,7 +962,9 @@ export const autoAssignReviewerService = async (proposalIds: number[]) => {
       });
 
       if (safeReviewers.length === 0) {
-        throw new Error(`Semua reviewer sebidang untuk Proposal ID ${proposalId} mengalami konflik kepentingan.`);
+        throw new Error(
+          `Semua reviewer sebidang untuk Proposal ID ${proposalId} mengalami konflik kepentingan.`,
+        );
       }
 
       // 4. Urutkan beban kerja (Load Balancing)
@@ -995,7 +1009,6 @@ export const autoAssignReviewerService = async (proposalIds: number[]) => {
         title: proposal.title,
         reviewerName: selectedReviewer.name,
       });
-
     } catch (error: any) {
       // Jika terjadi error pada SATU proposal tertentu, masukkan ke daftar gagal, namun proses (loop) untuk proposal lainnya tetap lanjut.
       errorResults.push({
