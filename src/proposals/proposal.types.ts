@@ -6,6 +6,7 @@ export interface CreateProposalBody {
   skema: SkemaProposal;
   funding_request_amount?: string | number;
   sumber_data_penelitian?: string;
+  detail_sumber_penelitian?: string;
   instansi?: string;
   is_draft?: string | boolean;
 }
@@ -25,6 +26,7 @@ export interface CreateProposalData {
   skema: SkemaProposal;
   funding_request_amount: number;
   sumber_data_penelitian?: string | null;
+  detail_sumber_penelitian?: string | null;
   instansi?: string | null;
   status: ProposalStatus;
   lead_researcher_id: number;

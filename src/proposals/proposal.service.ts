@@ -129,6 +129,7 @@ export const createProposal = async (
       skema: input.skema,
       funding_request_amount: input.funding_request_amount,
       sumber_data_penelitian: input.sumber_data_penelitian,
+      detail_sumber_penelitian: input.detail_sumber_penelitian,
       instansi: input.instansi,
       dosen_terlibat: input.dosen_terlibat,
       nidn_dosen_terlibat: input.nidn_dosen_terlibat,
@@ -587,6 +588,9 @@ export const editProposal = async (
       }),
       ...(input.sumber_data_penelitian !== undefined && {
         sumber_data_penelitian: input.sumber_data_penelitian,
+      }),
+      ...(input.detail_sumber_penelitian !== undefined && {
+        detail_sumber_penelitian: input.detail_sumber_penelitian,
       }),
       ...(input.instansi !== undefined && { instansi: input.instansi }),
       status: newStatus,
