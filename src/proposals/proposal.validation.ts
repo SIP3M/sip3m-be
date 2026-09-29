@@ -38,6 +38,12 @@ const sumberDataField = z
   .max(1000, "Sumber data penelitian maksimal 1000 karakter.")
   .optional();
 
+const detailSumberField = z
+  .string()
+  .trim()
+  .max(2000, "Detail sumber penelitian maksimal 2000 karakter.")
+  .optional();
+
 const instansiField = z
   .string()
   .trim()
@@ -59,6 +65,7 @@ export const createProposalSchema = z.object({
   skema: skemaField,
   funding_request_amount: fundingField.optional().default(0),
   sumber_data_penelitian: sumberDataField,
+  detail_sumber_penelitian: detailSumberField,
   instansi: instansiField,
 
   dosen_terlibat: dosenTerlibatField,
@@ -75,6 +82,7 @@ export const editProposalSchema = z.object({
   skema: skemaField.optional(),
   funding_request_amount: fundingField.optional(),
   sumber_data_penelitian: sumberDataField,
+  detail_sumber_penelitian: detailSumberField,
   instansi: instansiField,
 
   dosen_terlibat: dosenTerlibatField,

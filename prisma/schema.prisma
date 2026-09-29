@@ -80,6 +80,7 @@ model proposals {
   nim_anggota            String?        @db.Text
 
   sumber_data_penelitian String?        @db.Text
+  detail_sumber_penelitian String?      @db.Text
   instansi               String?        @db.VarChar(255)
 
   submitted_at DateTime?
