@@ -2,6 +2,7 @@ import { Response } from "express";
 import { prisma } from "../prisma";
 import { AuthenticatedRequest } from "../auth/types/auth.jwt.types";
 import { HttpError } from "../common/errors/http-error";
+import { searchDosen, searchMahasiswa } from "./dosen.service";
 
 /**
  * GET /dosen/profile
@@ -102,4 +103,86 @@ const updated = await prisma.users.update({
       roles: updated.roles?.roles,
     },
   });
+};
+
+/**
+ * GET /dosen/search?q=:query
+ * Search dosen by nama atau NIDN
+ */
+export const searchDosenController = async (
+  req: AuthenticatedRequest,
+  res: Response,
+): Promise<Response> => {
+  try {
+    const { q } = req.query as { q?: string };
+
+    if (!q) {
+      return res.status(400).json({
+        message: "Query parameter 'q' tidak boleh kosong.",
+      });
+    }
+
+    const results = await searchDosen(q);
+
+    return res.status(200).json({
+      message: "Search dosen berhasil.",
+      data: results.map((dosen) => ({
+        id: dosen.id,
+        name: dosen.name,
+        nidn: dosen.nidn_nip,
+        email: dosen.email,
+        fakultas: dosen.Fakultas,
+      })),
+    });
+  } catch (error) {
+    if (error instanceof HttpError) {
+      return res.status(error.statusCode).json({ message: error.message });
+    }
+
+    console.error("[SEARCH_DOSEN_ERROR]", error);
+    return res.status(500).json({
+      message: "Terjadi kesalahan pada server saat search dosen.",
+    });
+  }
+};
+
+/**
+ * GET /mahasiswa/search?q=:query
+ * Search mahasiswa by nama atau NIM
+ */
+export const searchMahasiswaController = async (
+  req: AuthenticatedRequest,
+  res: Response,
+): Promise<Response> => {
+  try {
+    const { q } = req.query as { q?: string };
+
+    if (!q) {
+      return res.status(400).json({
+        message: "Query parameter 'q' tidak boleh kosong.",
+      });
+    }
+
+    const results = await searchMahasiswa(q);
+
+    return res.status(200).json({
+      message: "Search mahasiswa berhasil.",
+      data: results.map((mahasiswa) => ({
+        id: mahasiswa.id,
+        name: mahasiswa.name,
+        nim: mahasiswa.nidn_nip,
+        email: mahasiswa.email,
+        program_studi: mahasiswa.ProgramStudi,
+      })),
+    });
+  } catch (error) {
+    if (error instanceof HttpError) {
+      return res.status(error.statusCode).json({ message: error.message });
+    }
+
+    console.error("[SEARCH_MAHASISWA_ERROR]", error);
+    return res.status(500).json({
+      message: "Terjadi kesalahan pada server saat search mahasiswa.",
+    });
+  }
 };
