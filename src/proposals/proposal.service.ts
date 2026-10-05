@@ -1106,6 +1106,16 @@ export const evaluateProposal = async (
       score_anggaran:
         input.score_anggaran ?? existingReview?.score_anggaran ?? null,
       score_luaran: input.score_luaran ?? existingReview?.score_luaran ?? null,
+      catatan_perumusan:
+        input.catatan_perumusan ?? existingReview?.catatan_perumusan ?? null,
+      catatan_tinjauan:
+        input.catatan_tinjauan ?? existingReview?.catatan_tinjauan ?? null,
+      catatan_metode:
+        input.catatan_metode ?? existingReview?.catatan_metode ?? null,
+      catatan_anggaran:
+        input.catatan_anggaran ?? existingReview?.catatan_anggaran ?? null,
+      catatan_luaran:
+        input.catatan_luaran ?? existingReview?.catatan_luaran ?? null,
       total_score:
         input.score_perumusan !== undefined &&
         input.score_tinjauan !== undefined &&
@@ -1167,6 +1177,11 @@ export const evaluateProposal = async (
       score_metode: input.score_metode,
       score_anggaran: input.score_anggaran,
       score_luaran: input.score_luaran,
+      catatan_perumusan: input.catatan_perumusan ?? null,
+      catatan_tinjauan: input.catatan_tinjauan ?? null,
+      catatan_metode: input.catatan_metode ?? null,
+      catatan_anggaran: input.catatan_anggaran ?? null,
+      catatan_luaran: input.catatan_luaran ?? null,
       total_score: finalTotalScore,
       kekuatan_proposal: input.kekuatan_proposal,
       kelemahan_proposal: input.kelemahan_proposal,
