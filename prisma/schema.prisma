@@ -28,8 +28,16 @@ enum ProposalStatus {
   ADMIN_VERIFIED
   UNDER_REVIEW
   REVISION
+  REVISION_PENDING
   ACCEPTED
   REJECTED
+}
+
+enum ReviewDecision {
+  APPROVED
+  REJECTED
+  REVISION_MINOR
+  REVISION_MAJOR
 }
 
 enum PengabdianStatus {
@@ -103,6 +111,7 @@ model ProposalReviews {
   status      ProposalStatus 
   notes       String?        @db.Text
   created_at  DateTime       @default(now())
+  completed_at DateTime?
 
   // perhitungan nilai per point
   score_perumusan   Float? 
@@ -112,7 +121,7 @@ model ProposalReviews {
   score_luaran      Float? 
   total_score       Float? 
   
-  // catatan per point (BARU)
+  // catatan per point
   catatan_perumusan   String? @db.Text
   catatan_tinjauan    String? @db.Text
   catatan_metode      String? @db.Text
@@ -123,6 +132,14 @@ model ProposalReviews {
   kekuatan_proposal String? @db.Text
   kelemahan_proposal String? @db.Text
   rekomendasi_akhir  String? @db.VarChar(50)
+
+  // keputusan reviewer (BARU)
+  decision ReviewDecision?
+  
+  // revision tracking (BARU)
+  revision_count Int @default(0)
+  revision_deadline DateTime?
+  last_revision_submitted_at DateTime?
 
   proposal proposals @relation(fields: [proposal_id], references: [id])
   reviewer users     @relation(fields: [reviewer_id], references: [id])

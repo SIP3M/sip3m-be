@@ -127,6 +127,12 @@ const catatanPerPointField = z
   .max(2000, "Catatan per point maksimal 2000 karakter.")
   .optional();
 
+const reviewDecisionField = z
+  .enum(["APPROVED", "REJECTED", "REVISION_MINOR", "REVISION_MAJOR"], {
+    message: "Keputusan review tidak valid. Pilihan: APPROVED, REJECTED, REVISION_MINOR, REVISION_MAJOR.",
+  })
+  .optional();
+
 const draftEvaluateProposalSchema = z.object({
   is_draft: z.literal(true),
   status: z
@@ -164,6 +170,8 @@ const draftEvaluateProposalSchema = z.object({
     .trim()
     .max(2000, "Catatan reviewer maksimal 2000 karakter.")
     .optional(),
+  decision: reviewDecisionField,
+  revision_deadline: z.string().datetime().optional(),
 });
 
 const submitEvaluateProposalSchema = z.object({
@@ -201,6 +209,10 @@ const submitEvaluateProposalSchema = z.object({
     .trim()
     .max(2000, "Catatan reviewer maksimal 2000 karakter.")
     .optional(),
+  decision: z.enum(["APPROVED", "REJECTED", "REVISION_MINOR", "REVISION_MAJOR"], {
+    message: "Keputusan review wajib diisi saat submit review.",
+  }),
+  revision_deadline: z.string().datetime().optional(),
 });
 
 export const evaluateProposalSchema = z.discriminatedUnion("is_draft", [

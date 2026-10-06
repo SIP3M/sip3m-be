@@ -1166,6 +1166,24 @@ export const evaluateProposal = async (
     score_luaran: input.score_luaran,
   });
 
+  // Determine proposal status based on decision
+  const getProposalStatusFromDecision = (decision: string | null | undefined): ProposalStatus => {
+    if (!decision) return ProposalStatus.UNDER_REVIEW;
+    
+    if (decision === "APPROVED") {
+      return ProposalStatus.ACCEPTED;
+    } else if (decision === "REJECTED") {
+      return ProposalStatus.REJECTED;
+    } else if (decision === "REVISION_MINOR" || decision === "REVISION_MAJOR") {
+      return ProposalStatus.REVISION;
+    }
+    return ProposalStatus.UNDER_REVIEW;
+  };
+
+  const newProposalStatus = input.decision
+    ? getProposalStatusFromDecision(input.decision as string)
+    : ProposalStatus.UNDER_REVIEW;
+
   const result = await prisma.$transaction(async (tx) => {
     const reviewData: Prisma.ProposalReviewsUncheckedCreateInput = {
       proposal_id: proposalId,
@@ -1186,6 +1204,9 @@ export const evaluateProposal = async (
       kekuatan_proposal: input.kekuatan_proposal,
       kelemahan_proposal: input.kelemahan_proposal,
       rekomendasi_akhir: input.rekomendasi_akhir,
+      decision: input.decision ?? null,
+      completed_at: new Date(),
+      revision_deadline: input.revision_deadline ? new Date(input.revision_deadline) : null,
     };
 
     const review = existingReview
@@ -1198,17 +1219,24 @@ export const evaluateProposal = async (
     const updatedProposal = await tx.proposals.update({
       where: { id: proposalId },
       data: {
-        status: input.status,
+        status: newProposalStatus,
       },
     });
 
     // Buat notifikasi untuk pemilik proposal
     let notifTitle = "Proposal Sudah Direview";
-    let notifMessage = `Proposal "${proposal.title}" telah direview reviewer dengan hasil ${input.status}.`;
+    let notifMessage = `Proposal "${proposal.title}" telah direview reviewer dengan hasil ${input.decision ?? "PENDING"}.`;
 
-    if (input.status === ProposalStatus.ACCEPTED) {
+    if (input.decision === "APPROVED" || newProposalStatus === ProposalStatus.ACCEPTED) {
       notifTitle = "Proposal Diterima 🎉";
       notifMessage = `Selamat! Proposal "${proposal.title}" telah diterima dan disetujui. Proyek pengabdian Anda telah dibuat secara otomatis.`;
+    } else if (input.decision === "REJECTED" || newProposalStatus === ProposalStatus.REJECTED) {
+      notifTitle = "Proposal Ditolak";
+      notifMessage = `Maaf, Proposal "${proposal.title}" telah ditolak oleh reviewer.`;
+    } else if (input.decision === "REVISION_MINOR" || input.decision === "REVISION_MAJOR") {
+      notifTitle = "Proposal Perlu Revisi";
+      const revisionType = input.decision === "REVISION_MINOR" ? "kecil" : "besar";
+      notifMessage = `Proposal "${proposal.title}" perlu revisi ${revisionType}. Silakan perbaiki sesuai dengan catatan reviewer.`;
     }
 
     await tx.notifications.create({
@@ -1220,7 +1248,7 @@ export const evaluateProposal = async (
     });
 
     // Jika proposal ACCEPTED, otomatis buat PengabdianProject + Milestones default
-    if (input.status === ProposalStatus.ACCEPTED) {
+    if (newProposalStatus === ProposalStatus.ACCEPTED) {
       const existingProject = await tx.pengabdianProjects.findUnique({
         where: { proposal_id: proposalId },
       });
