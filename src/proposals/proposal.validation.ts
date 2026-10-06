@@ -121,6 +121,12 @@ const reviewDecisionStatuses = [
   ProposalStatus.REVISION,
 ] as const;
 
+const catatanPerPointField = z
+  .string()
+  .trim()
+  .max(2000, "Catatan per point maksimal 2000 karakter.")
+  .optional();
+
 const draftEvaluateProposalSchema = z.object({
   is_draft: z.literal(true),
   status: z
@@ -133,6 +139,11 @@ const draftEvaluateProposalSchema = z.object({
   score_metode: scoreField.optional(),
   score_anggaran: scoreField.optional(),
   score_luaran: scoreField.optional(),
+  catatan_perumusan: catatanPerPointField,
+  catatan_tinjauan: catatanPerPointField,
+  catatan_metode: catatanPerPointField,
+  catatan_anggaran: catatanPerPointField,
+  catatan_luaran: catatanPerPointField,
   kekuatan_proposal: z
     .string()
     .trim()
@@ -165,6 +176,11 @@ const submitEvaluateProposalSchema = z.object({
   score_metode: scoreField,
   score_anggaran: scoreField,
   score_luaran: scoreField,
+  catatan_perumusan: catatanPerPointField,
+  catatan_tinjauan: catatanPerPointField,
+  catatan_metode: catatanPerPointField,
+  catatan_anggaran: catatanPerPointField,
+  catatan_luaran: catatanPerPointField,
   kekuatan_proposal: z
     .string()
     .trim()

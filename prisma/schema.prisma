@@ -104,13 +104,22 @@ model ProposalReviews {
   notes       String?        @db.Text
   created_at  DateTime       @default(now())
 
-  // perhitungan nilai
+  // perhitungan nilai per point
   score_perumusan   Float? 
-  score_tinjauan  Float? 
-  score_metode    Float? 
-  score_anggaran   Float? 
+  score_tinjauan    Float? 
+  score_metode      Float? 
+  score_anggaran    Float? 
   score_luaran      Float? 
-  total_score  Float? 
+  total_score       Float? 
+  
+  // catatan per point (BARU)
+  catatan_perumusan   String? @db.Text
+  catatan_tinjauan    String? @db.Text
+  catatan_metode      String? @db.Text
+  catatan_anggaran    String? @db.Text
+  catatan_luaran      String? @db.Text
+  
+  // catatan umum
   kekuatan_proposal String? @db.Text
   kelemahan_proposal String? @db.Text
   rekomendasi_akhir  String? @db.VarChar(50)
