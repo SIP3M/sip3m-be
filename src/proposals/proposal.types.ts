@@ -1,9 +1,10 @@
-import { ProposalStatus, SkemaProposal } from "../generated/prisma/enums";
+import { ProposalStatus, SkemaProposal, SumberPendanaan } from "../generated/prisma/enums";
 
 export interface CreateProposalBody {
   title: string;
   faculty?: string;
   skema: SkemaProposal;
+  sumber_pendanaan?: SumberPendanaan;
   funding_request_amount?: string | number;
   sumber_data_penelitian?: string;
   detail_sumber_penelitian?: string;
@@ -24,6 +25,7 @@ export interface CreateProposalData {
   title: string;
   faculty?: string;
   skema: SkemaProposal;
+  sumber_pendanaan?: SumberPendanaan | null;
   funding_request_amount: number;
   sumber_data_penelitian?: string | null;
   detail_sumber_penelitian?: string | null;

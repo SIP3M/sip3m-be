@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ProposalStatus, SkemaProposal } from "../generated/prisma/enums";
+import { ProposalStatus, SkemaProposal, SumberPendanaan } from "../generated/prisma/enums";
 
 // =============================================
 // Base Fields (DRY - reusable across schemas)
@@ -26,6 +26,20 @@ const skemaField = z
     },
   )
   .transform((value) => skemaLabelToEnum[value]);
+
+const sumberPendanaanLabelToEnum: Record<string, SumberPendanaan> = {
+  "Internal Kampus": SumberPendanaan.INTERNAL_KAMPUS,
+  Kemendikbudristek: SumberPendanaan.KEMENDIKBUDRISTEK,
+  Mandiri: SumberPendanaan.MANDIRI,
+  Lainnya: SumberPendanaan.LAINNYA,
+};
+
+const sumberPendanaanField = z
+  .enum(["Internal Kampus", "Kemendikbudristek", "Mandiri", "Lainnya"], {
+    message:
+      "Sumber pendanaan tidak valid. Pilihan: Internal Kampus, Kemendikbudristek, Mandiri, Lainnya.",
+  })
+  .transform((value) => sumberPendanaanLabelToEnum[value]);
 
 const dosenTerlibatField = z.string().trim().max(1000).optional();
 const nidnDosenField = z.string().trim().max(1000).optional(); 
@@ -63,6 +77,7 @@ export const createProposalSchema = z.object({
   title: titleField,
   faculty: facultyField.optional(),
   skema: skemaField,
+  sumber_pendanaan: sumberPendanaanField.optional(),
   funding_request_amount: fundingField.optional().default(0),
   sumber_data_penelitian: sumberDataField,
   detail_sumber_penelitian: detailSumberField,
@@ -80,6 +95,7 @@ export const editProposalSchema = z.object({
   title: titleField.optional(),
   faculty: facultyField.optional(),
   skema: skemaField.optional(),
+  sumber_pendanaan: sumberPendanaanField.optional(),
   funding_request_amount: fundingField.optional(),
   sumber_data_penelitian: sumberDataField,
   detail_sumber_penelitian: detailSumberField,

@@ -22,6 +22,13 @@ enum SkemaProposal {
   PENELITIAN_KOLABORASI   @map("Penelitian Kolaborasi")
 }
 
+enum SumberPendanaan {
+  INTERNAL_KAMPUS  @map("Internal Kampus")
+  KEMENDIKBUDRISTEK @map("Kemendikbudristek")
+  MANDIRI          @map("Mandiri")
+  LAINNYA          @map("Lainnya")
+}
+
 enum ProposalStatus {
   DRAFT
   SUBMITTED
@@ -79,6 +86,7 @@ model proposals {
   status                 ProposalStatus @default(DRAFT)
 
   skema              SkemaProposal
+  sumber_pendanaan   SumberPendanaan?
   proposal_file_path String? @db.VarChar(255)
   rab_file_path      String? @db.VarChar(255)
 

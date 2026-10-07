@@ -66,6 +66,11 @@ export const swaggerSpec = swaggerJSDoc({
               type: ["string", "null"],
               example: "Survei lapangan dan data BPS",
             },
+            sumber_pendanaan: {
+              type: ["string", "null"],
+              enum: ["Internal Kampus", "Kemendikbudristek", "Mandiri", "Lainnya"],
+              example: "Internal Kampus",
+            },
             instansi: {
               type: ["string", "null"],
               example: "Kementerian Pertanian",
