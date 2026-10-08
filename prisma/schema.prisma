@@ -94,6 +94,8 @@ model proposals {
   nidn_dosen_terlibat    String?        @db.Text
   nama_anggota           String?        @db.Text
   nim_anggota            String?        @db.Text
+  nama_ketua             String?        @db.VarChar(100)
+  nidn_ketua             String?        @db.VarChar(30)
 
   sumber_data_penelitian String?        @db.Text
   detail_sumber_penelitian String?      @db.Text

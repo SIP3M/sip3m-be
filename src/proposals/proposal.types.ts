@@ -9,6 +9,8 @@ export interface CreateProposalBody {
   sumber_data_penelitian?: string;
   detail_sumber_penelitian?: string;
   instansi?: string;
+  nama_ketua?: string;
+  nidn_ketua?: string;
   is_draft?: string | boolean;
 }
 
@@ -30,6 +32,8 @@ export interface CreateProposalData {
   sumber_data_penelitian?: string | null;
   detail_sumber_penelitian?: string | null;
   instansi?: string | null;
+  nama_ketua?: string | null;
+  nidn_ketua?: string | null;
   status: ProposalStatus;
   lead_researcher_id: number;
   proposal_file_path: string | null;

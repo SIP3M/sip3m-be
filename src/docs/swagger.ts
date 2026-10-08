@@ -95,6 +95,16 @@ export const swaggerSpec = swaggerJSDoc({
               example: "2020123456, 2020123457",
               description: "Daftar NIM anggota mahasiswa (teks bebas).",
             },
+            nama_ketua: {
+              type: ["string", "null"],
+              example: "Dr. Budi Santoso",
+              description: "Nama Ketua Peneliti — diambil dari baris Peran = Ketua Peneliti di tabel Tim (Opsi B). Fallback ke user.name jika null (data lama).",
+            },
+            nidn_ketua: {
+              type: ["string", "null"],
+              example: "0123456789",
+              description: "NIDN Ketua Peneliti.",
+            },
             funding_request_amount: {
               type: ["number", "null"],
               example: 15000000,
