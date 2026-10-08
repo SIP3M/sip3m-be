@@ -248,6 +248,7 @@ model users {
   reviewers ProposalReviewers[]
   pengabdianDocumentsUploaded PengabdianDocuments[] @relation("UploadedByUser")
   kkmPeriodsCreated        KkmPeriod[]
+  kkmLocationsCreated      KkmLocation[]
 
   @@index([role_id])
 }
@@ -368,9 +369,33 @@ model KkmPeriod {
   created_at              DateTime        @default(now())
   updated_at              DateTime        @updatedAt
 
+  locations KkmLocation[]
+
   @@unique([nama_periode, tahun_akademik])
   @@index([status])
   @@index([tahun_akademik])
   @@index([tahun])
   @@index([jenis])
+}
+
+model KkmLocation {
+  id         Int      @id @default(autoincrement())
+  periode_id Int
+  kabupaten  String   @db.VarChar(100)
+  kecamatan  String   @db.VarChar(100)
+  desa       String   @db.VarChar(100)
+  kuota      Int
+
+  // terisi & status Penuh/Tersedia = derived (hitungan kelompok/peserta), bukan kolom
+
+  created_by Int?
+  creator    users?     @relation(fields: [created_by], references: [id])
+  periode    KkmPeriod  @relation(fields: [periode_id], references: [id], onDelete: Cascade)
+  created_at DateTime   @default(now())
+  updated_at DateTime   @updatedAt
+
+  @@unique([periode_id, kabupaten, kecamatan, desa])
+  @@index([periode_id])
+  @@index([kecamatan])
+  @@index([kabupaten])
 }

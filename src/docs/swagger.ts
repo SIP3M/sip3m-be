@@ -509,6 +509,31 @@ export const swaggerSpec = swaggerJSDoc({
             },
           },
         },
+        KkmLocation: {
+          type: "object",
+          properties: {
+            id: { type: "number", example: 1 },
+            periode_id: { type: "number", example: 1, description: "FK ke KkmPeriod.id" },
+            kabupaten: { type: "string", example: "Cirebon" },
+            kecamatan: { type: "string", example: "Plumbon" },
+            desa: { type: "string", example: "Karangmulya", description: "1 Desa = 1 Kelompok KKM" },
+            kuota: { type: "number", example: 12, description: "Kuota mahasiswa untuk desa/kelompok ini" },
+            terisi: { type: "number", example: 0, description: "Derived 0 sampai modul Kelompok/Peserta ada" },
+            status: { type: "string", enum: ["Tersedia", "Penuh"], example: "Tersedia", description: "Derived: Penuh jika terisi >= kuota" },
+            created_by: { type: ["number", "null"], example: 1 },
+            created_at: { type: "string", format: "date-time" },
+            updated_at: { type: "string", format: "date-time" },
+            periode: {
+              type: "object",
+              properties: {
+                id: { type: "number", example: 1 },
+                nama_periode: { type: "string", example: "KKM Reguler 2026" },
+                tahun_akademik: { type: "string", example: "2025/2026" },
+                status: { type: "string", example: "AKTIF" },
+              },
+            },
+          },
+        },
         KkmPeriod: {
           type: "object",
           properties: {
@@ -6515,6 +6540,124 @@ Kolom FE: TAHUN, NAMA PERIODE, JENIS, PELAKSANAAN, PENARIKAN, STATUS, AKSI.
             403: { description: "Forbidden" },
             404: { description: "Periode tidak ditemukan" },
           },
+        },
+      },
+      "/kkm/locations": {
+        post: {
+          tags: ["KKM Lokasi"],
+          summary: "Tambah lokasi KKM (per Desa = 1 Kelompok)",
+          description: "Admin LPPM input langsung Desa-nya. 1 row = 1 Desa = 1 Kelompok. Contoh: Kec. Plumbon 4 kelompok = tambah 4x dengan desa beda. Tanpa tema, tanpa maks kelompok.",
+          security: [{ bearerAuth: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/KkmLocation" },
+                example: { periode_id: 1, kabupaten: "Cirebon", kecamatan: "Plumbon", desa: "Karangmulya", kuota: 12 },
+              },
+            },
+          },
+          responses: {
+            201: { description: "Lokasi berhasil dibuat", content: { "application/json": { example: { message: "Lokasi KKM berhasil dibuat.", data: { id: 1, periode_id: 1, desa: "Karangmulya", kecamatan: "Plumbon", kabupaten: "Cirebon", kuota: 12, terisi: 0, status: "Tersedia" } } } } },
+            400: { description: "Validasi gagal / periode SELESAI" },
+            401: { description: "Unauthorized" },
+            403: { description: "Forbidden" },
+            409: { description: "Desa sudah ada di periode ini" },
+          },
+        },
+        get: {
+          tags: ["KKM Lokasi"],
+          summary: "List lokasi KKM (tabel Desa/Kecamatan/Kabupaten, 1 Desa = 1 Kelompok)",
+          description: "Flat list per Desa. Filter periode_id wajib untuk konteks. terisi & status derived (masih 0 sampai modul Kelompok/Peserta ada).",
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            { name: "periode_id", in: "query", required: false, schema: { type: "integer", example: 1 } },
+            { name: "page", in: "query", required: false, schema: { type: "integer", minimum: 1, default: 1 } },
+            { name: "search", in: "query", required: false, schema: { type: "string", example: "Plumbon" } },
+            { name: "kecamatan", in: "query", required: false, schema: { type: "string", example: "Plumbon" } },
+            { name: "kabupaten", in: "query", required: false, schema: { type: "string", example: "Cirebon" } },
+            { name: "status", in: "query", required: false, schema: { type: "string", enum: ["Tersedia", "Penuh"] } },
+          ],
+          responses: {
+            200: {
+              description: "Berhasil",
+              content: {
+                "application/json": {
+                  example: {
+                    message: "Berhasil mengambil daftar lokasi KKM.",
+                    data: [
+                      { id: 1, desa: "Karangmulya", kecamatan: "Plumbon", kabupaten: "Cirebon", kuota: 12, terisi: 0, status: "Tersedia" },
+                      { id: 2, desa: "Lurah", kecamatan: "Plumbon", kabupaten: "Cirebon", kuota: 12, terisi: 0, status: "Tersedia" },
+                    ],
+                    meta: { totalData: 4, totalPages: 1, currentPage: 1, limit: 10 },
+                  },
+                },
+              },
+            },
+            401: { description: "Unauthorized" },
+          },
+        },
+      },
+      "/kkm/locations/stats": {
+        get: {
+          tags: ["KKM Lokasi"],
+          summary: "Statistik lokasi per periode (total desa, total kecamatan, per kecamatan)",
+          description: "Untuk jawaban 'ada berapa kecamatan' dan 'Kec. Plumbon ada 4 kelompok'. Hitung distinct kecamatan & total desa/kuota dari KkmLocation.",
+          security: [{ bearerAuth: [] }],
+          parameters: [{ name: "periode_id", in: "query", required: true, schema: { type: "integer", example: 1 } }],
+          responses: {
+            200: {
+              description: "Berhasil",
+              content: {
+                "application/json": {
+                  example: {
+                    message: "Berhasil mengambil statistik lokasi KKM.",
+                    data: {
+                      periode: { id: 1, nama_periode: "KKM Reguler 2026", tahun_akademik: "2025/2026" },
+                      total_desa: 32,
+                      total_kecamatan: 5,
+                      total_kuota: 338,
+                      total_terisi: 0,
+                      per_kecamatan: [{ kecamatan: "Plumbon", kabupaten: "Cirebon", jumlah_desa: 4, kuota: 60, terisi: 0 }],
+                    },
+                  },
+                },
+              },
+            },
+            400: { description: "periode_id wajib" },
+            404: { description: "Periode tidak ditemukan" },
+          },
+        },
+      },
+      "/kkm/locations/{id}": {
+        get: {
+          tags: ["KKM Lokasi"],
+          summary: "Detail lokasi KKM (ikon mata)",
+          security: [{ bearerAuth: [] }],
+          parameters: [{ name: "id", in: "path", required: true, schema: { type: "integer", example: 1 } }],
+          responses: {
+            200: { description: "Berhasil", content: { "application/json": { example: { message: "Berhasil mengambil detail lokasi KKM.", data: { id: 1, desa: "Karangmulya", kecamatan: "Plumbon", kuota: 12 } } } } },
+            404: { description: "Lokasi tidak ditemukan" },
+          },
+        },
+        put: {
+          tags: ["KKM Lokasi"],
+          summary: "Edit lokasi KKM",
+          security: [{ bearerAuth: [] }],
+          parameters: [{ name: "id", in: "path", required: true, schema: { type: "integer", example: 1 } }],
+          requestBody: { required: true, content: { "application/json": { schema: { $ref: "#/components/schemas/KkmLocation" } } } },
+          responses: {
+            200: { description: "Berhasil diperbarui" },
+            400: { description: "Validasi gagal / periode SELESAI" },
+            409: { description: "Desa duplikat di periode" },
+          },
+        },
+        delete: {
+          tags: ["KKM Lokasi"],
+          summary: "Hapus lokasi KKM",
+          security: [{ bearerAuth: [] }],
+          parameters: [{ name: "id", in: "path", required: true, schema: { type: "integer", example: 1 } }],
+          responses: { 200: { description: "Berhasil dihapus" }, 404: { description: "Lokasi tidak ditemukan" } },
         },
       },
       "/kkm/periods/{id}/status": {

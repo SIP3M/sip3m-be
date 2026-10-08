@@ -16,6 +16,7 @@ import exportRoute from "./export/export.routes";
 import dashboardRoute from "./dashboard/dashboard.routes";
 import monitoringRoute from "./monitoring/monitoring.routes";
 import kkmPeriodRoute from "./kkm/periods/kkm-period.routes";
+import kkmLocationRoute from "./kkm/locations/kkm-location.routes";
 import swaggerUiDist from "swagger-ui-dist";
 import { swaggerSpec } from "./docs/swagger";
 
@@ -87,6 +88,7 @@ app.use("/api", exportRoute);
 app.use("/api", dashboardRoute);
 app.use("/api", monitoringRoute);
 app.use("/api", kkmPeriodRoute);
+app.use("/api", kkmLocationRoute);
 app.use("/api", master)
 
 // health check (penting buat test)
