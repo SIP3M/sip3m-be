@@ -46,7 +46,96 @@ const nidnDosenField = z.string().trim().max(1000).optional();
 const namaAnggotaField = z.string().trim().max(1000).optional();
 const nimAnggotaField = z.string().trim().max(1000).optional();
 const namaKetuaField = z.string().trim().max(100, "Nama ketua peneliti maksimal 100 karakter.").optional();
-const nidnKetuaField = z.string().trim().max(30, "NIDN ketua maksimal 30 karakter.").optional(); 
+const nidnKetuaField = z.string().trim().max(30, "NIDN ketua maksimal 30 karakter.").optional();
+
+// --- Helpers anti-double ---
+const splitList = (value?: string | null): string[] => {
+  if (!value) return [];
+  return value
+    .split(/[,;\n]+/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+};
+const normalizeName = (s: string) => s.trim().replace(/\s+/g, " ").toLowerCase();
+const normalizeId = (s: string) => s.trim().toLowerCase();
+
+const assertNoDuplicateDosen = (
+  data: { dosen_terlibat?: string; nidn_dosen_terlibat?: string; nama_ketua?: string; nidn_ketua?: string; nama_anggota?: string; nim_anggota?: string },
+  ctx: z.RefinementCtx,
+) => {
+  const dosenNames = splitList(data.dosen_terlibat);
+  const nidnDosens = splitList(data.nidn_dosen_terlibat);
+  const mahasiswaNames = splitList(data.nama_anggota);
+  const nimMahasiswas = splitList(data.nim_anggota);
+
+  // duplikat dalam dosen anggota
+  {
+    const seen = new Set<string>();
+    for (const raw of dosenNames) {
+      const norm = normalizeName(raw);
+      if (seen.has(norm)) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["dosen_terlibat"], message: `Nama dosen "${raw.trim()}" duplikat di daftar anggota. Tiap dosen hanya boleh 1 kali.` });
+        break;
+      }
+      seen.add(norm);
+    }
+  }
+  // duplikat dalam NIDN anggota
+  {
+    const seen = new Set<string>();
+    for (const raw of nidnDosens) {
+      const norm = normalizeId(raw);
+      if (!norm) continue;
+      if (seen.has(norm)) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["nidn_dosen_terlibat"], message: `NIDN "${raw.trim()}" duplikat di daftar anggota.` });
+        break;
+      }
+      seen.add(norm);
+    }
+  }
+  // duplikat dalam nama anggota mahasiswa
+  {
+    const seen = new Set<string>();
+    for (const raw of mahasiswaNames) {
+      const norm = normalizeName(raw);
+      if (seen.has(norm)) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["nama_anggota"], message: `Nama anggota "${raw.trim()}" duplikat.` });
+        break;
+      }
+      seen.add(norm);
+    }
+  }
+  // duplikat dalam NIM anggota
+  {
+    const seen = new Set<string>();
+    for (const raw of nimMahasiswas) {
+      const norm = normalizeId(raw);
+      if (!norm) continue;
+      if (seen.has(norm)) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["nim_anggota"], message: `NIM "${raw.trim()}" duplikat.` });
+        break;
+      }
+      seen.add(norm);
+    }
+  }
+
+  // ketua vs anggota dosen (by nama)
+  const ketuaNamaRaw = data.nama_ketua?.trim();
+  if (ketuaNamaRaw) {
+    const ketuaNorm = normalizeName(ketuaNamaRaw);
+    if (dosenNames.some((n) => normalizeName(n) === ketuaNorm)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["nama_ketua"], message: `Ketua peneliti "${ketuaNamaRaw}" sudah ada di daftar anggota dosen. Tidak boleh double.` });
+    }
+  }
+  // ketua vs anggota dosen (by NIDN)
+  const ketuaNidnRaw = data.nidn_ketua?.trim();
+  if (ketuaNidnRaw) {
+    const ketuaNidnNorm = normalizeId(ketuaNidnRaw);
+    if (nidnDosens.some((n) => normalizeId(n) === ketuaNidnNorm)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["nidn_ketua"], message: `NIDN ketua "${ketuaNidnRaw}" sudah ada di daftar anggota. Tidak boleh double.` });
+    }
+  }
+};
 
 const sumberDataField = z
   .string()
@@ -75,45 +164,59 @@ const isDraftField = z
   .union([z.string(), z.boolean()])
   .transform((val) => val === "true" || val === true);
 
-export const createProposalSchema = z.object({
-  title: titleField,
-  faculty: facultyField.optional(),
-  skema: skemaField,
-  sumber_pendanaan: sumberPendanaanField.optional(),
-  funding_request_amount: fundingField.optional().default(0),
-  sumber_data_penelitian: sumberDataField,
-  detail_sumber_penelitian: detailSumberField,
-  instansi: instansiField,
+export const createProposalSchema = z
+  .object({
+    title: titleField,
+    faculty: facultyField.optional(),
+    skema: skemaField,
+    sumber_pendanaan: sumberPendanaanField.optional(),
+    funding_request_amount: fundingField.optional().default(0),
+    sumber_data_penelitian: sumberDataField,
+    detail_sumber_penelitian: detailSumberField,
+    instansi: instansiField,
 
-  dosen_terlibat: dosenTerlibatField,
-  nidn_dosen_terlibat: nidnDosenField,
-  nama_anggota: namaAnggotaField,
-  nim_anggota: nimAnggotaField,
-  nama_ketua: namaKetuaField,
-  nidn_ketua: nidnKetuaField,
+    dosen_terlibat: dosenTerlibatField,
+    nidn_dosen_terlibat: nidnDosenField,
+    nama_anggota: namaAnggotaField,
+    nim_anggota: nimAnggotaField,
+    nama_ketua: namaKetuaField,
+    nidn_ketua: nidnKetuaField,
 
-  is_draft: isDraftField.optional().default(false),
-});
+    is_draft: isDraftField.optional().default(false),
+  })
+  .superRefine((data, ctx) => assertNoDuplicateDosen(data, ctx));
 
-export const editProposalSchema = z.object({
-  title: titleField.optional(),
-  faculty: facultyField.optional(),
-  skema: skemaField.optional(),
-  sumber_pendanaan: sumberPendanaanField.optional(),
-  funding_request_amount: fundingField.optional(),
-  sumber_data_penelitian: sumberDataField,
-  detail_sumber_penelitian: detailSumberField,
-  instansi: instansiField,
+export const editProposalSchema = z
+  .object({
+    title: titleField.optional(),
+    faculty: facultyField.optional(),
+    skema: skemaField.optional(),
+    sumber_pendanaan: sumberPendanaanField.optional(),
+    funding_request_amount: fundingField.optional(),
+    sumber_data_penelitian: sumberDataField,
+    detail_sumber_penelitian: detailSumberField,
+    instansi: instansiField,
 
-  dosen_terlibat: dosenTerlibatField,
-  nidn_dosen_terlibat: nidnDosenField,
-  nama_anggota: namaAnggotaField,
-  nim_anggota: nimAnggotaField,
-  nama_ketua: namaKetuaField,
-  nidn_ketua: nidnKetuaField,
+    dosen_terlibat: dosenTerlibatField,
+    nidn_dosen_terlibat: nidnDosenField,
+    nama_anggota: namaAnggotaField,
+    nim_anggota: nimAnggotaField,
+    nama_ketua: namaKetuaField,
+    nidn_ketua: nidnKetuaField,
 
-  is_draft: isDraftField.optional(),
-});
+    is_draft: isDraftField.optional(),
+  })
+  .superRefine((data, ctx) => {
+    // edit: hanya validasi field yang sedang dikirim (partial update), jadi skip jika semua null/undefined
+    const hasDosenInput =
+      data.dosen_terlibat !== undefined ||
+      data.nidn_dosen_terlibat !== undefined ||
+      data.nama_ketua !== undefined ||
+      data.nidn_ketua !== undefined ||
+      data.nama_anggota !== undefined ||
+      data.nim_anggota !== undefined;
+    if (hasDosenInput) assertNoDuplicateDosen(data as never, ctx);
+  });
 
 const adminReviewerStatuses = Object.values(ProposalStatus).filter(
   (s) => s !== ProposalStatus.DRAFT && s !== ProposalStatus.SUBMITTED,
