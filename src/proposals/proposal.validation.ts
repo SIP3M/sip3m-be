@@ -44,7 +44,9 @@ const sumberPendanaanField = z
 const dosenTerlibatField = z.string().trim().max(1000).optional();
 const nidnDosenField = z.string().trim().max(1000).optional(); 
 const namaAnggotaField = z.string().trim().max(1000).optional();
-const nimAnggotaField = z.string().trim().max(1000).optional(); 
+const nimAnggotaField = z.string().trim().max(1000).optional();
+const namaKetuaField = z.string().trim().max(100, "Nama ketua peneliti maksimal 100 karakter.").optional();
+const nidnKetuaField = z.string().trim().max(30, "NIDN ketua maksimal 30 karakter.").optional(); 
 
 const sumberDataField = z
   .string()
@@ -87,6 +89,8 @@ export const createProposalSchema = z.object({
   nidn_dosen_terlibat: nidnDosenField,
   nama_anggota: namaAnggotaField,
   nim_anggota: nimAnggotaField,
+  nama_ketua: namaKetuaField,
+  nidn_ketua: nidnKetuaField,
 
   is_draft: isDraftField.optional().default(false),
 });
@@ -105,6 +109,8 @@ export const editProposalSchema = z.object({
   nidn_dosen_terlibat: nidnDosenField,
   nama_anggota: namaAnggotaField,
   nim_anggota: nimAnggotaField,
+  nama_ketua: namaKetuaField,
+  nidn_ketua: nidnKetuaField,
 
   is_draft: isDraftField.optional(),
 });

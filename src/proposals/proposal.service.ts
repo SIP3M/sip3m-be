@@ -136,6 +136,8 @@ export const createProposal = async (
       nidn_dosen_terlibat: input.nidn_dosen_terlibat,
       nama_anggota: input.nama_anggota,
       nim_anggota: input.nim_anggota,
+      nama_ketua: input.nama_ketua?.trim() ? input.nama_ketua.trim() : null,
+      nidn_ketua: input.nidn_ketua?.trim() ? input.nidn_ketua.trim() : null,
       status,
       lead_researcher_id: userId,
       proposal_file_path: proposalFilePath,
@@ -173,6 +175,18 @@ export const getAllProposals = async ({
       },
       {
         faculty: {
+          contains: search,
+          mode: "insensitive",
+        },
+      },
+      {
+        nama_ketua: {
+          contains: search,
+          mode: "insensitive",
+        },
+      },
+      {
+        nidn_ketua: {
           contains: search,
           mode: "insensitive",
         },
@@ -224,6 +238,8 @@ export const getAllProposals = async ({
         sumber_pendanaan: true,
         sumber_data_penelitian: true,
         instansi: true,
+        nama_ketua: true,
+        nidn_ketua: true,
         proposal_file_path: true,
         rab_file_path: true,
         submitted_at: true,
@@ -284,6 +300,18 @@ export const getAssignedProposalsForReviewer = async ({
         },
       },
       {
+        nama_ketua: {
+          contains: search,
+          mode: "insensitive",
+        },
+      },
+      {
+        nidn_ketua: {
+          contains: search,
+          mode: "insensitive",
+        },
+      },
+      {
         user: {
           is: {
             name: {
@@ -335,6 +363,8 @@ export const getAssignedProposalsForReviewer = async ({
         sumber_pendanaan: true,
         sumber_data_penelitian: true,
         instansi: true,
+        nama_ketua: true,
+        nidn_ketua: true,
         proposal_file_path: true,
         rab_file_path: true,
         submitted_at: true,
@@ -407,6 +437,18 @@ export const getMyProposals = async ({
           mode: "insensitive",
         },
       },
+      {
+        nama_ketua: {
+          contains: search,
+          mode: "insensitive",
+        },
+      },
+      {
+        nidn_ketua: {
+          contains: search,
+          mode: "insensitive",
+        },
+      },
     );
   }
 
@@ -435,6 +477,8 @@ export const getMyProposals = async ({
         sumber_pendanaan: true,
         sumber_data_penelitian: true,
         instansi: true,
+        nama_ketua: true,
+        nidn_ketua: true,
         proposal_file_path: true,
         rab_file_path: true,
         submitted_at: true,
@@ -482,6 +526,8 @@ export const getProposalById = async (proposalId: number) => {
       nidn_dosen_terlibat: true,
       nama_anggota: true,
       nim_anggota: true,
+      nama_ketua: true,
+      nidn_ketua: true,
       proposal_file_path: true,
       rab_file_path: true,
       submitted_at: true,
@@ -596,6 +642,12 @@ export const editProposal = async (
       }),
       ...(input.detail_sumber_penelitian !== undefined && {
         detail_sumber_penelitian: input.detail_sumber_penelitian,
+      }),
+      ...(input.nama_ketua !== undefined && {
+        nama_ketua: input.nama_ketua?.trim() ? input.nama_ketua.trim() : null,
+      }),
+      ...(input.nidn_ketua !== undefined && {
+        nidn_ketua: input.nidn_ketua?.trim() ? input.nidn_ketua.trim() : null,
       }),
       ...(input.sumber_pendanaan !== undefined && {
         sumber_pendanaan: input.sumber_pendanaan,
