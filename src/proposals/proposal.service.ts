@@ -615,6 +615,46 @@ export const editProposal = async (
     ? existingProposal.status
     : ProposalStatus.SUBMITTED;
 
+  // === Validasi anti-double untuk edit: gabungkan existing + input agar partial update tetap ke-detect ===
+  {
+    const eff = {
+      dosen_terlibat: input.dosen_terlibat !== undefined ? input.dosen_terlibat : (existingProposal as unknown as Record<string, string | null>).dosen_terlibat ?? undefined,
+      nidn_dosen_terlibat: input.nidn_dosen_terlibat !== undefined ? input.nidn_dosen_terlibat : (existingProposal as unknown as Record<string, string | null>).nidn_dosen_terlibat ?? undefined,
+      nama_ketua: input.nama_ketua !== undefined ? input.nama_ketua : (existingProposal as unknown as Record<string, string | null>).nama_ketua ?? undefined,
+      nidn_ketua: input.nidn_ketua !== undefined ? input.nidn_ketua : (existingProposal as unknown as Record<string, string | null>).nidn_ketua ?? undefined,
+      nama_anggota: input.nama_anggota !== undefined ? input.nama_anggota : (existingProposal as unknown as Record<string, string | null>).nama_anggota ?? undefined,
+      nim_anggota: input.nim_anggota !== undefined ? input.nim_anggota : (existingProposal as unknown as Record<string, string | null>).nim_anggota ?? undefined,
+    } as Record<string, string | undefined>;
+    const split = (v?: string) => (v ? v.split(/[,;\n]+/).map((s) => s.trim()).filter(Boolean) : []);
+    const norm = (s: string) => s.trim().replace(/\s+/g, " ").toLowerCase();
+    const normId = (s: string) => s.trim().toLowerCase();
+    const dosenNames = split(eff.dosen_terlibat);
+    const nidnDosens = split(eff.nidn_dosen_terlibat);
+    // duplikat dalam dosen anggota
+    {
+      const seen = new Set<string>();
+      for (const raw of dosenNames) { const n = norm(raw); if (seen.has(n)) throw new HttpError(`Nama dosen "${raw.trim()}" duplikat di daftar anggota. Tiap dosen hanya boleh 1 kali.`, 400); seen.add(n); }
+    }
+    {
+      const seen = new Set<string>();
+      for (const raw of nidnDosens) { const n = normId(raw); if (!n) continue; if (seen.has(n)) throw new HttpError(`NIDN "${raw.trim()}" duplikat di daftar anggota.`, 400); seen.add(n); }
+    }
+    const ketuaNama = eff.nama_ketua?.trim();
+    if (ketuaNama && dosenNames.some((x) => norm(x) === norm(ketuaNama))) throw new HttpError(`Ketua peneliti "${ketuaNama}" sudah ada di daftar anggota dosen. Tidak boleh double.`, 400);
+    const ketuaNidn = eff.nidn_ketua?.trim();
+    if (ketuaNidn && nidnDosens.some((x) => normId(x) === normId(ketuaNidn))) throw new HttpError(`NIDN ketua "${ketuaNidn}" sudah ada di daftar anggota.`, 400);
+    const mhsNames = split(eff.nama_anggota);
+    {
+      const seen = new Set<string>();
+      for (const raw of mhsNames) { const n = norm(raw); if (seen.has(n)) throw new HttpError(`Nama anggota "${raw.trim()}" duplikat.`, 400); seen.add(n); }
+    }
+    const nims = split(eff.nim_anggota);
+    {
+      const seen = new Set<string>();
+      for (const raw of nims) { const n = normId(raw); if (!n) continue; if (seen.has(n)) throw new HttpError(`NIM "${raw.trim()}" duplikat.`, 400); seen.add(n); }
+    }
+  }
+
   // Jika submit (bukan draft), pastikan file tersedia
   if (!isDraft) {
     const finalProposalFile =
