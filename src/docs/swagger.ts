@@ -509,6 +509,34 @@ export const swaggerSpec = swaggerJSDoc({
             },
           },
         },
+        KkmPeriod: {
+          type: "object",
+          properties: {
+            id: { type: "number", example: 1 },
+            nama_periode: { type: "string", example: "KKM Reguler 2026" },
+            tahun_akademik: { type: "string", example: "2025/2026" },
+            tahun: { type: "number", example: 2026 },
+            jenis: { type: "string", enum: ["REGULER", "TEMATIK"], example: "REGULER" },
+            deskripsi: { type: ["string", "null"], example: "Periode KKM Reguler semester genap." },
+            tgl_buka_daftar: { type: ["string", "null"], format: "date", example: "2026-01-05" },
+            tgl_tutup_daftar: { type: ["string", "null"], format: "date", example: "2026-01-20" },
+            tgl_pembekalan: { type: ["string", "null"], format: "date", example: "2026-01-25" },
+            tgl_pelaksanaan: { type: ["string", "null"], format: "date", example: "2026-02-01" },
+            tgl_penarikan: { type: ["string", "null"], format: "date", example: "2026-02-28" },
+            deadline_laporan: { type: ["string", "null"], format: "date", example: "2026-03-10" },
+            target_peserta: { type: "number", example: 1248, description: "Limit validasi aktif — cek di modul Peserta." },
+            minimal_semester: { type: ["number", "null"], example: 7 },
+            maks_anggota_kelompok: { type: "number", example: 10 },
+            boleh_lintas_fakultas: { type: "boolean", example: true },
+            wajib_campur_prodi: { type: "boolean", example: true },
+            assign_dpl_otomatis: { type: "boolean", example: true },
+            maks_kelompok_per_dosen: { type: ["number", "null"], example: 2 },
+            status: { type: "string", enum: ["DRAFT", "AKTIF", "DIJADWALKAN", "SELESAI"], example: "AKTIF" },
+            created_by: { type: ["number", "null"], example: 1 },
+            created_at: { type: "string", format: "date-time", example: "2026-01-01T08:00:00.000Z" },
+            updated_at: { type: "string", format: "date-time", example: "2026-01-02T08:00:00.000Z" },
+          },
+        },
       },
     },
     security: [{ bearerAuth: [] }],
@@ -6314,6 +6342,195 @@ Mengambil detail monitoring satu proyek berdasarkan ID.
                 },
               },
             },
+          },
+        },
+      },
+
+      /** ================= KKM PERIODE ================= */
+      "/kkm/periods": {
+        post: {
+          tags: ["KKM Periode"],
+          summary: "Tambah periode KKM",
+          description: `
+Buat periode KKM baru (Gambar 2 — Tambah Periode KKM).
+
+**Role akses:** ADMIN_LPPM
+**Catatan:**
+- \`tahun_akademik\` format **YYYY/YYYY** mis. \`2025/2026\` (harus berurutan).
+- \`nama_periode + tahun_akademik\` harus unik (409 jika duplikat).
+- Validasi urutan tanggal: \`buka < tutup < pembekalan < pelaksanaan < penarikan < deadline_laporan\`.
+- \`target_peserta\` adalah **limit validasi aktif** — dipakai modul Peserta untuk blok jika kuota penuh (bukan display only).
+- Jika \`status=AKTIF\` dikirim, transaksi otomatis ubah periode AKTIF lain menjadi \`DIJADWALKAN\` (hanya 1 AKTIF dalam satu waktu).
+- Tombol FE: **Simpan Draft** (\`status:DRAFT\`) atau **Simpan & Aktifkan** (\`status:AKTIF\`).
+          `,
+          security: [{ bearerAuth: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/KkmPeriod" },
+                example: {
+                  nama_periode: "KKM Reguler 2026",
+                  tahun_akademik: "2025/2026",
+                  tahun: 2026,
+                  jenis: "REGULER",
+                  deskripsi: "Periode KKM Reguler semester genap.",
+                  tgl_buka_daftar: "2026-01-05",
+                  tgl_tutup_daftar: "2026-01-20",
+                  tgl_pembekalan: "2026-01-25",
+                  tgl_pelaksanaan: "2026-02-01",
+                  tgl_penarikan: "2026-02-28",
+                  deadline_laporan: "2026-03-10",
+                  target_peserta: 1248,
+                  minimal_semester: 7,
+                  maks_anggota_kelompok: 10,
+                  boleh_lintas_fakultas: true,
+                  wajib_campur_prodi: true,
+                  assign_dpl_otomatis: true,
+                  maks_kelompok_per_dosen: 2,
+                  status: "DRAFT",
+                },
+              },
+            },
+          },
+          responses: {
+            201: {
+              description: "Periode berhasil dibuat",
+              content: { "application/json": { example: { message: "Periode KKM berhasil dibuat.", data: { id: 1, nama_periode: "KKM Reguler 2026", tahun_akademik: "2025/2026", tahun: 2026, jenis: "REGULER", status: "DRAFT" } } } },
+            },
+            400: { description: "Validasi gagal / urutan tanggal salah" },
+            401: { description: "Unauthorized" },
+            403: { description: "Forbidden — hanya ADMIN_LPPM" },
+            409: { description: "Nama periode duplikat untuk tahun akademik yang sama" },
+          },
+        },
+        get: {
+          tags: ["KKM Periode"],
+          summary: "List periode KKM (Gambar 1 — tabel)",
+          description: `
+Ambil daftar periode KKM untuk tabel Gambar 1.
+
+**Role akses:** ADMIN_LPPM, STAFF_LPPM
+**Query:** \`page\` (default 1, 10/halaman), \`search\` (nama_periode/tahun_akademik/deskripsi), \`status\` (DRAFT/AKTIF/DIJADWALKAN/SELESAI), \`jenis\` (REGULER/TEMATIK), \`tahun\`, \`tahun_akademik\`.
+Kolom FE: TAHUN, NAMA PERIODE, JENIS, PELAKSANAAN, PENARIKAN, STATUS, AKSI.
+          `,
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            { name: "page", in: "query", required: false, schema: { type: "integer", minimum: 1, default: 1 } },
+            { name: "search", in: "query", required: false, schema: { type: "string", example: "Reguler" } },
+            { name: "status", in: "query", required: false, schema: { type: "string", enum: ["DRAFT", "AKTIF", "DIJADWALKAN", "SELESAI"] } },
+            { name: "jenis", in: "query", required: false, schema: { type: "string", enum: ["REGULER", "TEMATIK"] } },
+            { name: "tahun", in: "query", required: false, schema: { type: "integer", example: 2026 } },
+            { name: "tahun_akademik", in: "query", required: false, schema: { type: "string", example: "2025/2026" } },
+          ],
+          responses: {
+            200: {
+              description: "Berhasil mengambil daftar periode KKM",
+              content: {
+                "application/json": {
+                  example: {
+                    message: "Berhasil mengambil daftar periode KKM.",
+                    data: [
+                      { id: 1, tahun: 2026, nama_periode: "KKM Reguler 2026", jenis: "REGULER", tgl_pelaksanaan: "2026-02-01", tgl_penarikan: "2026-02-28", target_peserta: 1248, status: "AKTIF" },
+                      { id: 2, tahun: 2026, nama_periode: "KKM Tematik 2026", jenis: "TEMATIK", tgl_pelaksanaan: "2026-04-01", tgl_penarikan: "2026-04-30", target_peserta: 400, status: "DRAFT" },
+                      { id: 3, tahun: 2025, nama_periode: "KKM Reguler 2025", jenis: "REGULER", tgl_pelaksanaan: "2025-02-01", tgl_penarikan: "2025-02-28", target_peserta: 1100, status: "SELESAI" },
+                    ],
+                    meta: { totalData: 3, totalPages: 1, currentPage: 1, limit: 10 },
+                  },
+                },
+              },
+            },
+            401: { description: "Unauthorized" },
+            403: { description: "Forbidden" },
+          },
+        },
+      },
+      "/kkm/periods/active": {
+        get: {
+          tags: ["KKM Periode"],
+          summary: "Periode aktif saat ini (banner hijau Gambar 1)",
+          description: "Ambil 1 periode dengan \`status=AKTIF\` untuk banner hijau 'Periode aktif saat ini: KKM Reguler 2026'. Login required (semua role).",
+          security: [{ bearerAuth: [] }],
+          responses: {
+            200: { description: "Berhasil", content: { "application/json": { example: { message: "Periode aktif ditemukan.", data: { id: 1, nama_periode: "KKM Reguler 2026", status: "AKTIF", tgl_pelaksanaan: "2026-02-01", tgl_penarikan: "2026-02-28" } } } } },
+            401: { description: "Unauthorized" },
+          },
+        },
+      },
+      "/kkm/periods/run-auto-complete": {
+        post: {
+          tags: ["KKM Periode"],
+          summary: "Trigger cron AKTIF -> SELESAI (manual)",
+          description: "Jalankan auto-complete manual (ADMIN_LPPM). Cron otomatis juga jalan tiap 24 jam via server — ini untuk override/test. Ubah \`AKTIF\` dengan \`tgl_penarikan < hari ini\` menjadi \`SELESAI\`.",
+          security: [{ bearerAuth: [] }],
+          responses: {
+            200: { description: "Cron dijalankan", content: { "application/json": { example: { message: "Cron selesai. 1 periode diubah menjadi SELESAI.", data: { count: 1 } } } } },
+            401: { description: "Unauthorized" },
+            403: { description: "Forbidden" },
+          },
+        },
+      },
+      "/kkm/periods/{id}": {
+        get: {
+          tags: ["KKM Periode"],
+          summary: "Detail periode KKM (Lihat Detail / pre-fill Edit)",
+          description: "Ambil 1 periode by ID. Untuk icon mata & pensil di kolom AKSI Gambar 1. Role: ADMIN_LPPM, STAFF_LPPM.",
+          security: [{ bearerAuth: [] }],
+          parameters: [{ name: "id", in: "path", required: true, schema: { type: "integer", example: 1 } }],
+          responses: {
+            200: { description: "Berhasil", content: { "application/json": { example: { message: "Berhasil mengambil detail periode KKM.", data: { id: 1, nama_periode: "KKM Reguler 2026", tahun_akademik: "2025/2026", status: "AKTIF" } } } } },
+            400: { description: "ID tidak valid" },
+            401: { description: "Unauthorized" },
+            404: { description: "Periode tidak ditemukan" },
+          },
+        },
+        put: {
+          tags: ["KKM Periode"],
+          summary: "Edit periode KKM",
+          description: "Update periode (PUT full/partial). Validasi unik & urutan tanggal tetap jalan. Jika ubah \`status=AKTIF\` maka single-active transaction jalan. Role: ADMIN_LPPM.",
+          security: [{ bearerAuth: [] }],
+          parameters: [{ name: "id", in: "path", required: true, schema: { type: "integer", example: 1 } }],
+          requestBody: { required: true, content: { "application/json": { schema: { $ref: "#/components/schemas/KkmPeriod" } } } },
+          responses: {
+            200: { description: "Berhasil diperbarui", content: { "application/json": { example: { message: "Periode KKM berhasil diperbarui.", data: { id: 1, nama_periode: "KKM Reguler 2026 (Revisi)" } } } } },
+            400: { description: "Validasi gagal" },
+            401: { description: "Unauthorized" },
+            403: { description: "Forbidden" },
+            404: { description: "Periode tidak ditemukan" },
+            409: { description: "Nama duplikat" },
+          },
+        },
+      },
+      "/kkm/periods/{id}/activate": {
+        patch: {
+          tags: ["KKM Periode"],
+          summary: "Aktifkan periode (tombol Aktifkan di row Draft)",
+          description: "Ubah status periode menjadi AKTIF. Transaksi single-active: periode AKTIF lain otomatis jadi DIJADWALKAN. SELESAI tidak bisa diaktifkan kembali. Role: ADMIN_LPPM.",
+          security: [{ bearerAuth: [] }],
+          parameters: [{ name: "id", in: "path", required: true, schema: { type: "integer", example: 2 } }],
+          responses: {
+            200: { description: "Berhasil diaktifkan", content: { "application/json": { example: { message: "Periode KKM berhasil diaktifkan.", data: { id: 2, status: "AKTIF" } } } } },
+            400: { description: "Sudah AKTIF atau status SELESAI" },
+            401: { description: "Unauthorized" },
+            403: { description: "Forbidden" },
+            404: { description: "Periode tidak ditemukan" },
+          },
+        },
+      },
+      "/kkm/periods/{id}/status": {
+        patch: {
+          tags: ["KKM Periode"],
+          summary: "Override status manual (Kombinasi Otomatis + Manual)",
+          description: "Override manual status periode — untuk kombinasi cron+manual. Bisa \`DRAFT|AKTIF|DIJADWALKAN|SELESAI\`. Jika \`AKTIF\` => lewat jalur activate (single-active). Role: ADMIN_LPPM.",
+          security: [{ bearerAuth: [] }],
+          parameters: [{ name: "id", in: "path", required: true, schema: { type: "integer", example: 1 } }],
+          requestBody: { required: true, content: { "application/json": { schema: { type: "object", required: ["status"], properties: { status: { type: "string", enum: ["DRAFT", "AKTIF", "DIJADWALKAN", "SELESAI"], example: "SELESAI" } } } } } },
+          responses: {
+            200: { description: "Status berhasil diubah", content: { "application/json": { example: { message: "Status periode berhasil diubah menjadi SELESAI.", data: { id: 1, status: "SELESAI" } } } } },
+            400: { description: "Validasi gagal / status sama" },
+            401: { description: "Unauthorized" },
+            403: { description: "Forbidden" },
+            404: { description: "Periode tidak ditemukan" },
           },
         },
       },
