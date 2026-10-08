@@ -77,6 +77,18 @@ enum DocumentVerificationStatus {
   REJECTED
 }
 
+enum JenisKkm {
+  REGULER
+  TEMATIK
+}
+
+enum KkmPeriodStatus {
+  DRAFT
+  AKTIF
+  DIJADWALKAN
+  SELESAI
+}
+
 model proposals {
   id                     Int            @id @default(autoincrement())
   title                  String         @db.VarChar(255)
@@ -235,6 +247,7 @@ model users {
   notifications     Notifications[]
   reviewers ProposalReviewers[]
   pengabdianDocumentsUploaded PengabdianDocuments[] @relation("UploadedByUser")
+  kkmPeriodsCreated        KkmPeriod[]
 
   @@index([role_id])
 }
@@ -322,4 +335,42 @@ model PengabdianDocuments {
   @@index([milestone_id])
   @@index([document_type])
   @@index([verification_status])
+}
+
+model KkmPeriod {
+  id                      Int             @id @default(autoincrement())
+  nama_periode            String          @db.VarChar(150)
+  tahun_akademik          String          @db.VarChar(9)
+  tahun                   Int
+  jenis                   JenisKkm
+  deskripsi               String?         @db.Text
+
+  tgl_buka_daftar         DateTime?       @db.Date
+  tgl_tutup_daftar        DateTime?       @db.Date
+  tgl_pembekalan          DateTime?       @db.Date
+  tgl_pelaksanaan         DateTime?       @db.Date
+  tgl_penarikan           DateTime?       @db.Date
+  deadline_laporan        DateTime?       @db.Date
+
+  target_peserta          Int             @default(0)
+  minimal_semester        Int?
+  maks_anggota_kelompok   Int             @default(10)
+  boleh_lintas_fakultas   Boolean         @default(false)
+  wajib_campur_prodi      Boolean         @default(false)
+
+  assign_dpl_otomatis     Boolean         @default(false)
+  maks_kelompok_per_dosen Int?
+
+  status                  KkmPeriodStatus @default(DRAFT)
+
+  created_by              Int?
+  creator                 users?          @relation(fields: [created_by], references: [id])
+  created_at              DateTime        @default(now())
+  updated_at              DateTime        @updatedAt
+
+  @@unique([nama_periode, tahun_akademik])
+  @@index([status])
+  @@index([tahun_akademik])
+  @@index([tahun])
+  @@index([jenis])
 }
