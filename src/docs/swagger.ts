@@ -6449,7 +6449,7 @@ Kolom FE: TAHUN, NAMA PERIODE, JENIS, PELAKSANAAN, PENARIKAN, STATUS, AKSI.
         get: {
           tags: ["KKM Periode"],
           summary: "Periode aktif saat ini (banner hijau Gambar 1)",
-          description: "Ambil 1 periode dengan \`status=AKTIF\` untuk banner hijau 'Periode aktif saat ini: KKM Reguler 2026'. Login required (semua role).",
+          description: "Ambil 1 periode dengan `status=AKTIF` untuk banner hijau 'Periode aktif saat ini: KKM Reguler 2026'. Login required (semua role).",
           security: [{ bearerAuth: [] }],
           responses: {
             200: { description: "Berhasil", content: { "application/json": { example: { message: "Periode aktif ditemukan.", data: { id: 1, nama_periode: "KKM Reguler 2026", status: "AKTIF", tgl_pelaksanaan: "2026-02-01", tgl_penarikan: "2026-02-28" } } } } },
@@ -6461,7 +6461,7 @@ Kolom FE: TAHUN, NAMA PERIODE, JENIS, PELAKSANAAN, PENARIKAN, STATUS, AKSI.
         post: {
           tags: ["KKM Periode"],
           summary: "Trigger cron AKTIF -> SELESAI (manual)",
-          description: "Jalankan auto-complete manual (ADMIN_LPPM). Cron otomatis juga jalan tiap 24 jam via server — ini untuk override/test. Ubah \`AKTIF\` dengan \`tgl_penarikan < hari ini\` menjadi \`SELESAI\`.",
+          description: "Jalankan auto-complete manual (ADMIN_LPPM). Cron otomatis juga jalan tiap 24 jam via server — ini untuk override/test. Ubah `AKTIF` dengan `tgl_penarikan < hari ini` menjadi `SELESAI`.",
           security: [{ bearerAuth: [] }],
           responses: {
             200: { description: "Cron dijalankan", content: { "application/json": { example: { message: "Cron selesai. 1 periode diubah menjadi SELESAI.", data: { count: 1 } } } } },
@@ -6487,7 +6487,7 @@ Kolom FE: TAHUN, NAMA PERIODE, JENIS, PELAKSANAAN, PENARIKAN, STATUS, AKSI.
         put: {
           tags: ["KKM Periode"],
           summary: "Edit periode KKM",
-          description: "Update periode (PUT full/partial). Validasi unik & urutan tanggal tetap jalan. Jika ubah \`status=AKTIF\` maka single-active transaction jalan. Role: ADMIN_LPPM.",
+          description: "Update periode (PUT full/partial). Validasi unik & urutan tanggal tetap jalan. Jika ubah `status=AKTIF` maka single-active transaction jalan. Role: ADMIN_LPPM.",
           security: [{ bearerAuth: [] }],
           parameters: [{ name: "id", in: "path", required: true, schema: { type: "integer", example: 1 } }],
           requestBody: { required: true, content: { "application/json": { schema: { $ref: "#/components/schemas/KkmPeriod" } } } },
@@ -6521,7 +6521,7 @@ Kolom FE: TAHUN, NAMA PERIODE, JENIS, PELAKSANAAN, PENARIKAN, STATUS, AKSI.
         patch: {
           tags: ["KKM Periode"],
           summary: "Override status manual (Kombinasi Otomatis + Manual)",
-          description: "Override manual status periode — untuk kombinasi cron+manual. Bisa \`DRAFT|AKTIF|DIJADWALKAN|SELESAI\`. Jika \`AKTIF\` => lewat jalur activate (single-active). Role: ADMIN_LPPM.",
+          description: "Override manual status periode — untuk kombinasi cron+manual. Bisa `DRAFT|AKTIF|DIJADWALKAN|SELESAI`. Jika `AKTIF` => lewat jalur activate (single-active). Role: ADMIN_LPPM.",
           security: [{ bearerAuth: [] }],
           parameters: [{ name: "id", in: "path", required: true, schema: { type: "integer", example: 1 } }],
           requestBody: { required: true, content: { "application/json": { schema: { type: "object", required: ["status"], properties: { status: { type: "string", enum: ["DRAFT", "AKTIF", "DIJADWALKAN", "SELESAI"], example: "SELESAI" } } } } } },
