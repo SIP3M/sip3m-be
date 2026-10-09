@@ -66,16 +66,26 @@ export const createKkmLocation = async (input: CreateKkmLocationInput, createdBy
   await ensurePeriodeWritable(input.periode_id);
   await ensureUniqueDesa(input.periode_id, input.kabupaten, input.kecamatan, input.desa);
 
-  const created = await prisma.kkmLocation.create({
-    data: {
-      periode_id: input.periode_id,
-      kabupaten: input.kabupaten.trim(),
-      kecamatan: input.kecamatan.trim(),
-      desa: input.desa.trim(),
-      kuota: input.kuota,
-      created_by: createdBy ?? null,
-    },
-    include: { periode: { select: { id: true, nama_periode: true, tahun_akademik: true, status: true } } },
+  const created = await prisma.$transaction(async (tx) => {
+    const loc = await tx.kkmLocation.create({
+      data: {
+        periode_id: input.periode_id,
+        kabupaten: input.kabupaten.trim(),
+        kecamatan: input.kecamatan.trim(),
+        desa: input.desa.trim(),
+        kuota: input.kuota,
+        created_by: createdBy ?? null,
+      },
+      include: { periode: { select: { id: true, nama_periode: true, tahun_akademik: true, status: true } } },
+    });
+
+    const countInPeriode = await tx.kkmKelompok.count({ where: { periode_id: input.periode_id } });
+    const nama = `Kelompok ${String(countInPeriode + 1).padStart(2, "0")}`;
+    await tx.kkmKelompok.create({
+      data: { periode_id: input.periode_id, lokasi_id: loc.id, nama, dpl_id: null },
+    });
+
+    return loc;
   });
   return toDerived(created as never);
 };
