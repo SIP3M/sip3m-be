@@ -249,6 +249,8 @@ model users {
   pengabdianDocumentsUploaded PengabdianDocuments[] @relation("UploadedByUser")
   kkmPeriodsCreated        KkmPeriod[]
   kkmLocationsCreated      KkmLocation[]
+  dplKelompok              KkmKelompok[]       @relation("DplKelompok")
+  dplQuotas                KkmDplQuota[]
 
   @@index([role_id])
 }
@@ -369,13 +371,31 @@ model KkmPeriod {
   created_at              DateTime        @default(now())
   updated_at              DateTime        @updatedAt
 
-  locations KkmLocation[]
+  locations   KkmLocation[]
+  kelompokan  KkmKelompok[]
+  dplQuotas   KkmDplQuota[]
 
   @@unique([nama_periode, tahun_akademik])
   @@index([status])
   @@index([tahun_akademik])
   @@index([tahun])
   @@index([jenis])
+}
+
+model KkmDplQuota {
+  id                Int      @id @default(autoincrement())
+  periode_id        Int
+  dosen_id          Int
+  maksimal_kelompok Int
+
+  periode           KkmPeriod @relation(fields: [periode_id], references: [id], onDelete: Cascade)
+  dosen             users     @relation(fields: [dosen_id], references: [id], onDelete: Cascade)
+  created_at        DateTime  @default(now())
+  updated_at        DateTime  @updatedAt
+
+  @@unique([periode_id, dosen_id])
+  @@index([periode_id])
+  @@index([dosen_id])
 }
 
 model KkmLocation {
@@ -391,6 +411,7 @@ model KkmLocation {
   created_by Int?
   creator    users?     @relation(fields: [created_by], references: [id])
   periode    KkmPeriod  @relation(fields: [periode_id], references: [id], onDelete: Cascade)
+  kelompok   KkmKelompok?
   created_at DateTime   @default(now())
   updated_at DateTime   @updatedAt
 
@@ -398,4 +419,23 @@ model KkmLocation {
   @@index([periode_id])
   @@index([kecamatan])
   @@index([kabupaten])
+}
+
+model KkmKelompok {
+  id         Int      @id @default(autoincrement())
+  periode_id Int
+  lokasi_id  Int      @unique
+  nama       String   @db.VarChar(50)
+  dpl_id     Int?
+
+  periode    KkmPeriod   @relation(fields: [periode_id], references: [id], onDelete: Cascade)
+  lokasi     KkmLocation @relation(fields: [lokasi_id], references: [id], onDelete: Cascade)
+  dpl        users?      @relation("DplKelompok", fields: [dpl_id], references: [id], onDelete: SetNull)
+
+  created_at DateTime    @default(now())
+  updated_at DateTime    @updatedAt
+
+  @@index([periode_id])
+  @@index([dpl_id])
+  @@index([periode_id, dpl_id])
 }

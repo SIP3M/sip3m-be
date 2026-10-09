@@ -509,6 +509,26 @@ export const swaggerSpec = swaggerJSDoc({
             },
           },
         },
+        KkmKelompok: {
+          type: "object",
+          properties: {
+            id: { type: "number", example: 1 },
+            periode_id: { type: "number", example: 1 },
+            lokasi_id: { type: "number", example: 5, description: "FK KkmLocation.id @unique (1 desa = 1 kelompok)" },
+            nama: { type: "string", example: "Kelompok 01" },
+            dpl_id: { type: ["number", "null"], example: 10, description: "FK users.id DOSEN, null = belum ditugaskan" },
+            lokasi: { type: "object", example: { desa: "Astanajapura", kecamatan: "Astanajapura", kabupaten: "Cirebon", kuota: 10 } },
+          },
+        },
+        KkmDplQuota: {
+          type: "object",
+          properties: {
+            id: { type: "number", example: 1 },
+            periode_id: { type: "number", example: 1 },
+            dosen_id: { type: "number", example: 10 },
+            maksimal_kelompok: { type: "number", example: 3, description: "Override per-dosen (modal 'Maksimal Kelompok')" },
+          },
+        },
         KkmLocation: {
           type: "object",
           properties: {
@@ -6627,6 +6647,148 @@ Kolom FE: TAHUN, NAMA PERIODE, JENIS, PELAKSANAAN, PENARIKAN, STATUS, AKSI.
             400: { description: "periode_id wajib" },
             404: { description: "Periode tidak ditemukan" },
           },
+        },
+      },
+      "/kkm/dpl": {
+        get: {
+          tags: ["KKM DPL"],
+          summary: "List DPL KKM (tabel Manajemen DPL KKM)",
+          description: "Paginated list Dosen. Kolom: NAMA DOSEN, FAKULTAS/PRODI, STATUS DPL (Aktif/Belum Ditugaskan), KELOMPOK (4/5 bar), DESA BIMBINGAN, PERIODE. Filter: search (nama/NIDN/desa), fakultas, status, periode_id.",
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            { name: "periode_id", in: "query", required: false, schema: { type: "integer", example: 1 } },
+            { name: "page", in: "query", required: false, schema: { type: "integer", minimum: 1, default: 1 } },
+            { name: "search", in: "query", required: false, schema: { type: "string", example: "Ahmad" } },
+            { name: "fakultas", in: "query", required: false, schema: { type: "string", example: "Teknik" } },
+            { name: "status", in: "query", required: false, schema: { type: "string", enum: ["Aktif", "Belum Ditugaskan"] } },
+          ],
+          responses: {
+            200: {
+              description: "Berhasil",
+              content: {
+                "application/json": {
+                  example: {
+                    message: "Berhasil mengambil daftar DPL KKM.",
+                    data: [
+                      {
+                        dosen: { id: 10, name: "Dr. Ahmad Fauzi, M.Kom", nidn_nip: "0412028801", fakultas: "FT", prodi: "Teknik Informatika" },
+                        status_dpl: "Aktif",
+                        is_dpl_aktif: true,
+                        kelompok: { count: 4, maksimal: 5 },
+                        desa_bimbingan: ["Astanajapura", "Palimanan"],
+                        periode: { id: 1, nama_periode: "KKM Reguler 2026" },
+                      },
+                    ],
+                    meta: { totalData: 8, totalPages: 1, currentPage: 1, limit: 10 },
+                  },
+                },
+              },
+            },
+            401: { description: "Unauthorized" },
+          },
+        },
+      },
+      "/kkm/dpl/stats": {
+        get: {
+          tags: ["KKM DPL"],
+          summary: "Statistik DPL (4 kartu atas)",
+          description: "Untuk 4 kartu: Total DPL Aktif, Belum Ditugaskan, Total Kelompok KKM, Rata-rata Bimbingan (Klp per dosen).",
+          security: [{ bearerAuth: [] }],
+          parameters: [{ name: "periode_id", in: "query", required: true, schema: { type: "integer", example: 1 } }],
+          responses: {
+            200: {
+              description: "Berhasil",
+              content: {
+                "application/json": {
+                  example: {
+                    message: "Berhasil mengambil statistik DPL KKM.",
+                    data: { periode: { id: 1, nama_periode: "KKM Reguler 2026" }, total_dpl_aktif: 5, belum_ditugaskan: 2, total_kelompok: 19, rata_rata_bimbingan: 3.8 },
+                  },
+                },
+              },
+            },
+            404: { description: "Periode tidak ditemukan" },
+          },
+        },
+      },
+      "/kkm/dpl/dosen": {
+        get: {
+          tags: ["KKM DPL"],
+          summary: "Search dosen (autocomplete Pilih Dosen di modal)",
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            { name: "search", in: "query", required: false, schema: { type: "string", example: "Dewi" } },
+            { name: "limit", in: "query", required: false, schema: { type: "integer", minimum: 1, maximum: 50, default: 20 } },
+          ],
+          responses: { 200: { description: "Berhasil" }, 401: { description: "Unauthorized" } },
+        },
+      },
+      "/kkm/dpl/kelompok": {
+        get: {
+          tags: ["KKM DPL"],
+          summary: "List kelompok untuk checklist (modal Tugaskan)",
+          description: "Query `periode_id` wajib. `unassigned_only=true` hanya yang belum punya DPL. Search cari nama/desa/kecamatan.",
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            { name: "periode_id", in: "query", required: true, schema: { type: "integer", example: 1 } },
+            { name: "unassigned_only", in: "query", required: false, schema: { type: "string", enum: ["true", "false"], example: "true" } },
+            { name: "search", in: "query", required: false, schema: { type: "string", example: "Astanajapura" } },
+          ],
+          responses: { 200: { description: "Berhasil" }, 400: { description: "periode_id wajib" } },
+        },
+      },
+      "/kkm/dpl/me": {
+        get: {
+          tags: ["KKM DPL"],
+          summary: "Cek is_dpl_aktif untuk login user (derived, Sistem Izin Dinamis DPL)",
+          description: "Role tetap DOSEN. `is_dpl_aktif = exists KkmKelompok where dpl_id=userId & periode AKTIF`. FE pakai untuk banner & hide menu KKM.",
+          security: [{ bearerAuth: [] }],
+          responses: { 200: { description: "Berhasil", content: { "application/json": { example: { message: "Berhasil cek status DPL.", data: { is_dpl_aktif: true, user_id: 10 } } } } }, 401: { description: "Unauthorized" } },
+        },
+      },
+      "/kkm/dpl/assign": {
+        post: {
+          tags: ["KKM DPL"],
+          summary: "Tugaskan DPL Baru (modal Assign DPL KKM)",
+          description: "Body: `dosen_id, periode_id, kelompok_ids[], maksimal_kelompok` (override per-dosen). Validasi: max tidak melebihi periode.maks_kelompok_per_dosen, kelompok 1 periode, belum punya DPL lain, total tidak melebihi maksimal. Upsert KkmDplQuota + update KkmKelompok.dpl_id.",
+          security: [{ bearerAuth: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: { type: "object", required: ["dosen_id", "periode_id", "kelompok_ids", "maksimal_kelompok"], properties: { dosen_id: { type: "integer", example: 20 }, periode_id: { type: "integer", example: 1 }, kelompok_ids: { type: "array", items: { type: "integer" }, example: [1, 2, 3] }, maksimal_kelompok: { type: "integer", example: 3 } } },
+              },
+            },
+          },
+          responses: {
+            200: { description: "Berhasil ditugaskan" },
+            400: { description: "Validasi gagal / periode SELESAI / melebihi maksimal" },
+            404: { description: "Dosen/periode/kelompok tidak ditemukan" },
+            409: { description: "Kelompok sudah ditugaskan ke DPL lain" },
+          },
+        },
+      },
+      "/kkm/dpl/cabut": {
+        post: {
+          tags: ["KKM DPL"],
+          summary: "Cabut tugas DPL (tombol Cabut merah)",
+          description: "Null-kan semua KkmKelompok.dpl_id untuk dosen+periode tersebut. Akses menu KKM otomatis hilang (derived).",
+          security: [{ bearerAuth: [] }],
+          requestBody: {
+            required: true,
+            content: { "application/json": { schema: { type: "object", required: ["dosen_id", "periode_id"], properties: { dosen_id: { type: "integer", example: 10 }, periode_id: { type: "integer", example: 1 } } } } },
+          },
+          responses: { 200: { description: "Berhasil dicabut" }, 404: { description: "Periode tidak ditemukan" } },
+        },
+      },
+      "/kkm/kelompok/generate": {
+        post: {
+          tags: ["KKM Kelompok"],
+          summary: "Generate kelompok dari lokasi yang belum punya kelompok (auto-seed backfill)",
+          description: "Untuk lokasi lama yang belum punya KkmKelompok. Buat Kelompok 01..N dari KkmLocation tanpa kelompok di periode tersebut. Lokasi baru auto-create jadi tidak perlu panggil ini lagi.",
+          security: [{ bearerAuth: [] }],
+          requestBody: { required: true, content: { "application/json": { schema: { type: "object", required: ["periode_id"], properties: { periode_id: { type: "integer", example: 1 } } } } } },
+          responses: { 200: { description: "Berhasil", content: { "application/json": { example: { message: "4 kelompok berhasil dibuat.", data: { created: 4 } } } } }, 404: { description: "Periode tidak ditemukan" } },
         },
       },
       "/kkm/locations/{id}": {
