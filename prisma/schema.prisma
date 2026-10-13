@@ -232,6 +232,8 @@ model users {
   alamat        String?   @db.Text
   nomor_hp      String?   @db.VarChar(20)
 
+  semester  Int?
+
   is_active  Boolean?  @default(true)
   created_at DateTime? @default(now()) @db.Timestamp(6)
   updated_at DateTime? @default(now()) @db.Timestamp(6)
@@ -251,6 +253,7 @@ model users {
   kkmLocationsCreated      KkmLocation[]
   dplKelompok              KkmKelompok[]       @relation("DplKelompok")
   dplQuotas                KkmDplQuota[]
+  kkmPeserta               KkmPeserta[]
 
   @@index([role_id])
 }
@@ -373,6 +376,7 @@ model KkmPeriod {
 
   locations   KkmLocation[]
   kelompokan  KkmKelompok[]
+  peserta     KkmPeserta[]
   dplQuotas   KkmDplQuota[]
 
   @@unique([nama_periode, tahun_akademik])
@@ -421,6 +425,12 @@ model KkmLocation {
   @@index([kabupaten])
 }
 
+enum KkmPesertaStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
 model KkmKelompok {
   id         Int      @id @default(autoincrement())
   periode_id Int
@@ -432,10 +442,33 @@ model KkmKelompok {
   lokasi     KkmLocation @relation(fields: [lokasi_id], references: [id], onDelete: Cascade)
   dpl        users?      @relation("DplKelompok", fields: [dpl_id], references: [id], onDelete: SetNull)
 
+  peserta    KkmPeserta[]
+
   created_at DateTime    @default(now())
   updated_at DateTime    @updatedAt
 
   @@index([periode_id])
   @@index([dpl_id])
   @@index([periode_id, dpl_id])
+}
+
+model KkmPeserta {
+  id          Int                @id @default(autoincrement())
+  periode_id  Int
+  user_id     Int
+  kelompok_id Int?
+
+  status      KkmPesertaStatus   @default(PENDING)
+
+  periode     KkmPeriod          @relation(fields: [periode_id], references: [id], onDelete: Cascade)
+  user        users              @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  kelompok    KkmKelompok?       @relation(fields: [kelompok_id], references: [id], onDelete: SetNull)
+
+  created_at  DateTime           @default(now())
+  updated_at  DateTime           @updatedAt
+
+  @@unique([periode_id, user_id])
+  @@index([periode_id, status])
+  @@index([kelompok_id])
+  @@index([periode_id, kelompok_id])
 }

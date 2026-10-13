@@ -509,6 +509,22 @@ export const swaggerSpec = swaggerJSDoc({
             },
           },
         },
+        KkmPeserta: {
+          type: "object",
+          properties: {
+            id: { type: "number", example: 1 },
+            periode_id: { type: "number", example: 1 },
+            user_id: { type: "number", example: 50 },
+            nim: { type: "string", example: "210411001" },
+            nama: { type: "string", example: "Andi Pratama" },
+            prodi: { type: ["string", "null"], example: "S1 Teknik Informatika" },
+            fakultas: { type: ["string", "null"], example: "Fakultas Teknik" },
+            semester: { type: ["number", "null"], example: 7 },
+            status: { type: "string", enum: ["PENDING", "VERIFIED", "REJECTED"], example: "VERIFIED" },
+            kelompok: { type: ["object", "null"], example: { id: 7, nama: "Kelompok 07", desa: "Astanajapura" } },
+            status_kelompok: { type: "string", enum: ["Belum Ditempatkan", "Sudah Ditempatkan"], example: "Sudah Ditempatkan" },
+          },
+        },
         KkmKelompok: {
           type: "object",
           properties: {
@@ -6779,6 +6795,124 @@ Kolom FE: TAHUN, NAMA PERIODE, JENIS, PELAKSANAAN, PENARIKAN, STATUS, AKSI.
             content: { "application/json": { schema: { type: "object", required: ["dosen_id", "periode_id"], properties: { dosen_id: { type: "integer", example: 10 }, periode_id: { type: "integer", example: 1 } } } } },
           },
           responses: { 200: { description: "Berhasil dicabut" }, 404: { description: "Periode tidak ditemukan" } },
+        },
+      },
+      "/kkm/peserta": {
+        get: {
+          tags: ["KKM Peserta"],
+          summary: "List peserta KKM (tabel NIM/Nama/Prodi/Sem/Status Verifikasi/Status Kelompok)",
+          description: "Paginated 10/halaman. Filter: periode_id wajib, search (nama/NIM/prodi/kelompok/desa), fakultas, prodi, semester, kelompok_id, status (PENDING/VERIFIED/REJECTED), status_kelompok (BelumDitempatkan/SudahDitempatkan).",
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            { name: "periode_id", in: "query", required: true, schema: { type: "integer", example: 1 } },
+            { name: "page", in: "query", required: false, schema: { type: "integer", minimum: 1, default: 1 } },
+            { name: "search", in: "query", required: false, schema: { type: "string", example: "Andi" } },
+            { name: "fakultas", in: "query", required: false, schema: { type: "string", example: "Teknik" } },
+            { name: "prodi", in: "query", required: false, schema: { type: "string", example: "Informatika" } },
+            { name: "semester", in: "query", required: false, schema: { type: "integer", example: 7 } },
+            { name: "kelompok_id", in: "query", required: false, schema: { type: "integer", example: 7 } },
+            { name: "status", in: "query", required: false, schema: { type: "string", enum: ["PENDING", "VERIFIED", "REJECTED"] } },
+            { name: "status_kelompok", in: "query", required: false, schema: { type: "string", enum: ["BelumDitempatkan", "SudahDitempatkan"] } },
+          ],
+          responses: {
+            200: {
+              description: "Berhasil",
+              content: {
+                "application/json": {
+                  example: {
+                    message: "Berhasil mengambil daftar peserta KKM.",
+                    data: [{ id: 1, nim: "210411001", nama: "Andi Pratama", prodi: "S1 Teknik Informatika", fakultas: "Fakultas Teknik", semester: 7, status: "VERIFIED", kelompok: { id: 7, nama: "Kelompok 07", desa: "Astanajapura" }, status_kelompok: "Belum Ditempatkan" }],
+                    meta: { totalData: 10, totalPages: 1, currentPage: 1, limit: 10 },
+                  },
+                },
+              },
+            },
+            400: { description: "periode_id wajib" },
+          },
+        },
+      },
+      "/kkm/peserta/stats": {
+        get: {
+          tags: ["KKM Peserta"],
+          summary: "Statistik peserta (5 kartu & 5 tabs: TOTAL/VERIFIED/PENDING/REJECTED/BELUM KELOMPOK)",
+          security: [{ bearerAuth: [] }],
+          parameters: [{ name: "periode_id", in: "query", required: true, schema: { type: "integer", example: 1 } }],
+          responses: {
+            200: {
+              description: "Berhasil",
+              content: {
+                "application/json": {
+                  example: {
+                    message: "Berhasil mengambil statistik peserta KKM.",
+                    data: { periode: { id: 1, nama_periode: "KKM Reguler 2026" }, total: 10, verified: 5, pending: 4, rejected: 1, belum_kelompok: 6 },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      "/kkm/peserta/export": {
+        get: {
+          tags: ["KKM Peserta"],
+          summary: "Export peserta KKM (untuk tombol Export Data)",
+          security: [{ bearerAuth: [] }],
+          parameters: [{ name: "periode_id", in: "query", required: true, schema: { type: "integer", example: 1 } }],
+          responses: { 200: { description: "Berhasil" } },
+        },
+      },
+      "/kkm/peserta/{id}": {
+        get: {
+          tags: ["KKM Peserta"],
+          summary: "Detail peserta KKM (ikon mata)",
+          security: [{ bearerAuth: [] }],
+          parameters: [{ name: "id", in: "path", required: true, schema: { type: "integer", example: 1 } }],
+          responses: { 200: { description: "Berhasil" }, 404: { description: "Peserta tidak ditemukan" } },
+        },
+        patch: {
+          tags: ["KKM Peserta"],
+          summary: "Update status 1 peserta (aksi centang/silang per row)",
+          security: [{ bearerAuth: [] }],
+          parameters: [{ name: "id", in: "path", required: true, schema: { type: "integer", example: 1 } }],
+          requestBody: {
+            required: true,
+            content: { "application/json": { schema: { type: "object", required: ["status"], properties: { status: { type: "string", enum: ["PENDING", "VERIFIED", "REJECTED"], example: "VERIFIED" } } } } },
+          },
+          responses: { 200: { description: "Berhasil" } },
+        },
+      },
+      "/kkm/peserta/bulk-status": {
+        patch: {
+          tags: ["KKM Peserta"],
+          summary: "Bulk update status (Verifikasi Massal / Reject) 1..N peserta",
+          description: "Validasi kuota target_peserta & minimal_semester jika VERIFIED.",
+          security: [{ bearerAuth: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: { type: "object", required: ["periode_id", "peserta_ids", "status"], properties: { periode_id: { type: "integer", example: 1 }, peserta_ids: { type: "array", items: { type: "integer" }, example: [1, 2, 3] }, status: { type: "string", enum: ["PENDING", "VERIFIED", "REJECTED"], example: "VERIFIED" } } },
+              },
+            },
+          },
+          responses: { 200: { description: "Berhasil" }, 400: { description: "Kuota penuh / semester tidak cukup" } },
+        },
+      },
+      "/kkm/peserta/assign-kelompok": {
+        post: {
+          tags: ["KKM Peserta"],
+          summary: "Assign N peserta ke 1 kelompok (tombol Assign Kelompok)",
+          description: "Validasi 1 periode, kelompok ada, kuota lokasi tidak jebol.",
+          security: [{ bearerAuth: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: { type: "object", required: ["peserta_ids", "kelompok_id"], properties: { peserta_ids: { type: "array", items: { type: "integer" }, example: [1, 2] }, kelompok_id: { type: "integer", example: 7 } } },
+              },
+            },
+          },
+          responses: { 200: { description: "Berhasil" }, 400: { description: "Kelompok penuh / beda periode" } },
         },
       },
       "/kkm/kelompok/generate": {
