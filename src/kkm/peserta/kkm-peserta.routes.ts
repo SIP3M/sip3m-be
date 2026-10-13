@@ -35,13 +35,7 @@ router.get(
   getAllPesertaController,
 );
 
-router.get(
-  "/kkm/peserta/:id",
-  authMiddleware,
-  requireRole([ROLES.ADMIN_LPPM, ROLES.STAFF_LPPM]),
-  getPesertaByIdController,
-);
-
+// BULK routes harus di atas :id agar tidak ditangkap param
 router.patch(
   "/kkm/peserta/bulk-status",
   authMiddleware,
@@ -54,6 +48,13 @@ router.post(
   authMiddleware,
   requireRole([ROLES.ADMIN_LPPM]),
   assignKelompokController,
+);
+
+router.get(
+  "/kkm/peserta/:id",
+  authMiddleware,
+  requireRole([ROLES.ADMIN_LPPM, ROLES.STAFF_LPPM]),
+  getPesertaByIdController,
 );
 
 router.patch(

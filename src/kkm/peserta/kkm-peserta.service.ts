@@ -167,6 +167,10 @@ export const getPesertaById = async (id: number) => {
   };
 };
 
+/**
+ * Kuota Verified: KkmPeriod.target_peserta WAJIB dicek untuk set VERIFIED.
+ * Jika target_peserta = 0 (belum diset), arti BELUM ada batas — lewati validasi.
+ */
 export const bulkUpdateStatus = async (input: KkmPesertaBulkStatusInput) => {
   const periode = await prisma.kkmPeriod.findUnique({ where: { id: input.periode_id } });
   if (!periode) throw new HttpError("Periode KKM tidak ditemukan.", 404);
