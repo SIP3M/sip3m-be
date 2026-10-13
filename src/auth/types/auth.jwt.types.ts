@@ -6,6 +6,8 @@ export interface AuthJwtPayload extends JwtPayload {
   userId?: number;
   role?: string;
   roles?: string;
+  jti?: string;
+  deviceId?: string;
 }
 
 export interface AuthenticatedRequest extends Request {

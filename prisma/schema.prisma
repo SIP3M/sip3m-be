@@ -254,6 +254,7 @@ model users {
   dplKelompok              KkmKelompok[]       @relation("DplKelompok")
   dplQuotas                KkmDplQuota[]
   kkmPeserta               KkmPeserta[]
+  sessions                 UserSession[]
 
   @@index([role_id])
 }
@@ -450,6 +451,26 @@ model KkmKelompok {
   @@index([periode_id])
   @@index([dpl_id])
   @@index([periode_id, dpl_id])
+}
+
+model UserSession {
+  id          String   @id @default(uuid())
+  user_id     Int
+  jti         String   @unique
+  device_id   String   @db.VarChar(100)
+  user_agent  String?  @db.VarChar(500)
+  ip          String?  @db.VarChar(45)
+  expires_at  DateTime
+  revoked_at  DateTime?
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  user        users    @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, device_id])
+  @@index([user_id])
+  @@index([jti])
+  @@index([expires_at])
 }
 
 model KkmPeserta {

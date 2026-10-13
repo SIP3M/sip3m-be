@@ -1,9 +1,12 @@
 import { Router } from "express";
 import {
   loginController,
+  logoutController,
   me,
   registerDosenController,
   registerReviewerController,
+  revokeSessionController,
+  sessionsController,
 } from "./auth.controller";
 import { authMiddleware } from "./middleware/auth.middleware";
 import multer from "multer";
@@ -123,6 +126,10 @@ router.post("/auth/login", loginLimiter, loginController);
 
 // Protected route to get current user info
 router.get("/auth/me", authMiddleware, me);
+router.post("/auth/logout", authMiddleware, logoutController);
+router.get("/auth/sessions", authMiddleware, sessionsController);
+router.delete("/auth/sessions/:deviceId", authMiddleware, revokeSessionController);
+router.post("/auth/sessions/revoke", authMiddleware, revokeSessionController);
 
 // Oauth route
 router.get("/auth/oauth/google", (req, res) => {
