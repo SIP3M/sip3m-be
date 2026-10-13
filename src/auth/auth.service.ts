@@ -206,7 +206,7 @@ export const loginUser = async (
       deviceId,
     },
     jwtSecret,
-    { expiresIn, jwtid: jti },
+    { expiresIn },
   );
 
   await createOrRotateSession({

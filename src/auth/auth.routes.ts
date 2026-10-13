@@ -10,7 +10,7 @@ import {
 } from "./auth.controller";
 import { authMiddleware } from "./middleware/auth.middleware";
 import multer from "multer";
-import rateLimit from "express-rate-limit";
+import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 
 const router = Router();
 
@@ -37,7 +37,7 @@ const loginLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: (req) => {
-    return req.body.identifier || req.ip;
+    return (req.body?.identifier as string) || ipKeyGenerator(req.ip ?? "");
   },
 });
 
