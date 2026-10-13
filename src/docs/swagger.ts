@@ -6915,6 +6915,100 @@ Kolom FE: TAHUN, NAMA PERIODE, JENIS, PELAKSANAAN, PENARIKAN, STATUS, AKSI.
           responses: { 200: { description: "Berhasil" }, 400: { description: "Kelompok penuh / beda periode" } },
         },
       },
+      "/kkm/generate/stats": {
+        get: {
+          tags: ["KKM Generate"],
+          summary: "Stats generate (Gambar 1: Total 1248, Verified 1180, Pending 68, Belum Kelompok 1180, 25 belum syarat)",
+          security: [{ bearerAuth: [] }],
+          parameters: [{ name: "periode_id", in: "query", required: true, schema: { type: "integer", example: 2 } }],
+          responses: { 200: { description: "Berhasil", content: { "application/json": { example: { message: "Berhasil mengambil statistik generate KKM.", data: { total_peserta: 200, sudah_verified: 180, belum_verifikasi: 12, belum_kelompok: 200, total_desa: 30, total_kelompok: 30, belum_syarat_semester: 4 } } } } } },
+        },
+      },
+      "/kkm/generate/validasi": {
+        get: {
+          tags: ["KKM Generate"],
+          summary: "Validasi generate (Gambar 3: 32 desa, 47 DPL, 5 hampir penuh, rekomendasi)",
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            { name: "periode_id", in: "query", required: true, schema: { type: "integer", example: 2 } },
+            { name: "jumlah_anggota_per_kelompok", in: "query", required: false, schema: { type: "integer", example: 10 } },
+          ],
+          responses: { 200: { description: "Berhasil" } },
+        },
+      },
+      "/kkm/generate/preview": {
+        get: {
+          tags: ["KKM Generate"],
+          summary: "Preview generate dry-run (Gambar 4: distribusi rata, tidak simpan)",
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            { name: "periode_id", in: "query", required: true, schema: { type: "integer", example: 2 } },
+            { name: "jumlah_anggota_per_kelompok", in: "query", required: false, schema: { type: "integer", example: 10 } },
+            { name: "pola_prodi", in: "query", required: false, schema: { type: "string", enum: ["CAMPUR", "MIN_3_PRODI", "FAKULTAS", "RANDOM"], example: "CAMPUR" } },
+            { name: "gender_balance", in: "query", required: false, schema: { type: "boolean", example: false } },
+            { name: "lokasi_mode", in: "query", required: false, schema: { type: "string", enum: ["RANDOM", "KUOTA"], example: "RANDOM" } },
+            { name: "ikuti_kuota_desa", in: "query", required: false, schema: { type: "boolean", example: true } },
+          ],
+          responses: { 200: { description: "Berhasil" } },
+        },
+        post: {
+          tags: ["KKM Generate"],
+          summary: "Preview generate dry-run POST (untuk FE form Gambar 2)",
+          security: [{ bearerAuth: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["periode_id"],
+                  properties: {
+                    periode_id: { type: "integer", example: 2 },
+                    jumlah_anggota_per_kelompok: { type: "integer", example: 10 },
+                    pola_prodi: { type: "string", enum: ["CAMPUR", "MIN_3_PRODI", "FAKULTAS", "RANDOM"], example: "CAMPUR" },
+                    gender_balance: { type: "boolean", example: true },
+                    lokasi_mode: { type: "string", enum: ["RANDOM", "KUOTA"], example: "RANDOM" },
+                    assign_dpl_otomatis: { type: "boolean", example: false },
+                    ikuti_kuota_desa: { type: "boolean", example: true },
+                  },
+                },
+              },
+            },
+          },
+          responses: { 200: { description: "Berhasil" } },
+        },
+      },
+      "/kkm/generate/execute": {
+        post: {
+          tags: ["KKM Generate"],
+          summary: "Execute generate: distribusi peserta ke kelompok (1 Desa=1 Kelompok) - Stratified Snake + Skor",
+          description: "Algoritma: Filter VERIFIED+belum_kelompok+semester, Stratify prodi interleave, sort kelompok by KUOTA/RANDOM, distribusi Snake Round-Robin + skor kapasitas/gender/prodi. 1 Desa=1 Kelompok fix, bukan create kelompok baru.",
+          security: [{ bearerAuth: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["periode_id"],
+                  properties: {
+                    periode_id: { type: "integer", example: 2 },
+                    jumlah_anggota_per_kelompok: { type: "integer", example: 10 },
+                    pola_prodi: { type: "string", enum: ["CAMPUR", "MIN_3_PRODI", "FAKULTAS", "RANDOM"], example: "CAMPUR" },
+                    gender_balance: { type: "boolean", example: true },
+                    lokasi_mode: { type: "string", enum: ["RANDOM", "KUOTA"], example: "RANDOM" },
+                    assign_dpl_otomatis: { type: "boolean", example: false },
+                    metode_dpl: { type: "string", enum: ["RANDOM", "FAKULTAS", "BEBAN_SEIMBANG"], example: "BEBAN_SEIMBANG" },
+                    maks_kelompok_per_dpl: { type: "integer", example: 2 },
+                    ikuti_kuota_desa: { type: "boolean", example: true },
+                  },
+                },
+              },
+            },
+          },
+          responses: { 200: { description: "Berhasil", content: { "application/json": { example: { message: "Berhasil generate: 180 peserta didistribusikan ke 30 kelompok.", data: { updated: 180, preview: { total_peserta: 180, total_kelompok: 30 } } } } } }, 400: { description: "Kuota desa jebol / tidak ada peserta siap" } },
+        },
+      },
       "/kkm/kelompok/generate": {
         post: {
           tags: ["KKM Kelompok"],
