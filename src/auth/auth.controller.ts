@@ -132,7 +132,7 @@ export const registerReviewerController = async (
 
 // login
 export const loginController = async (
-  req: { body: LoginInput },
+  req: Request & { body: LoginInput },
   res: Response,
 ): Promise<Response> => {
   try {
@@ -145,7 +145,12 @@ export const loginController = async (
       });
     }
 
-    const result = await loginUser(validation.data);
+    const deviceId = (req.headers["x-device-id"] as string) || undefined;
+    const result = await loginUser(validation.data, {
+      deviceId,
+      userAgent: req.headers["user-agent"],
+      ip: (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() || req.ip,
+    });
 
     return res.status(200).json({
       message: "Login berhasil.",
@@ -161,6 +166,37 @@ export const loginController = async (
       .status(500)
       .json({ message: "Terjadi kesalahan pada server saat login." });
   }
+};
+
+export const logoutController = async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
+  try {
+    const jti = req.user?.jti;
+    if (jti) {
+      const { revokeSessionByJti } = await import("./session.service");
+      await revokeSessionByJti(jti);
+    }
+    return res.status(200).json({ message: "Logout berhasil." });
+  } catch {
+    return res.status(500).json({ message: "Gagal logout." });
+  }
+};
+
+export const sessionsController = async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
+  const userId = Number(req.user?.userId);
+  if (Number.isNaN(userId)) return res.status(401).json({ message: "Unauthorized." });
+  const { getActiveSessions } = await import("./session.service");
+  const data = await getActiveSessions(userId);
+  return res.status(200).json({ message: "Berhasil mengambil sesi aktif.", data });
+};
+
+export const revokeSessionController = async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
+  const userId = Number(req.user?.userId);
+  if (Number.isNaN(userId)) return res.status(401).json({ message: "Unauthorized." });
+  const deviceId = String(req.params.deviceId ?? req.body.deviceId ?? "");
+  if (!deviceId) return res.status(400).json({ message: "deviceId wajib." });
+  const { revokeDeviceSession } = await import("./session.service");
+  await revokeDeviceSession(userId, deviceId);
+  return res.status(200).json({ message: "Sesi perangkat berhasil dicabut." });
 };
 
 // me endpoint untuk mendapatkan info user yang sedang login

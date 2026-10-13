@@ -137,7 +137,10 @@ export const registerReviewer = async (
   };
 };
 
-export const loginUser = async (data: LoginInput): Promise<LoginResult> => {
+export const loginUser = async (
+  data: LoginInput,
+  meta?: { deviceId?: string; userAgent?: string; ip?: string },
+): Promise<LoginResult> => {
   const identifier = data.identifier.trim();
   const isEmailIdentifier = identifier.includes("@");
 
@@ -188,16 +191,32 @@ export const loginUser = async (data: LoginInput): Promise<LoginResult> => {
     throw new HttpError("JWT_SECRET tidak ditemukan.", 500);
   }
 
+  const { createOrRotateSession, generateJti } = await import("./session.service");
+  const jti = generateJti();
+  const deviceId = meta?.deviceId?.trim() ? meta.deviceId.trim().slice(0, 100) : `ua-${(meta?.userAgent ?? "unknown").slice(0, 80)}`;
+  const expiresAt = new Date(Date.now() + (data.remember_me ? 7 * 24 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000));
+
   const token = jwt.sign(
     {
       sub: String(user.id),
       userId: user.id,
       role: user.roles.roles,
       roles: user.roles.roles,
+      jti,
+      deviceId,
     },
     jwtSecret,
-    { expiresIn },
+    { expiresIn, jwtid: jti },
   );
+
+  await createOrRotateSession({
+    userId: user.id,
+    deviceId,
+    jti,
+    userAgent: meta?.userAgent,
+    ip: meta?.ip,
+    expiresAt,
+  });
 
   return {
     token,
