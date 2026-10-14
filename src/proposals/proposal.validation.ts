@@ -48,7 +48,10 @@ const nimAnggotaField = z.string().trim().max(1000).optional();
 const namaKetuaField = z.string().trim().max(100, "Nama ketua peneliti maksimal 100 karakter.").optional();
 const nidnKetuaField = z.string().trim().max(30, "NIDN ketua maksimal 30 karakter.").optional();
 
-// --- Helpers anti-double ---
+// --- Helpers anti-double & limit ---
+export const MAX_TIM_DOSEN = 5;
+export const MAX_TIM_MAHASISWA = 5;
+
 const splitList = (value?: string | null): string[] => {
   if (!value) return [];
   return value
@@ -67,6 +70,26 @@ const assertNoDuplicateDosen = (
   const nidnDosens = splitList(data.nidn_dosen_terlibat);
   const mahasiswaNames = splitList(data.nama_anggota);
   const nimMahasiswas = splitList(data.nim_anggota);
+
+  // Opsi A: 5 dosen + 5 mahasiswa terpisah (ketua tidak hitung)
+  if (dosenNames.length > MAX_TIM_DOSEN) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["dosen_terlibat"], message: `Maksimal ${MAX_TIM_DOSEN} dosen terlibat. Saat ini ${dosenNames.length}.` });
+  }
+  if (nidnDosens.length > MAX_TIM_DOSEN) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["nidn_dosen_terlibat"], message: `Maksimal ${MAX_TIM_DOSEN} NIDN dosen. Saat ini ${nidnDosens.length}.` });
+  }
+  if (dosenNames.length > 0 && nidnDosens.length > 0 && dosenNames.length !== nidnDosens.length) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["nidn_dosen_terlibat"], message: `Jumlah NIDN (${nidnDosens.length}) harus sama dengan jumlah nama dosen (${dosenNames.length}).` });
+  }
+  if (mahasiswaNames.length > MAX_TIM_MAHASISWA) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["nama_anggota"], message: `Maksimal ${MAX_TIM_MAHASISWA} mahasiswa terlibat. Saat ini ${mahasiswaNames.length}.` });
+  }
+  if (nimMahasiswas.length > MAX_TIM_MAHASISWA) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["nim_anggota"], message: `Maksimal ${MAX_TIM_MAHASISWA} NIM mahasiswa. Saat ini ${nimMahasiswas.length}.` });
+  }
+  if (mahasiswaNames.length > 0 && nimMahasiswas.length > 0 && mahasiswaNames.length !== nimMahasiswas.length) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["nim_anggota"], message: `Jumlah NIM (${nimMahasiswas.length}) harus sama dengan jumlah nama mahasiswa (${mahasiswaNames.length}).` });
+  }
 
   // duplikat dalam dosen anggota
   {

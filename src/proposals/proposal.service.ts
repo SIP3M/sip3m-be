@@ -630,6 +630,12 @@ export const editProposal = async (
     const normId = (s: string) => s.trim().toLowerCase();
     const dosenNames = split(eff.dosen_terlibat);
     const nidnDosens = split(eff.nidn_dosen_terlibat);
+    // Opsi A: 5 dosen + 5 mahasiswa terpisah (ketua tidak hitung)
+    const MAX_DOSEN = 5;
+    const MAX_MHS = 5;
+    if (dosenNames.length > MAX_DOSEN) throw new HttpError(`Maksimal ${MAX_DOSEN} dosen terlibat. Saat ini ${dosenNames.length}.`, 400);
+    if (nidnDosens.length > MAX_DOSEN) throw new HttpError(`Maksimal ${MAX_DOSEN} NIDN dosen. Saat ini ${nidnDosens.length}.`, 400);
+    if (dosenNames.length > 0 && nidnDosens.length > 0 && dosenNames.length !== nidnDosens.length) throw new HttpError(`Jumlah NIDN (${nidnDosens.length}) harus sama dengan jumlah nama dosen (${dosenNames.length}).`, 400);
     // duplikat dalam dosen anggota
     {
       const seen = new Set<string>();
@@ -644,11 +650,14 @@ export const editProposal = async (
     const ketuaNidn = eff.nidn_ketua?.trim();
     if (ketuaNidn && nidnDosens.some((x) => normId(x) === normId(ketuaNidn))) throw new HttpError(`NIDN ketua "${ketuaNidn}" sudah ada di daftar anggota.`, 400);
     const mhsNames = split(eff.nama_anggota);
+    const nims = split(eff.nim_anggota);
+    if (mhsNames.length > MAX_MHS) throw new HttpError(`Maksimal ${MAX_MHS} mahasiswa terlibat. Saat ini ${mhsNames.length}.`, 400);
+    if (nims.length > MAX_MHS) throw new HttpError(`Maksimal ${MAX_MHS} NIM mahasiswa. Saat ini ${nims.length}.`, 400);
+    if (mhsNames.length > 0 && nims.length > 0 && mhsNames.length !== nims.length) throw new HttpError(`Jumlah NIM (${nims.length}) harus sama dengan jumlah nama mahasiswa (${mhsNames.length}).`, 400);
     {
       const seen = new Set<string>();
       for (const raw of mhsNames) { const n = norm(raw); if (seen.has(n)) throw new HttpError(`Nama anggota "${raw.trim()}" duplikat.`, 400); seen.add(n); }
     }
-    const nims = split(eff.nim_anggota);
     {
       const seen = new Set<string>();
       for (const raw of nims) { const n = normId(raw); if (!n) continue; if (seen.has(n)) throw new HttpError(`NIM "${raw.trim()}" duplikat.`, 400); seen.add(n); }
