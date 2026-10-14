@@ -78,22 +78,22 @@ export const swaggerSpec = swaggerJSDoc({
             dosen_terlibat: {
               type: ["string", "null"],
               example: "Dr. Budi, Dr. Sari",
-              description: "Daftar dosen terlibat (teks bebas).",
+              description: "Daftar dosen terlibat, dipisah koma/semicolon/baris baru. Maks 5 dosen (ketua tidak hitung).",
             },
             nidn_dosen_terlibat: {
               type: ["string", "null"],
               example: "0123456789, 9876543210",
-              description: "Daftar NIDN dosen terlibat (teks bebas).",
+              description: "Daftar NIDN dosen terlibat, urut sesuai nama. Maks 5, jumlah harus sama dengan dosen_terlibat jika keduanya diisi.",
             },
             nama_anggota: {
               type: ["string", "null"],
               example: "Andi, Bunga",
-              description: "Daftar nama anggota mahasiswa (teks bebas).",
+              description: "Daftar nama anggota mahasiswa, dipisah koma/semicolon/baris baru. Maks 5 mahasiswa.",
             },
             nim_anggota: {
               type: ["string", "null"],
               example: "2020123456, 2020123457",
-              description: "Daftar NIM anggota mahasiswa (teks bebas).",
+              description: "Daftar NIM anggota mahasiswa, urut sesuai nama. Maks 5, jumlah harus sama dengan nama_anggota jika keduanya diisi.",
             },
             nama_ketua: {
               type: ["string", "null"],
