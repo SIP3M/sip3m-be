@@ -255,6 +255,7 @@ model users {
   dplQuotas                KkmDplQuota[]
   kkmPeserta               KkmPeserta[]
   sessions                 UserSession[]
+  kkmKelompokDocsUploaded  KkmKelompokDocument[] @relation("KkmKelompokDocUploader")
 
   @@index([role_id])
 }
@@ -432,6 +433,12 @@ enum KkmPesertaStatus {
   REJECTED
 }
 
+enum KkmKelompokDocumentType {
+  PROPOSAL_PROGRAM_KERJA
+  LOGBOOK_KELOMPOK
+  LAPORAN_AKHIR
+}
+
 model KkmKelompok {
   id         Int      @id @default(autoincrement())
   periode_id Int
@@ -444,6 +451,7 @@ model KkmKelompok {
   dpl        users?      @relation("DplKelompok", fields: [dpl_id], references: [id], onDelete: SetNull)
 
   peserta    KkmPeserta[]
+  documents  KkmKelompokDocument[]
 
   created_at DateTime    @default(now())
   updated_at DateTime    @updatedAt
@@ -451,6 +459,29 @@ model KkmKelompok {
   @@index([periode_id])
   @@index([dpl_id])
   @@index([periode_id, dpl_id])
+}
+
+model KkmKelompokDocument {
+  id            Int                      @id @default(autoincrement())
+  kelompok_id   Int
+  document_type KkmKelompokDocumentType
+  title         String                   @db.VarChar(255)
+  file_path     String                   @db.VarChar(500)
+  file_size     Int?
+  mime_type     String?                  @db.VarChar(100)
+  uploaded_by   Int
+  uploaded_at   DateTime                 @default(now())
+
+  kelompok      KkmKelompok              @relation(fields: [kelompok_id], references: [id], onDelete: Cascade)
+  uploader      users                    @relation("KkmKelompokDocUploader", fields: [uploaded_by], references: [id], onDelete: Cascade)
+
+  created_at    DateTime                 @default(now())
+  updated_at    DateTime                 @updatedAt
+
+  // 1 kelompok = 1 dokumen per jenis (upload baru menggantikan yang lama)
+  @@unique([kelompok_id, document_type])
+  @@index([kelompok_id])
+  @@index([document_type])
 }
 
 model UserSession {

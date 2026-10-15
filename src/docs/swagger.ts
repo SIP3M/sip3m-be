@@ -7019,6 +7019,239 @@ Kolom FE: TAHUN, NAMA PERIODE, JENIS, PELAKSANAAN, PENARIKAN, STATUS, AKSI.
           responses: { 200: { description: "Berhasil", content: { "application/json": { example: { message: "4 kelompok berhasil dibuat.", data: { created: 4 } } } } }, 404: { description: "Periode tidak ditemukan" } },
         },
       },
+      "/kkm/kelompok/stats": {
+        get: {
+          tags: ["KKM Kelompok"],
+          summary: "Statistik kelompok KKM (5 kartu dashboard)",
+          description: "5 kartu: Total Kelompok, Aktif, Belum Lengkap, Bermasalah, Total Mahasiswa. Status derived dari isi vs kuota desa: **AKTIF >= 80%, BELUM_LENGKAP 50-<80%, BERMASALAH < 50%**.",
+          security: [{ bearerAuth: [] }],
+          parameters: [{ name: "periode_id", in: "query", required: true, schema: { type: "integer", example: 2 } }],
+          responses: {
+            200: {
+              description: "Berhasil",
+              content: {
+                "application/json": {
+                  example: {
+                    message: "Berhasil mengambil statistik kelompok KKM.",
+                    data: {
+                      periode: { id: 2, nama_periode: "KKM Periode 2040", tahun_akademik: "2040/2041" },
+                      total_kelompok: 30,
+                      aktif: 28,
+                      belum_lengkap: 2,
+                      bermasalah: 0,
+                      total_mahasiswa: 180,
+                    },
+                  },
+                },
+              },
+            },
+            400: { description: "periode_id wajib" },
+            404: { description: "Periode tidak ditemukan" },
+          },
+        },
+      },
+      "/kkm/kelompok": {
+        get: {
+          tags: ["KKM Kelompok"],
+          summary: "Daftar kelompok KKM (card list)",
+          description: "Card list kelompok per periode dengan derived status/komposisi. Tiap card: nama, DPL, desa/kecamatan, jumlah_anggota/kuota, persentase, terverifikasi, gender, chip prodi, status (AKTIF/BELUM_LENGKAP/BERMASALAH), komposisi (SEIMBANG/DOMINASI/PERLU_PENYESUAIAN). Filter status & komposisi dihitung in-memory setelah aggregate.",
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            { name: "periode_id", in: "query", required: true, schema: { type: "integer", example: 2 } },
+            { name: "page", in: "query", required: false, schema: { type: "integer", minimum: 1, default: 1 } },
+            { name: "search", in: "query", required: false, schema: { type: "string", description: "nama kelompok / DPL / desa / kecamatan", example: "Plumbon" } },
+            { name: "status", in: "query", required: false, schema: { type: "string", enum: ["AKTIF", "BELUM_LENGKAP", "BERMASALAH"] } },
+            { name: "komposisi", in: "query", required: false, schema: { type: "string", enum: ["SEIMBANG", "DOMINASI", "PERLU_PENYESUAIAN"] } },
+            { name: "desa", in: "query", required: false, schema: { type: "string", example: "Plumbon" } },
+            { name: "dpl_id", in: "query", required: false, schema: { type: "integer", example: 10 } },
+          ],
+          responses: {
+            200: {
+              description: "Berhasil",
+              content: {
+                "application/json": {
+                  example: {
+                    message: "Berhasil mengambil daftar kelompok KKM.",
+                    data: [
+                      {
+                        id: 1,
+                        nama: "Kelompok 01",
+                        dpl_id: 10,
+                        dpl_name: "Dr. Ahmad Fauzi, M.Kom",
+                        lokasi: { desa: "Astanajapura", kecamatan: "Astanajapura", kabupaten: "Cirebon", kuota: 10 },
+                        jumlah_anggota: 10,
+                        terverifikasi: 8,
+                        pending: 2,
+                        rejected: 0,
+                        gender: { laki: 5, perempuan: 5, unknown: 0 },
+                        prodi: [{ nama: "Teknik Informatika", jumlah: 3 }, { nama: "Manajemen", jumlah: 2 }],
+                        status: "AKTIF",
+                        komposisi: "SEIMBANG",
+                        persentase_terisi: 100,
+                      },
+                    ],
+                    meta: { totalData: 30, totalPages: 3, currentPage: 1, limit: 12 },
+                  },
+                },
+              },
+            },
+            400: { description: "periode_id wajib" },
+            404: { description: "Periode tidak ditemukan" },
+          },
+        },
+      },
+      "/kkm/kelompok/{id}": {
+        get: {
+          tags: ["KKM Kelompok"],
+          summary: "Detail kelompok KKM (halaman Detail)",
+          description: "Info kelompok + kartu verifikasi (verified/pending/rejected) + Progress KKM 5 tahap (Pembentukan, Pembekalan, Pelaksanaan, Logbook, Laporan Akhir — derived dari tanggal KkmPeriod) + pie prodi + distribusi gender + daftar anggota (dengan search di FE) + dokumen kelompok. Program Kerja & Riwayat Aktivitas TIDAK dibikin.",
+          security: [{ bearerAuth: [] }],
+          parameters: [{ name: "id", in: "path", required: true, schema: { type: "integer", example: 1 } }],
+          responses: {
+            200: {
+              description: "Berhasil",
+              content: {
+                "application/json": {
+                  example: {
+                    message: "Berhasil mengambil detail kelompok KKM.",
+                    data: {
+                      id: 1,
+                      nama: "Kelompok 01",
+                      status: "AKTIF",
+                      komposisi: "SEIMBANG",
+                      persentase_terisi: 100,
+                      jumlah_anggota: 10,
+                      kuota: 10,
+                      verifikasi: { verified: 8, pending: 2, rejected: 0 },
+                      periode: { id: 2, nama_periode: "KKM Periode 2040", tahun_akademik: "2040/2041", jenis: "REGULER", status: "AKTIF" },
+                      progress: {
+                        stages: [
+                          { key: "PEMBENTUKAN", label: "Pembentukan", date: null, done: true },
+                          { key: "PEMBEKALAN", label: "Pembekalan", date: "2040-01-15", done: true },
+                          { key: "PELAKSANAAN", label: "Pelaksanaan", date: "2040-02-01", done: true },
+                          { key: "LOGBOOK", label: "Logbook", date: "2040-03-01", done: false },
+                          { key: "LAPORAN_AKHIR", label: "Laporan Akhir", date: "2040-03-15", done: false },
+                        ],
+                        tahap_saat_ini: "Logbook",
+                      },
+                      lokasi: { id: 1, desa: "Astanajapura", kecamatan: "Astanajapura", kabupaten: "Cirebon", kuota: 10 },
+                      dpl: { id: 10, name: "Dr. Ahmad Fauzi, M.Kom", email: "ahmad@umc.ac.id", nidn_nip: "0412028801" },
+                      gender: { laki: 5, perempuan: 5, unknown: 0 },
+                      prodi: [{ nama: "Teknik Informatika", jumlah: 3 }],
+                      anggota: [
+                        { peserta_id: 1, user_id: 51, nim: "210411001", nama: "Andi Pratama", email: "210411001@student.umc.ac.id", semester: 7, nomor_hp: "081234567890", jenis_kelamin: "Laki-laki", fakultas: "FT", prodi: "Teknik Informatika", status: "VERIFIED" },
+                      ],
+                      dokumen: [
+                        { id: 1, document_type: "PROPOSAL_PROGRAM_KERJA", title: "proposal.pdf", file_size: 102400, mime_type: "application/pdf", uploaded_at: "2040-01-20T00:00:00.000Z", uploaded_by: "Admin LPPM", url: "https://...supabase.co/.../proposal.pdf" },
+                      ],
+                    },
+                  },
+                },
+              },
+            },
+            404: { description: "Kelompok tidak ditemukan" },
+          },
+        },
+        patch: {
+          tags: ["KKM Kelompok"],
+          summary: "Edit kelompok KKM (ganti / cabut DPL saja)",
+          description: "Desa/lokasi TIDAK bisa diubah di endpoint ini (1 Desa = 1 Kelompok) — ganti desa lewat menu Lokasi KKM. Body: `dpl_id` (integer = assign DPL baru dengan validasi kuota KkmDplQuota/periode; null = cabut DPL kelompok ini). Periode SELESAI ditolak.",
+          security: [{ bearerAuth: [] }],
+          parameters: [{ name: "id", in: "path", required: true, schema: { type: "integer", example: 1 } }],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: { type: "object", properties: { dpl_id: { type: ["integer", "null"], example: 11, description: "null = cabut DPL" } } },
+                examples: {
+                  gantiDPL: { value: { dpl_id: 11 } },
+                  cabutDPL: { value: { dpl_id: null } },
+                },
+              },
+            },
+          },
+          responses: {
+            200: { description: "Berhasil", content: { "application/json": { example: { message: "Kelompok berhasil diubah.", data: { id: 1, dpl_id: 11 } } } } },
+            400: { description: "DPL kuota penuh / periode SELESAI / tidak ada perubahan" },
+            409: { description: "Kelompok sudah punya DPL lain" },
+            404: { description: "Kelompok tidak ditemukan" },
+          },
+        },
+      },
+      "/kkm/kelompok/{id}/anggota": {
+        post: {
+          tags: ["KKM Kelompok"],
+          summary: "Tambah anggota ke kelompok (tombol + Tambah Mahasiswa di Edit)",
+          description: "Body: `peserta_ids[]` (KkmPeserta.id, status PENDING/VERIFIED). Validasi: peserta satu periode, belum ditempatkan di kelompok lain (pindah kelompok pakai `/kkm/peserta/assign-kelompok`), kuota desa tidak terlampaui. Periode SELESAI ditolak.",
+          security: [{ bearerAuth: [] }],
+          parameters: [{ name: "id", in: "path", required: true, schema: { type: "integer", example: 1 } }],
+          requestBody: { required: true, content: { "application/json": { schema: { type: "object", required: ["peserta_ids"], properties: { peserta_ids: { type: "array", items: { type: "integer" }, example: [1, 2, 3] } } } } } },
+          responses: {
+            200: { description: "Berhasil", content: { "application/json": { example: { message: "Berhasil menambah 3 anggota ke kelompok.", data: { count: 3 } } } } },
+            400: { description: "Kelompok penuh / peserta sudah di kelompok lain / periode SELESAI" },
+            404: { description: "Kelompok / peserta tidak ditemukan" },
+          },
+        },
+      },
+      "/kkm/kelompok/{id}/anggota/{pesertaId}": {
+        delete: {
+          tags: ["KKM Kelompok"],
+          summary: "Hapus anggota dari kelompok (🗑 di Daftar Anggota)",
+          description: "Set `KkmPeserta.kelompok_id = null` (kembali ke Belum Ditempatkan), peserta TIDAK dihapus.",
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            { name: "id", in: "path", required: true, schema: { type: "integer", example: 1 } },
+            { name: "pesertaId", in: "path", required: true, schema: { type: "integer", example: 1 } },
+          ],
+          responses: {
+            200: { description: "Berhasil", content: { "application/json": { example: { message: "Anggota berhasil dihapus dari kelompok.", data: { id: 1, kelompok_id: null } } } } },
+            400: { description: "Peserta bukan anggota kelompok ini" },
+            404: { description: "Peserta tidak ditemukan" },
+          },
+        },
+      },
+      "/kkm/kelompok/{id}/dokumen": {
+        post: {
+          tags: ["KKM Kelompok"],
+          summary: "Upload dokumen kelompok (multipart/form-data)",
+          description: "Field: `file` (PDF, maks 10 MB) + `document_type` (PROPOSAL_PROGRAM_KERJA | LOGBOOK_KELOMPOK | LAPORAN_AKHIR). 1 kelompok = 1 dokumen per jenis; upload baru menggantikan yang lama (file lama dihapus dari storage).",
+          security: [{ bearerAuth: [] }],
+          parameters: [{ name: "id", in: "path", required: true, schema: { type: "integer", example: 1 } }],
+          requestBody: {
+            required: true,
+            content: {
+              "multipart/form-data": {
+                schema: {
+                  type: "object",
+                  required: ["file", "document_type"],
+                  properties: {
+                    file: { type: "string", format: "binary" },
+                    document_type: { type: "string", enum: ["PROPOSAL_PROGRAM_KERJA", "LOGBOOK_KELOMPOK", "LAPORAN_AKHIR"] },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            201: { description: "Berhasil", content: { "application/json": { example: { message: "Dokumen kelompok berhasil diunggah.", data: { id: 1, document_type: "PROPOSAL_PROGRAM_KERJA", title: "proposal.pdf" } } } } },
+            400: { description: "File bukan PDF / > 10 MB / document_type salah" },
+            404: { description: "Kelompok tidak ditemukan" },
+          },
+        },
+      },
+      "/kkm/kelompok/dokumen/{docId}": {
+        delete: {
+          tags: ["KKM Kelompok"],
+          summary: "Hapus dokumen kelompok",
+          description: "Hapus row + file di Supabase Storage.",
+          security: [{ bearerAuth: [] }],
+          parameters: [{ name: "docId", in: "path", required: true, schema: { type: "integer", example: 1 } }],
+          responses: {
+            200: { description: "Berhasil", content: { "application/json": { example: { message: "Dokumen kelompok berhasil dihapus.", data: { id: 1 } } } } },
+            404: { description: "Dokumen tidak ditemukan" },
+          },
+        },
+      },
       "/kkm/locations/{id}": {
         get: {
           tags: ["KKM Lokasi"],
