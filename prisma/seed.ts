@@ -108,7 +108,7 @@ async function main() {
     const name = `${firstNames[i % firstNames.length]} ${lastNames[i % lastNames.length]}${i >= firstNames.length ? ` ${Math.floor(i / firstNames.length) + 1}` : ""}`;
     const prodi = prodiRows[i % prodiRows.length];
     const fakultas = fakultasRows.find((f) => f.id === prodi.fakultas_id) ?? fakultasRows[i % fakultasRows.length];
-    const semester = 5 + (i % 4); // 5,6,7,8 sebar — biar lolos minimal_semester
+    const semester = 7; // wajib semester 7 untuk semua dummy (tes Generate KKM)
     const jenis_kelamin = genders[i % 2];
     const email = `${nimReal}@student.umc.ac.id`;
     await prisma.users.upsert({
@@ -145,10 +145,6 @@ async function main() {
       let status: "VERIFIED" | "PENDING" | "REJECTED" = "VERIFIED";
       if (idx >= 180 && idx < 192) status = "PENDING";
       else if (idx >= 192) status = "REJECTED";
-      // Beberapa semester rendah biar kena "Belum Memenuhi Syarat" di preview
-      if (idx % 47 === 0 && status === "VERIFIED") {
-        await prisma.users.update({ where: { id: u.id }, data: { semester: 3 } });
-      }
       await prisma.kkmPeserta.upsert({
         where: { periode_id_user_id: { periode_id: activePeriod.id, user_id: u.id } },
         update: { status: status as never, kelompok_id: null },
