@@ -29,6 +29,15 @@ const getUniqueConstraintInfo = (
   return { message: "Data unik sudah digunakan.", field: null };
 };
 
+/**
+ * Normalisasi relasi master (Fakultas / ProgramStudi) menjadi { id, nama } | null
+ * supaya shape respons konsisten di semua endpoint users (jangan return object
+ * relasi Prisma mentah atau angka id — membingungkan FE).
+ */
+const toRef = (
+  row: { id: number; nama: string } | null,
+): { id: number; nama: string } | null => (row ? { id: row.id, nama: row.nama } : null);
+
 export const getReviewers = async (
   _req: Request,
   res: Response,
@@ -103,7 +112,8 @@ export const getUsers = async (
           name: true,
           email: true,
           nidn_nip: true,
-          Fakultas: true,
+          Fakultas: { select: { id: true, nama: true } },
+          ProgramStudi: { select: { id: true, nama: true } },
           is_active: true,
           created_at: true,
           roles: {
@@ -130,7 +140,8 @@ export const getUsers = async (
         name: user.name,
         email: user.email,
         nidn: user.nidn_nip,
-        fakultas: user.Fakultas,
+        fakultas: toRef(user.Fakultas),
+        program_studi: toRef(user.ProgramStudi),
         is_active: user.is_active,
         created_at: user.created_at,
         roles: {
@@ -172,8 +183,8 @@ export const getUserById = async (
       email: true,
       username: true,
       nidn_nip: true,
-      Fakultas: true,
-      program_studi_id: true,
+      Fakultas: { select: { id: true, nama: true } },
+      ProgramStudi: { select: { id: true, nama: true } },
       tempat_lahir: true,
       tanggal_lahir: true,
       jenis_kelamin: true,
@@ -202,8 +213,8 @@ export const getUserById = async (
       email: user.email,
       username: user.username,
       nidn: user.nidn_nip,
-      fakultas: user.Fakultas,
-      program_studi: user.program_studi_id,
+      fakultas: toRef(user.Fakultas),
+      program_studi: toRef(user.ProgramStudi),
       tempat_lahir: user.tempat_lahir,
       tanggal_lahir: user.tanggal_lahir,
       jenis_kelamin: user.jenis_kelamin,
@@ -260,7 +271,7 @@ export const updateUserRole = async (
       name: true,
       email: true,
       nidn_nip: true,
-      Fakultas: true,
+      Fakultas: { select: { id: true, nama: true } },
       roles: {
         select: {
           id: true,
@@ -277,7 +288,7 @@ export const updateUserRole = async (
       name: updatedUser.name,
       email: updatedUser.email,
       nidn: updatedUser.nidn_nip,
-      fakultas: updatedUser.Fakultas,
+      fakultas: toRef(updatedUser.Fakultas),
       roles: {
         id: updatedUser.roles.id,
         roles: updatedUser.roles.roles,
@@ -314,7 +325,7 @@ export const updateUserStatus = async (
       name: true,
       email: true,
       nidn_nip: true,
-      Fakultas: true,
+      Fakultas: { select: { id: true, nama: true } },
       is_active: true,
       roles: {
         select: {
@@ -332,7 +343,7 @@ export const updateUserStatus = async (
       name: updatedUser.name,
       email: updatedUser.email,
       nidn: updatedUser.nidn_nip,
-      fakultas: updatedUser.Fakultas,
+      fakultas: toRef(updatedUser.Fakultas),
       is_active: updatedUser.is_active,
       roles: {
         id: updatedUser.roles.id,
@@ -442,13 +453,9 @@ export const createUser = async (
         username: true,
         nidn_nip: true,
 
-        // 2. PERBAIKAN DI SINI:
-        // Kolom 'fakultas' string sudah tidak ada. Kamu bisa me-return ID-nya...
-        fakultas_id: true,
-
-        // ...Atau menarik teks namanya langsung dari tabel master:
-        Fakultas: { select: { nama: true } },
-        ProgramStudi: { select: { nama: true } },
+        // Ambil id + nama dari tabel master supaya response konsisten { id, nama } | null
+        Fakultas: { select: { id: true, nama: true } },
+        ProgramStudi: { select: { id: true, nama: true } },
 
         is_active: true,
         created_at: true,
@@ -464,7 +471,8 @@ export const createUser = async (
         email: newUser.email,
         username: newUser.username,
         nidn: newUser.nidn_nip,
-        fakultas: newUser.Fakultas,
+        fakultas: toRef(newUser.Fakultas),
+        program_studi: toRef(newUser.ProgramStudi),
         is_active: newUser.is_active,
         created_at: newUser.created_at,
         roles: { id: newUser.roles.id, roles: newUser.roles.roles },
@@ -627,7 +635,8 @@ export const updateUser = async (
         email: true,
         username: true,
         nidn_nip: true,
-        Fakultas: true,
+        Fakultas: { select: { id: true, nama: true } },
+        ProgramStudi: { select: { id: true, nama: true } },
         is_active: true,
         created_at: true,
         updated_at: true,
@@ -643,7 +652,8 @@ export const updateUser = async (
         email: updatedUser.email,
         username: updatedUser.username,
         nidn: updatedUser.nidn_nip,
-        fakultas: updatedUser.Fakultas,
+        fakultas: toRef(updatedUser.Fakultas),
+        program_studi: toRef(updatedUser.ProgramStudi),
         is_active: updatedUser.is_active,
         created_at: updatedUser.created_at,
         updated_at: updatedUser.updated_at,
