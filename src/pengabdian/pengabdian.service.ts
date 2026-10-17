@@ -34,28 +34,28 @@ const generateStandardMilestones = async (projectId: number): Promise<void> => {
       {
         project_id: projectId,
         title: "Tanda Tangan Kontrak",
-        sequence: 0, // KEMBALIKAN KE 0
+        sequence: 1,
         target_percentage: 0,
         status: PengabdianMilestoneStatus.PENDING,
       },
       {
         project_id: projectId,
         title: "Laporan Kemajuan 1",
-        sequence: 1, // KEMBALIKAN KE 1
+        sequence: 2,
         target_percentage: 30,
         status: PengabdianMilestoneStatus.PENDING,
       },
       {
         project_id: projectId,
-        title: "Laporan Kemajuan 2", // UBAH JADI KEMAJUAN 2
-        sequence: 2, // KEMBALIKAN KE 2
+        title: "Laporan Kemajuan 2",
+        sequence: 3,
         target_percentage: 70,
         status: PengabdianMilestoneStatus.PENDING,
       },
       {
         project_id: projectId,
         title: "Laporan Akhir",
-        sequence: 3, // TETAP 3
+        sequence: 4,
         target_percentage: 100,
         status: PengabdianMilestoneStatus.PENDING,
       },
