@@ -313,12 +313,14 @@ export const approveDocument = async (
             select: {
               id: true,
               sequence: true,
+              target_percentage: true,
               project_id: true,
             },
           },
           project: {
             select: {
               id: true,
+              status: true,
               proposal: {
                 select: {
                   lead_researcher_id: true,
@@ -388,15 +390,26 @@ export const approveDocument = async (
 
         const projectUpdateData: Prisma.PengabdianProjectsUpdateInput = {};
 
-        if (document.milestone.sequence === 0) {
+        // Progres mengikuti target milestone (0 / 30 / 70 / 100), bukan hardcode sequence.
+        projectUpdateData.overall_progress = document.milestone.target_percentage;
+
+        // Proyek dianggap berjalan saat milestone pertama disetujui.
+        if (document.project.status === PengabdianStatus.PENDING) {
           projectUpdateData.status = PengabdianStatus.SEDANG_BERJALAN;
           projectUpdateData.start_date = approvedAt;
-        } else if (document.milestone.sequence === 1) {
-          projectUpdateData.overall_progress = 30;
-        } else if (document.milestone.sequence === 2) {
-          projectUpdateData.overall_progress = 70;
-        } else if (document.milestone.sequence === 3) {
-          projectUpdateData.overall_progress = 100;
+        }
+
+        // Proyek hanya SELESAI jika milestone yang disetujui adalah yang terakhir
+        // (tidak ada milestone dengan sequence lebih besar). Dengan ini "Laporan
+        // Akhir" wajib disetujui lebih dulu sebelum proyek dianggap selesai.
+        const moreMilestones = await tx.pengabdianMilestones.count({
+          where: {
+            project_id: document.milestone.project_id,
+            sequence: { gt: document.milestone.sequence },
+          },
+        });
+
+        if (moreMilestones === 0) {
           projectUpdateData.status = PengabdianStatus.SELESAI;
           projectUpdateData.end_date = approvedAt;
         }

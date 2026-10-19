@@ -991,7 +991,7 @@ export const updateProposalStatus = async (
             {
               project_id: newProject.id,
               sequence: 3,
-              title: "Laporan Kemajuan 3",
+              title: "Laporan Kemajuan 2",
               target_percentage: 70,
               status: "PENDING",
             },
