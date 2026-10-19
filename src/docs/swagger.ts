@@ -6112,6 +6112,136 @@ Struktur data mencakup:
         },
       },
 
+      "/dashboard/kkm": {
+        get: {
+          tags: ["Dashboard"],
+          summary: "Ambil data Dashboard KKM",
+          description: `
+Mengambil data agregat **Dashboard KKM** untuk memantau pelaksanaan Kuliah Kerja Mahasiswa.
+Dapat diakses oleh **ADMIN_LPPM** dan **STAFF_LPPM**.
+
+**Scoping periode:** tanpa parameter, dashboard menampilkan periode berstatus **AKTIF**.
+Bisa di-override dengan query \`?periode_id=\`. Jika tidak ada periode aktif, field \`periode\` bernilai \`null\` dan semua angka 0.
+
+Struktur data:
+- **periode**: referensi periode yang ditampilkan (\`id, nama_periode, tahun_akademik, status\`) atau \`null\`.
+- **summary_cards**: \`total_peserta\`, \`total_kelompok\`, \`total_desa\`, \`total_dpl\` (distinct DPL), \`belum_dapat_kelompok\`, \`menunggu_verifikasi\`.
+- **peserta_per_prodi**: jumlah peserta per program studi (urut menurun).
+- **status_kelompok**: distribusi status kelompok — \`AKTIF\` (>=80% kuota), \`BELUM_LENGKAP\` (50-<80%), \`BERMASALAH\` (<50%) — diturunkan dari rasio terisi vs kuota.
+- **distribusi_per_desa**: jumlah mahasiswa per desa penempatan, hanya peserta yang sudah memiliki kelompok (urut menurun).
+          `,
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: "periode_id",
+              in: "query",
+              required: false,
+              schema: { type: "integer" },
+              description:
+                "ID periode KKM (opsional). Default: periode berstatus AKTIF.",
+              example: 3,
+            },
+          ],
+          responses: {
+            200: {
+              description: "Dashboard KKM berhasil diambil",
+              content: {
+                "application/json": {
+                  example: {
+                    message: "Dashboard KKM berhasil diambil.",
+                    data: {
+                      periode: {
+                        id: 3,
+                        nama_periode: "KKM TERBARU 2026",
+                        tahun_akademik: "2025/2026",
+                        status: "AKTIF",
+                      },
+                      summary_cards: {
+                        total_peserta: 1248,
+                        total_kelompok: 98,
+                        total_desa: 32,
+                        total_dpl: 47,
+                        belum_dapat_kelompok: 45,
+                        menunggu_verifikasi: 120,
+                      },
+                      peserta_per_prodi: [
+                        { nama: "S1 Teknik Informatika", jumlah: 220 },
+                        { nama: "S1 Sistem Informasi", jumlah: 190 },
+                        { nama: "S1 Farmasi", jumlah: 165 },
+                      ],
+                      status_kelompok: [
+                        { status: "AKTIF", label: "Aktif", jumlah: 60 },
+                        {
+                          status: "BELUM_LENGKAP",
+                          label: "Belum Lengkap",
+                          jumlah: 25,
+                        },
+                        { status: "BERMASALAH", label: "Bermasalah", jumlah: 13 },
+                      ],
+                      distribusi_per_desa: [
+                        { nama: "Astanajapura", jumlah: 78 },
+                        { nama: "Palimanan", jumlah: 72 },
+                        { nama: "Gempol", jumlah: 66 },
+                      ],
+                    },
+                  },
+                },
+              },
+            },
+            400: {
+              description: "Query periode_id tidak valid",
+              content: {
+                "application/json": {
+                  example: {
+                    message: "Query periode_id harus berupa angka yang valid.",
+                  },
+                },
+              },
+            },
+            401: {
+              description: "Unauthorized",
+              content: {
+                "application/json": {
+                  example: { message: "Unauthorized." },
+                },
+              },
+            },
+            403: {
+              description: "Forbidden — hanya ADMIN_LPPM atau STAFF_LPPM",
+              content: {
+                "application/json": {
+                  example: {
+                    message:
+                      "You do not have permission to access this resource.",
+                  },
+                },
+              },
+            },
+            404: {
+              description: "Periode KKM tidak ditemukan",
+              content: {
+                "application/json": {
+                  example: {
+                    message: "Periode KKM dengan ID 999 tidak ditemukan.",
+                  },
+                },
+              },
+            },
+            500: {
+              description: "Internal server error",
+              content: {
+                "application/json": {
+                  example: {
+                    message:
+                      "Terjadi kesalahan pada server saat mengambil dashboard KKM.",
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+
       /** ================= MONITORING PROYEK ================= */
       "/monitoring/projects": {
         get: {

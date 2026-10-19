@@ -2,7 +2,7 @@ import { Router } from "express";
 import { authMiddleware } from "../auth/middleware/auth.middleware";
 import { requireRole } from "../auth/middleware/role.middleware";
 import { ROLES } from "../auth/role";
-import { getAdminDashboardController } from "./dashboard.controller";
+import { getAdminDashboardController, getKkmDashboardController } from "./dashboard.controller";
 
 const router = Router();
 
@@ -11,6 +11,13 @@ router.get(
   authMiddleware,
   requireRole([ROLES.ADMIN_LPPM]),
   getAdminDashboardController,
+);
+
+router.get(
+  "/dashboard/kkm",
+  authMiddleware,
+  requireRole([ROLES.ADMIN_LPPM, ROLES.STAFF_LPPM]),
+  getKkmDashboardController,
 );
 
 export default router;
