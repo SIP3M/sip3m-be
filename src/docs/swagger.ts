@@ -7405,6 +7405,182 @@ Kolom FE: TAHUN, NAMA PERIODE, JENIS, PELAKSANAAN, PENARIKAN, STATUS, AKSI.
           },
         },
       },
+      "/kkm/monitoring": {
+        get: {
+          tags: ["KKM Monitoring"],
+          summary: "Monitoring KKM (tabel per-kelompok: progres, tahapan, indikator, status)",
+          description: "Memantau progres tiap kelompok secara real-time. Query `periode_id` opsional (default: periode AKTIF). Tiap baris memuat: jumlah anggota, DPL (+ \"terakhir\" 3 hari lalu), logbook (jumlah entri + delta mingguan), tahapan (derived dokumen), progres 0-100, indikator, dan status monitoring. `stats` (5 kartu + rata-rata progres) dihitung dari seluruh kelompok periode (sebelum filter status/search). `filters` = opsi dropdown desa & DPL.",
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            { name: "periode_id", in: "query", required: false, schema: { type: "integer", example: 3 }, description: "Kosongkan untuk periode AKTIF." },
+            { name: "page", in: "query", required: false, schema: { type: "integer", minimum: 1, default: 1 } },
+            { name: "search", in: "query", required: false, schema: { type: "string", example: "Astanajapura" }, description: "Cari nama kelompok / desa / kecamatan / DPL." },
+            { name: "status", in: "query", required: false, schema: { type: "string", enum: ["AKTIF", "PERLU_PERHATIAN", "BERMASALAH", "SELESAI"] } },
+            { name: "desa", in: "query", required: false, schema: { type: "string", example: "Astanajapura" } },
+            { name: "dpl_id", in: "query", required: false, schema: { type: "integer", example: 10 } },
+          ],
+          responses: {
+            200: {
+              description: "Berhasil",
+              content: {
+                "application/json": {
+                  example: {
+                    message: "Berhasil mengambil monitoring KKM.",
+                    periode: { id: 3, nama_periode: "KKM TERBARU 2026", tahun_akademik: "2026/2027", status: "AKTIF" },
+                    data: [
+                      {
+                        id: 1,
+                        nama: "Kelompok 01",
+                        jumlah_anggota: 10,
+                        desa: "Astanajapura",
+                        kecamatan: "Astanajapura",
+                        kabupaten: "Cirebon",
+                        dpl: { id: 4, nama: "Dr. Ahmad Fauzi, M.Kom", last_monitored_at: "2026-10-17T00:00:00.000Z", terakhir: "3 hari lalu" },
+                        logbook: { jumlah: 15, delta: -2 },
+                        tahapan: "LOGBOOK_AKTIF",
+                        tahapan_label: "Logbook Aktif",
+                        progress: 80,
+                        indikator: "NORMAL",
+                        indikator_label: "Normal",
+                        status: "AKTIF",
+                        status_label: "Aktif",
+                      },
+                      {
+                        id: 2,
+                        nama: "Kelompok 02",
+                        jumlah_anggota: 8,
+                        desa: "Karangmulya",
+                        kecamatan: "Plumbon",
+                        kabupaten: "Cirebon",
+                        dpl: { id: 5, nama: "Dr. Siti Aminah, M.Kom", last_monitored_at: null, terakhir: null },
+                        logbook: { jumlah: 8, delta: -2 },
+                        tahapan: "PROGRAM_KERJA",
+                        tahapan_label: "Program Kerja",
+                        progress: 40,
+                        indikator: "DPL_BELUM_MONITORING",
+                        indikator_label: "DPL Blm. Monitoring",
+                        status: "PERLU_PERHATIAN",
+                        status_label: "Perlu Perhatian",
+                      },
+                    ],
+                    meta: { totalData: 30, totalPages: 3, currentPage: 1, limit: 12 },
+                    stats: { total_kelompok: 30, kelompok_aktif: 20, perlu_perhatian: 6, bermasalah: 3, selesai: 1, rata_rata_progress: 63 },
+                    filters: { desa: ["Astanajapura", "Karangmulya"], dpl: [{ id: 4, nama: "Dr. Ahmad Fauzi, M.Kom" }, { id: 5, nama: "Dr. Siti Aminah, M.Kom" }] },
+                  },
+                },
+              },
+            },
+            400: { description: "Validasi query gagal / periode_id tidak valid" },
+            404: { description: "periode_id tidak ditemukan" },
+          },
+        },
+      },
+      "/kkm/kelompok/{id}/logbook": {
+        get: {
+          tags: ["KKM Monitoring"],
+          summary: "Daftar entri logbook kelompok",
+          description: "Mengembalikan seluruh entri logbook milik sebuah kelompok (terbaru dulu), lengkap dengan penulisnya. Bisa diakses mahasiswa anggota, DPL, admin, dan staff.",
+          security: [{ bearerAuth: [] }],
+          parameters: [{ name: "id", in: "path", required: true, schema: { type: "integer", example: 1 } }],
+          responses: {
+            200: {
+              description: "Berhasil",
+              content: {
+                "application/json": {
+                  example: {
+                    message: "Berhasil mengambil entri logbook kelompok.",
+                    data: [
+                      {
+                        id: 1,
+                        tanggal: "2026-10-18T00:00:00.000Z",
+                        judul: "Sosialisasi Program Kerja",
+                        deskripsi: "Melaksanakan sosialisasi program kerja kepada warga desa.",
+                        lokasi_kegiatan: "Balai Desa Astanajapura",
+                        created_at: "2026-10-18T09:15:00.000Z",
+                        penulis: { id: 201, nama: "Budi Santoso", nim_nip: "210411001" },
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+            404: { description: "Kelompok tidak ditemukan" },
+          },
+        },
+        post: {
+          tags: ["KKM Monitoring"],
+          summary: "Tambah entri logbook kelompok",
+          description: "Menambah satu catatan aktivitas (logbook) ke kelompok. Hanya boleh oleh **mahasiswa anggota** kelompok tersebut atau **DPL** kelompok. Menambah entri akan menaikkan progres & indikator aktivitas kelompok.",
+          security: [{ bearerAuth: [] }],
+          parameters: [{ name: "id", in: "path", required: true, schema: { type: "integer", example: 1 } }],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["tanggal", "judul", "deskripsi"],
+                  properties: {
+                    tanggal: { type: "string", format: "date", example: "2026-10-18" },
+                    judul: { type: "string", minLength: 3, example: "Sosialisasi Program Kerja" },
+                    deskripsi: { type: "string", minLength: 3, example: "Melaksanakan sosialisasi program kerja kepada warga desa." },
+                    lokasi_kegiatan: { type: "string", maxLength: 255, example: "Balai Desa Astanajapura" },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            201: {
+              description: "Berhasil ditambahkan",
+              content: {
+                "application/json": {
+                  example: {
+                    message: "Entri logbook berhasil ditambahkan.",
+                    data: { id: 1, tanggal: "2026-10-18T00:00:00.000Z", judul: "Sosialisasi Program Kerja", created_at: "2026-10-18T09:15:00.000Z" },
+                  },
+                },
+              },
+            },
+            400: { description: "Validasi data gagal / periode SELESAI" },
+            403: { description: "Bukan anggota kelompok / bukan DPL kelompok" },
+            404: { description: "Kelompok tidak ditemukan" },
+          },
+        },
+      },
+      "/kkm/kelompok/{id}/monitoring": {
+        post: {
+          tags: ["KKM Monitoring"],
+          summary: "DPL tandai monitoring kelompok",
+          description: "DPL menandai kelompoknya sedang/sudah dimonitoring — menyetel `last_monitored_at` ke waktu sekarang. Ini menghilangkan indikator \"DPL Blm. Monitoring\" dan menampilkan \"terakhir\" (mis. \"Hari ini\") di tabel monitoring. Bisa diakses DPL kelompok, admin, dan staff.",
+          security: [{ bearerAuth: [] }],
+          parameters: [{ name: "id", in: "path", required: true, schema: { type: "integer", example: 1 } }],
+          requestBody: {
+            required: false,
+            content: {
+              "application/json": {
+                schema: { type: "object", properties: { catatan: { type: "string", maxLength: 500, example: "Cek progres logbook mingguan." } } },
+              },
+            },
+          },
+          responses: {
+            200: {
+              description: "Berhasil dicatat",
+              content: {
+                "application/json": {
+                  example: {
+                    message: "Monitoring kelompok berhasil dicatat.",
+                    data: { id: 1, last_monitored_at: "2026-10-20T10:00:00.000Z", terakhir: "Hari ini" },
+                  },
+                },
+              },
+            },
+            400: { description: "Periode SELESAI" },
+            403: { description: "Bukan DPL kelompok ini" },
+            404: { description: "Kelompok tidak ditemukan" },
+          },
+        },
+      },
       "/kkm/locations/{id}": {
         get: {
           tags: ["KKM Lokasi"],
