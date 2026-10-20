@@ -256,6 +256,7 @@ model users {
   kkmPeserta               KkmPeserta[]
   sessions                 UserSession[]
   kkmKelompokDocsUploaded  KkmKelompokDocument[] @relation("KkmKelompokDocUploader")
+  kkmLogbookEntries        KkmLogbookEntry[]
 
   @@index([role_id])
 }
@@ -446,12 +447,16 @@ model KkmKelompok {
   nama       String   @db.VarChar(50)
   dpl_id     Int?
 
+  // Monitoring: timestamp terakhir DPL mencatat monitoring (null = belum pernah)
+  last_monitored_at DateTime?
+
   periode    KkmPeriod   @relation(fields: [periode_id], references: [id], onDelete: Cascade)
   lokasi     KkmLocation @relation(fields: [lokasi_id], references: [id], onDelete: Cascade)
   dpl        users?      @relation("DplKelompok", fields: [dpl_id], references: [id], onDelete: SetNull)
 
   peserta    KkmPeserta[]
   documents  KkmKelompokDocument[]
+  logbook    KkmLogbookEntry[]
 
   created_at DateTime    @default(now())
   updated_at DateTime    @updatedAt
@@ -459,6 +464,7 @@ model KkmKelompok {
   @@index([periode_id])
   @@index([dpl_id])
   @@index([periode_id, dpl_id])
+  @@index([last_monitored_at])
 }
 
 model KkmKelompokDocument {
@@ -523,4 +529,24 @@ model KkmPeserta {
   @@index([periode_id, status])
   @@index([kelompok_id])
   @@index([periode_id, kelompok_id])
+}
+
+model KkmLogbookEntry {
+  id             Int      @id @default(autoincrement())
+  kelompok_id    Int
+  user_id        Int
+  tanggal        DateTime @db.Date
+  judul          String   @db.VarChar(255)
+  deskripsi      String   @db.Text
+  lokasi_kegiatan String? @db.VarChar(255)
+
+  kelompok       KkmKelompok @relation(fields: [kelompok_id], references: [id], onDelete: Cascade)
+  author         users       @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  created_at     DateTime    @default(now())
+  updated_at     DateTime    @updatedAt
+
+  @@index([kelompok_id])
+  @@index([kelompok_id, tanggal])
+  @@index([user_id])
 }
