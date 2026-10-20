@@ -7581,6 +7581,56 @@ Kolom FE: TAHUN, NAMA PERIODE, JENIS, PELAKSANAAN, PENARIKAN, STATUS, AKSI.
           },
         },
       },
+      "/kkm/skema": {
+        get: {
+          tags: ["KKM Skema"],
+          summary: "Portal Skema KKM (kartu pilihan untuk mahasiswa)",
+          description: "Daftar KKM yang **terbuka pendaftarannya** (status AKTIF/DIJADWALKAN + masih dalam jendela `tgl_buka_daftar`→`tgl_tutup_daftar`), disajikan sebagai kartu untuk halaman Portal Mahasiswa. Tiap periode = 1 kartu (Jalur A — model KkmSkema menyusul). Per kartu: nama, deskripsi, jenis, durasi (derive), tanggal, kuota (`target_peserta`) + terisi (peserta VERIFIED) + menunggu (PENDING), sisa, persentase, wilayah (kabupaten), batas_daftar. `stats` = agregat seluruh kartu (di atas filter). Filter `jenis` & `wilayah` opsional.",
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            { name: "jenis", in: "query", required: false, schema: { type: "string", enum: ["REGULER", "TEMATIK"] } },
+            { name: "wilayah", in: "query", required: false, schema: { type: "string", example: "Cirebon" }, description: "Cocokkan sebagian kabupaten (case-insensitive)." },
+          ],
+          responses: {
+            200: {
+              description: "Berhasil",
+              content: {
+                "application/json": {
+                  example: {
+                    message: "Berhasil mengambil daftar skema KKM.",
+                    periode_aktif: { id: 3, nama_periode: "KKM TERBARU 2026", tahun_akademik: "2026/2027", jenis: "REGULER", status: "AKTIF" },
+                    skema: [
+                      {
+                        id: 3,
+                        nama: "KKM TERBARU 2026",
+                        deskripsi: "Kuliah Kerja Mahasiswa reguler.",
+                        jenis: "REGULER",
+                        durasi_hari: 43,
+                        tanggal: {
+                          buka_daftar: "2026-10-15T00:00:00.000Z",
+                          tutup_daftar: "2026-10-31T00:00:00.000Z",
+                          pelaksanaan: "2026-11-02T00:00:00.000Z",
+                          penarikan: "2026-12-15T00:00:00.000Z",
+                        },
+                        kuota: 2000,
+                        terisi: 183,
+                        menunggu: 9,
+                        sisa: 1817,
+                        persentase_terisi: 9,
+                        wilayah: ["Cirebon", "Indramayu", "Kuningan", "Majalengka"],
+                        batas_daftar: "2026-10-31T00:00:00.000Z",
+                      },
+                    ],
+                    stats: { total_skema: 2, akumulasi_kuota: 4000, akumulasi_terisi: 183, batas_akhir: "2026-10-31T00:00:00.000Z" },
+                    filters: { jenis: ["REGULER"], wilayah: ["Cirebon", "Indramayu", "Kuningan", "Majalengka"] },
+                  },
+                },
+              },
+            },
+            400: { description: "Validasi query gagal" },
+          },
+        },
+      },
       "/kkm/locations/{id}": {
         get: {
           tags: ["KKM Lokasi"],

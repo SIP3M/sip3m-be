@@ -22,6 +22,7 @@ import kkmPesertaRoute from "./kkm/peserta/kkm-peserta.routes";
 import kkmGenerateRoute from "./kkm/generate/kkm-generate.routes";
 import kkmKelompokRoute from "./kkm/kelompok/kkm-kelompok.routes";
 import kkmMonitoringRoute from "./kkm/monitoring/kkm-monitoring.routes";
+import kkmSkemaRoute from "./kkm/skema/kkm-skema.routes";
 import swaggerUiDist from "swagger-ui-dist";
 import { swaggerSpec } from "./docs/swagger";
 
@@ -99,6 +100,7 @@ app.use("/api", kkmPesertaRoute);
 app.use("/api", kkmGenerateRoute);
 app.use("/api", kkmKelompokRoute);
 app.use("/api", kkmMonitoringRoute);
+app.use("/api", kkmSkemaRoute);
 app.use("/api", master)
 
 // health check (penting buat test)
