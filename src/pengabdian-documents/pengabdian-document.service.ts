@@ -16,6 +16,19 @@ type MilestoneUploadFiles = {
   [fieldname: string]: Express.Multer.File[];
 };
 
+/**
+ * Ambil URL publik dokumen dari Supabase Storage.
+ * - Utama: pakai `public_url` yang tersimpan di database.
+ * - Fallback (data lama yang public_url-nya NULL): hitung dari `file_path`.
+ */
+export const resolvePublicUrl = (doc: {
+  file_path: string;
+  public_url?: string | null;
+}): string =>
+  doc.public_url ??
+  supabase.storage.from(SUPABASE_BUCKET).getPublicUrl(doc.file_path).data
+    .publicUrl;
+
 const getBaseDocumentTypeFromMilestone = (
   milestoneTitle: string,
   milestoneSequence: number,
@@ -92,8 +105,10 @@ export const uploadDocument = async (
       throw new Error(`Gagal upload ke Supabase: ${uploadError?.message}`);
     }
 
-    // Dapatkan public URL (untuk referensi)
-    supabase.storage.from(SUPABASE_BUCKET).getPublicUrl(filePath);
+    // Dapatkan public URL untuk disimpan di database (dipakai tombol "Lihat")
+    const {
+      data: { publicUrl },
+    } = supabase.storage.from(SUPABASE_BUCKET).getPublicUrl(filePath);
 
     // Simpan ke database PengabdianDocuments
     const document = await prisma.pengabdianDocuments.create({
@@ -102,6 +117,7 @@ export const uploadDocument = async (
         document_type: documentType,
         title: file.originalname,
         file_path: filePath,
+        public_url: publicUrl,
         file_size: file.size,
         mime_type: file.mimetype,
         verification_status: DocumentVerificationStatus.PENDING,
@@ -211,6 +227,7 @@ export const uploadMilestoneDocuments = async (
         document_type: documentType,
         title: file.originalname,
         file_path: filePath,
+        public_url: publicUrl,
         file_size: file.size,
         mime_type: file.mimetype,
         verification_status: initialStatus,
@@ -275,6 +292,7 @@ export const getDocumentsByProjectId = async (projectId: number) => {
       milestone_id: true,
       title: true,
       file_path: true,
+      public_url: true,
       file_size: true,
       mime_type: true,
       document_type: true,
@@ -291,7 +309,10 @@ export const getDocumentsByProjectId = async (projectId: number) => {
     orderBy: { uploaded_at: "desc" },
   });
 
-  return documents;
+  return documents.map((document) => ({
+    ...document,
+    public_url: resolvePublicUrl(document),
+  }));
 };
 
 /**

@@ -5,6 +5,7 @@ import {
 } from "../generated/prisma/enums";
 import { Prisma } from "../generated/prisma/client";
 import { prisma } from "../prisma";
+import { resolvePublicUrl } from "../pengabdian-documents/pengabdian-document.service";
 
 const PROYEK_PER_PAGE = 5;
 
@@ -289,6 +290,9 @@ export const getProjectDetail = async (projectId: number) => {
     milestone_berikutnya: getNextMilestoneTitle(milestones),
     calculated_status: calculateProjectStatus(project.status, milestones, now),
     milestones: project.milestones,
-    documents: project.documents,
+    documents: project.documents.map((document) => ({
+      ...document,
+      public_url: resolvePublicUrl(document),
+    })),
   };
 };
