@@ -8,6 +8,7 @@ import {
   getMonitoringListController,
   markMonitoredController,
 } from "./kkm-monitoring.controller";
+import { requireDplAktif } from "../dpl/kkm-dpl.middleware";
 
 const router = Router();
 
@@ -24,6 +25,7 @@ router.get(
   "/kkm/kelompok/:id/logbook",
   authMiddleware,
   requireRole([ROLES.MAHASISWA, ROLES.DOSEN, ROLES.ADMIN_LPPM, ROLES.STAFF_LPPM]),
+  requireDplAktif,
   getLogbookEntriesController,
 );
 
@@ -31,6 +33,7 @@ router.post(
   "/kkm/kelompok/:id/logbook",
   authMiddleware,
   requireRole([ROLES.MAHASISWA, ROLES.DOSEN]),
+  requireDplAktif,
   createLogbookEntryController,
 );
 
@@ -39,6 +42,7 @@ router.post(
   "/kkm/kelompok/:id/monitoring",
   authMiddleware,
   requireRole([ROLES.DOSEN, ROLES.ADMIN_LPPM, ROLES.STAFF_LPPM]),
+  requireDplAktif,
   markMonitoredController,
 );
 
