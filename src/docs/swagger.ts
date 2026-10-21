@@ -376,6 +376,13 @@ export const swaggerSpec = swaggerJSDoc({
               example:
                 "pengabdian/1/1711234567890-Laporan_Kemajuan_Tahap_1.pdf",
             },
+            public_url: {
+              type: ["string", "null"],
+              description:
+                "URL publik file di Supabase Storage (dipakai tombol 'Lihat').",
+              example:
+                "https://<supabase>/storage/v1/object/public/lppm_documents/pengabdian/1/1711234567890-Laporan_Kemajuan_Tahap_1.pdf",
+            },
             file_size: { type: ["number", "null"], example: 2456780 },
             mime_type: {
               type: ["string", "null"],

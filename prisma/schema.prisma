@@ -329,6 +329,7 @@ model PengabdianDocuments {
   document_type       PengabdianDocumentType
   title               String?                    @db.VarChar(255)
   file_path           String                     @db.VarChar(500)
+  public_url          String?                    @db.VarChar(1000)
   file_size           Int?
   mime_type           String?                    @db.VarChar(100)
   verification_status DocumentVerificationStatus @default(PENDING)

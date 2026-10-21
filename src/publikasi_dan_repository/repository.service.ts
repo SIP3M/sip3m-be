@@ -4,8 +4,8 @@ import {
   PengabdianStatus,
 } from "../generated/prisma/enums";
 import { Prisma } from "../generated/prisma/client";
-import { supabase } from "../config/storage";
 import { prisma } from "../prisma";
+import { resolvePublicUrl } from "../pengabdian-documents/pengabdian-document.service";
 
 type GetPublicRepositoryParams = {
   page: number;
@@ -68,6 +68,7 @@ export const getPublicPengabdianRepository = async ({
           select: {
             id: true,
             file_path: true,
+            public_url: true,
             uploaded_at: true,
           },
           orderBy: {
@@ -87,9 +88,7 @@ export const getPublicPengabdianRepository = async ({
     ...project,
     documents: project.documents.map((doc) => ({
       ...doc,
-      public_url: supabase.storage
-        .from("lppm_documents")
-        .getPublicUrl(doc.file_path).data.publicUrl,
+      public_url: resolvePublicUrl(doc),
     })),
   }));
 
