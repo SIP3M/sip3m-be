@@ -1,7 +1,9 @@
 import { prisma } from "../../prisma";
 import { KkmPeriodStatus } from "../../generated/prisma/enums";
 import { HttpError } from "../../common/errors/http-error";
+import { ROLES } from "../../auth/role";
 import { supabase } from "../../config/storage";
+import { deriveMonitoringForKelompok } from "../monitoring/kkm-monitoring.service";
 import type {
   KkmKelompokAddAnggotaInput,
   KkmKelompokDocType,
@@ -234,7 +236,10 @@ const deriveProgress = (periode: {
   return { stages, tahap_saat_ini: current };
 };
 
-export const getKelompokDetail = async (id: number) => {
+export const getKelompokDetail = async (
+  id: number,
+  viewer?: { id: number; role?: string },
+) => {
   const kelompok = await prisma.kkmKelompok.findUnique({
     where: { id },
     include: {
@@ -269,6 +274,11 @@ export const getKelompokDetail = async (id: number) => {
     },
   });
   if (!kelompok) throw new HttpError("Kelompok KKM tidak ditemukan.", 404);
+
+  // DOSEN (DPL) hanya boleh membuka kelompok bimbingannya sendiri.
+  if (viewer?.role === ROLES.DOSEN && kelompok.dpl_id !== viewer.id) {
+    throw new HttpError("Anda bukan DPL kelompok ini.", 403);
+  }
 
   const pesertaRows = await prisma.kkmPeserta.findMany({
     where: { kelompok_id: id },
@@ -328,6 +338,13 @@ export const getKelompokDetail = async (id: number) => {
       status: kelompok.periode.status,
     },
     progress: deriveProgress(kelompok.periode),
+    // Turunan monitoring (progress %, tahapan, indikator, status) —
+    // sumber angka "Progress KKM" di halaman Kelompok Bimbingan DPL.
+    monitoring: await deriveMonitoringForKelompok({
+      id: kelompok.id,
+      last_monitored_at: kelompok.last_monitored_at,
+      document_types: kelompok.documents.map((doc) => doc.document_type),
+    }),
     lokasi: kelompok.lokasi,
     dpl: kelompok.dpl,
     gender,

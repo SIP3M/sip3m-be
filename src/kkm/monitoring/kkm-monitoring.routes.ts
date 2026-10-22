@@ -12,11 +12,11 @@ import { requireDplAktif } from "../dpl/kkm-dpl.middleware";
 
 const router = Router();
 
-// ===== Monitoring KKM (ADMIN + STAFF) =====
+// ===== Monitoring KKM (ADMIN + STAFF; DOSEN/DPL hanya kelompok bimbingannya) =====
 router.get(
   "/kkm/monitoring",
   authMiddleware,
-  requireRole([ROLES.ADMIN_LPPM, ROLES.STAFF_LPPM]),
+  requireRole([ROLES.ADMIN_LPPM, ROLES.STAFF_LPPM, ROLES.DOSEN]),
   getMonitoringListController,
 );
 

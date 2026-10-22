@@ -7273,7 +7273,7 @@ Kolom FE: TAHUN, NAMA PERIODE, JENIS, PELAKSANAAN, PENARIKAN, STATUS, AKSI.
         get: {
           tags: ["KKM Kelompok"],
           summary: "Detail kelompok KKM (halaman Detail)",
-          description: "Info kelompok + kartu verifikasi (verified/pending/rejected) + Progress KKM 5 tahap (Pembentukan, Pembekalan, Pelaksanaan, Logbook, Laporan Akhir — derived dari tanggal KkmPeriod) + pie prodi + distribusi gender + daftar anggota (dengan search di FE) + dokumen kelompok. Program Kerja & Riwayat Aktivitas TIDAK dibikin.",
+          description: "Info kelompok + kartu verifikasi (verified/pending/rejected) + Progress KKM 5 tahap (Pembentukan, Pembekalan, Pelaksanaan, Logbook, Laporan Akhir — derived dari tanggal KkmPeriod) + pie prodi + distribusi gender + daftar anggota (dengan search di FE) + dokumen kelompok + blok `monitoring` (progress 0-100, tahapan, indikator, status, jumlah logbook — turunan dokumen & aktivitas). **Role:** ADMIN_LPPM, STAFF_LPPM, dan DOSEN (DPL) — untuk DOSEN hanya boleh kelompok yang ia bimbing (`dpl_id` miliknya), selain itu **403** \"Anda bukan DPL kelompok ini.\". Program Kerja & Riwayat Aktivitas TIDAK dibikin.",
           security: [{ bearerAuth: [] }],
           parameters: [{ name: "id", in: "path", required: true, schema: { type: "integer", example: 1 } }],
           responses: {
@@ -7302,6 +7302,16 @@ Kolom FE: TAHUN, NAMA PERIODE, JENIS, PELAKSANAAN, PENARIKAN, STATUS, AKSI.
                           { key: "LAPORAN_AKHIR", label: "Laporan Akhir", date: "2040-03-15", done: false },
                         ],
                         tahap_saat_ini: "Logbook",
+                      },
+                      monitoring: {
+                        progress: 80,
+                        tahapan: "LOGBOOK_AKTIF",
+                        tahapan_label: "Logbook Aktif",
+                        indikator: "NORMAL",
+                        indikator_label: "Normal",
+                        status: "AKTIF",
+                        status_label: "Aktif",
+                        logbook: { jumlah: 15, delta: -2 },
                       },
                       lokasi: { id: 1, desa: "Astanajapura", kecamatan: "Astanajapura", kabupaten: "Cirebon", kuota: 10 },
                       dpl: { id: 10, name: "Dr. Ahmad Fauzi, M.Kom", email: "ahmad@umc.ac.id", nidn_nip: "0412028801" },
@@ -7425,7 +7435,7 @@ Kolom FE: TAHUN, NAMA PERIODE, JENIS, PELAKSANAAN, PENARIKAN, STATUS, AKSI.
         get: {
           tags: ["KKM Monitoring"],
           summary: "Monitoring KKM (tabel per-kelompok: progres, tahapan, indikator, status)",
-          description: "Memantau progres tiap kelompok secara real-time. Query `periode_id` opsional (default: periode AKTIF). Tiap baris memuat: jumlah anggota, DPL (+ \"terakhir\" 3 hari lalu), logbook (jumlah entri + delta mingguan), tahapan (derived dokumen), progres 0-100, indikator, dan status monitoring. `stats` (5 kartu + rata-rata progres) dihitung dari seluruh kelompok periode (sebelum filter status/search). `filters` = opsi dropdown desa & DPL.",
+          description: "Memantau progres tiap kelompok secara real-time. **Role:** ADMIN_LPPM, STAFF_LPPM, dan DOSEN (DPL). **Untuk DOSEN:** `dpl_id` dipaksa ke user yang login di server (query param diabaikan), sehingga hanya kelompok bimbingannya sendiri yang tampil. Query `periode_id` opsional (default: periode AKTIF). Tiap baris memuat: jumlah anggota, DPL (+ \"terakhir\" 3 hari lalu), logbook (jumlah entri + delta mingguan), tahapan (derived dokumen), progres 0-100, indikator, dan status monitoring. `stats` (5 kartu + rata-rata progres) dihitung dari seluruh kelompok periode (sebelum filter status/search). `filters` = opsi dropdown desa & DPL.",
           security: [{ bearerAuth: [] }],
           parameters: [
             { name: "periode_id", in: "query", required: false, schema: { type: "integer", example: 3 }, description: "Kosongkan untuk periode AKTIF." },

@@ -29,7 +29,8 @@ const upload = multer({
   },
 });
 
-// ===== List & stats (ADMIN + STAFF) =====
+// List & stats (ADMIN + STAFF) — catatan: detail juga terbuka untuk DOSEN/DPL,
+// dengan pemeriksaan kepemilikan (hanya DPL kelompok tersebut) di service.
 router.get(
   "/kkm/kelompok/stats",
   authMiddleware,
@@ -47,7 +48,7 @@ router.get(
 router.get(
   "/kkm/kelompok/:id",
   authMiddleware,
-  requireRole([ROLES.ADMIN_LPPM, ROLES.STAFF_LPPM]),
+  requireRole([ROLES.ADMIN_LPPM, ROLES.STAFF_LPPM, ROLES.DOSEN]),
   getKelompokDetailController,
 );
 
