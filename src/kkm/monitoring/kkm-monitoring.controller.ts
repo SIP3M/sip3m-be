@@ -1,6 +1,7 @@
 import { Response } from "express";
 import { AuthenticatedRequest } from "../../auth/types/auth.jwt.types";
 import { HttpError } from "../../common/errors/http-error";
+import { ROLES } from "../../auth/role";
 import {
   kkmLogbookCreateSchema,
   kkmMonitoringMarkSchema,
@@ -28,7 +29,15 @@ export const getMonitoringListController = async (req: AuthenticatedRequest, res
         .status(400)
         .json({ message: "Validasi query gagal.", errors: parsed.error.flatten().fieldErrors });
     }
-    const data = await getMonitoringList(parsed.data);
+
+    const role = req.user.role ?? req.user.roles;
+    // DOSEN (DPL) hanya boleh melihat kelompok bimbingannya sendiri —
+    // dpl_id dipaksa di server, query param dari FE diabaikan.
+    const data = await getMonitoringList(
+      role === ROLES.DOSEN
+        ? { ...parsed.data, dpl_id: Number(req.user.userId) }
+        : parsed.data,
+    );
     return res.status(200).json({ message: "Berhasil mengambil monitoring KKM.", ...data });
   } catch (error) {
     if (error instanceof HttpError) return res.status(error.statusCode).json({ message: error.message });

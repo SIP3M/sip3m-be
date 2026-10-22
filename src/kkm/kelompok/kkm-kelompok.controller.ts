@@ -57,7 +57,10 @@ export const getKelompokDetailController = async (req: AuthenticatedRequest, res
   try {
     if (!req.user?.userId) throw new HttpError("Unauthorized", 401);
     const id = parseIdParam(req.params.id);
-    const data = await getKelompokDetail(id);
+    const data = await getKelompokDetail(id, {
+      id: Number(req.user.userId),
+      role: req.user.role ?? req.user.roles,
+    });
     return res.status(200).json({ message: "Berhasil mengambil detail kelompok KKM.", data });
   } catch (error) {
     if (error instanceof HttpError) return res.status(error.statusCode).json({ message: error.message });

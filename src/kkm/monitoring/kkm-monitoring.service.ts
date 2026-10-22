@@ -162,6 +162,67 @@ const deriveMonitoring = (input: DeriveInput): DeriveOutput => {
   return { progress, tahapan, indikator, status, delta: input.entriBaru - input.entriSebelumnya };
 };
 
+export type KelompokMonitoring = {
+  progress: number;
+  tahapan: MonitoringTahapan;
+  tahapan_label: string;
+  indikator: MonitoringIndikator;
+  indikator_label: string;
+  status: MonitoringStatus;
+  status_label: string;
+  logbook: { jumlah: number; delta: number };
+};
+
+/**
+ * Turunan monitoring untuk SATU kelompok — dipakai halaman detail
+ * (`GET /kkm/kelompok/:id`) agar FE cukup satu panggilan untuk
+ * progress %, tahapan, dan indikator kelompok.
+ */
+export const deriveMonitoringForKelompok = async (kelompok: {
+  id: number;
+  last_monitored_at: Date | null;
+  document_types: string[];
+}): Promise<KelompokMonitoring> => {
+  const now = Date.now();
+  const sinceBaru = new Date(now - AKTIVITAS_JENDELA_HARI * dayMs);
+  const sinceSebelum = new Date(now - 2 * AKTIVITAS_JENDELA_HARI * dayMs);
+
+  const entries = await prisma.kkmLogbookEntry.findMany({
+    where: { kelompok_id: kelompok.id },
+    select: { created_at: true },
+  });
+
+  let total = 0;
+  let baru = 0;
+  let sebelum = 0;
+  for (const entry of entries) {
+    total += 1;
+    if (entry.created_at >= sinceBaru) baru += 1;
+    else if (entry.created_at >= sinceSebelum) sebelum += 1;
+  }
+
+  const derived = deriveMonitoring({
+    hasProgramKerja: kelompok.document_types.includes("PROPOSAL_PROGRAM_KERJA"),
+    hasLogbookDoc: kelompok.document_types.includes("LOGBOOK_KELOMPOK"),
+    hasLaporanAkhir: kelompok.document_types.includes("LAPORAN_AKHIR"),
+    jumlahEntri: total,
+    entriBaru: baru,
+    entriSebelumnya: sebelum,
+    lastMonitoredAt: kelompok.last_monitored_at,
+  });
+
+  return {
+    progress: derived.progress,
+    tahapan: derived.tahapan,
+    tahapan_label: TAHAPAN_LABEL[derived.tahapan],
+    indikator: derived.indikator,
+    indikator_label: INDIKATOR_LABEL[derived.indikator],
+    status: derived.status,
+    status_label: STATUS_LABEL[derived.status],
+    logbook: { jumlah: total, delta: derived.delta },
+  };
+};
+
 // =============================================
 // List monitoring (list + stats + opsi filter)
 // =============================================
