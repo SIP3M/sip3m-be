@@ -5415,6 +5415,12 @@ Upload dokumen pengabdian berbasis **milestone** menggunakan **multipart/form-da
 - \`logbook\`
 - \`anggaran\`
 
+**Persetujuan otomatis:**
+- Semua dokumen **kecuali \`LAPORAN_AKHIR\`** langsung berstatus \`APPROVED\` saat diunggah (catatan: "Disetujui otomatis — bukan laporan akhir").
+- Dokumen yang di-approve otomatis pada milestone non-akhir langsung menyelesaikan milestone-nya (COMPLETED), menaikkan \`overall_progress\` ke target milestone, membuka milestone berikutnya, dan mengirim notifikasi ke ketua peneliti.
+- \`LAPORAN_AKHIR\` tetap \`PENDING\` dan **menunggu persetujuan Admin LPPM** (endpoint \`PATCH /pengabdian-documents/{documentId}/verify\`).
+- \`isDraft: true\` tetap menyimpan status \`DRAFT\` (belum dianggap submit).
+
 **Ketentuan file:**
 - Format: PDF, DOCX, XLSX, ZIP
 - MIME type: 
@@ -5453,7 +5459,7 @@ Upload dokumen pengabdian berbasis **milestone** menggunakan **multipart/form-da
                       type: "boolean",
                       example: true,
                       description:
-                        "Jika true, dokumen disimpan dengan status DRAFT. Jika false/omit, status awal PENDING.",
+                        "Jika true, dokumen disimpan dengan status DRAFT. Jika false/omit, dokumen non-akhir langsung APPROVED otomatis, sedangkan LAPORAN_AKHIR status awalnya PENDING (menunggu Admin LPPM).",
                     },
                     laporan: {
                       type: "string",
@@ -5659,6 +5665,9 @@ Memperbarui status verifikasi dokumen dan catatan verifikator.
 **Role akses:**
 - ADMIN_LPPM
 - STAFF_LPPM
+
+**Catatan:**
+- Endpoint ini kini relevan terutama untuk \`LAPORAN_AKHIR\`, karena dokumen lain di-approve otomatis saat diunggah.
 
 **Status yang tersedia saat ini:**
 - DRAFT

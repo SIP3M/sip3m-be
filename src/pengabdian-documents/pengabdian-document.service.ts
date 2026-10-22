@@ -29,7 +29,7 @@ export const resolvePublicUrl = (doc: {
   supabase.storage.from(SUPABASE_BUCKET).getPublicUrl(doc.file_path).data
     .publicUrl;
 
-const getBaseDocumentTypeFromMilestone = (
+export const getBaseDocumentTypeFromMilestone = (
   milestoneTitle: string,
   milestoneSequence: number,
 ): PengabdianDocumentType => {
@@ -63,6 +63,190 @@ const mapFieldToDocumentType = (
   }
 
   throw new HttpError(`Field upload tidak dikenali: ${fieldName}`, 400);
+};
+
+/** Catatan verifikasi untuk dokumen yang di-approve otomatis saat upload. */
+const AUTO_APPROVED_NOTE = "Disetujui otomatis — bukan laporan akhir";
+
+/**
+ * Hanya `LAPORAN_AKHIR` yang tetap menunggu persetujuan Admin LPPM.
+ * Semua dokumen lain (laporan kemajuan, logbook, bukti anggaran) di-approve
+ * otomatis saat diunggah.
+ */
+const requiresAdminApproval = (
+  documentType: PengabdianDocumentType,
+): boolean => documentType === PengabdianDocumentType.LAPORAN_AKHIR;
+
+/** Konteks dokumen (milestone + proyek) yang dibutuhkan untuk efek persetujuan. */
+export type ApprovalContext = {
+  id: number;
+  title: string | null;
+  document_type: PengabdianDocumentType;
+  milestone: {
+    id: number;
+    sequence: number;
+    target_percentage: number;
+    project_id: number;
+  } | null;
+  project: {
+    id: number;
+    status: PengabdianStatus;
+    proposal: {
+      lead_researcher_id: number;
+    };
+  };
+};
+
+export type ApprovalEffects = {
+  milestone: {
+    id: number;
+    status: PengabdianMilestoneStatus;
+    completed_at: Date | null;
+  } | null;
+  project: {
+    id: number;
+    status: PengabdianStatus;
+    overall_progress: number;
+    start_date: Date | null;
+    end_date: Date | null;
+  } | null;
+  next_milestone: {
+    id: number;
+    sequence: number;
+    status: PengabdianMilestoneStatus;
+    due_date: Date | null;
+  } | null;
+};
+
+/**
+ * Efek persetujuan dokumen milestone — dipakai `approveDocument` (Admin LPPM)
+ * dan auto-approve saat upload:
+ * 1. milestone -> COMPLETED (+ completed_at)
+ * 2. proyek.overall_progress = target milestone
+ * 3. proyek PENDING -> SEDANG_BERJALAN (+ start_date)
+ * 4. milestone terakhir -> proyek SELESAI (+ end_date)
+ * 5. milestone berikutnya -> ONGOING (+ due_date 40 hari)
+ * 6. notifikasi ke ketua peneliti
+ *
+ * Harus dipanggil di dalam `prisma.$transaction`.
+ */
+export const applyApprovalEffects = async (
+  tx: Prisma.TransactionClient,
+  document: ApprovalContext,
+  approvedAt: Date,
+): Promise<ApprovalEffects> => {
+  if (!document.milestone) {
+    throw new HttpError(
+      "Dokumen tidak terhubung ke milestone, tidak dapat melakukan proses persetujuan milestone.",
+      400,
+    );
+  }
+
+  const updatedMilestone = await tx.pengabdianMilestones.update({
+    where: { id: document.milestone.id },
+    data: {
+      status: PengabdianMilestoneStatus.COMPLETED,
+      completed_at: approvedAt,
+    },
+    select: {
+      id: true,
+      status: true,
+      completed_at: true,
+    },
+  });
+
+  const projectUpdateData: Prisma.PengabdianProjectsUpdateInput = {};
+
+  // Progres mengikuti target milestone (0 / 30 / 70 / 100), bukan hardcode sequence.
+  projectUpdateData.overall_progress = document.milestone.target_percentage;
+
+  // Proyek dianggap berjalan saat milestone pertama disetujui.
+  if (document.project.status === PengabdianStatus.PENDING) {
+    projectUpdateData.status = PengabdianStatus.SEDANG_BERJALAN;
+    projectUpdateData.start_date = approvedAt;
+  }
+
+  // Proyek hanya SELESAI jika milestone yang disetujui adalah yang terakhir
+  // (tidak ada milestone dengan sequence lebih besar). Dengan ini "Laporan
+  // Akhir" wajib disetujui lebih dulu sebelum proyek dianggap selesai.
+  const moreMilestones = await tx.pengabdianMilestones.count({
+    where: {
+      project_id: document.milestone.project_id,
+      sequence: { gt: document.milestone.sequence },
+    },
+  });
+
+  if (moreMilestones === 0) {
+    projectUpdateData.status = PengabdianStatus.SELESAI;
+    projectUpdateData.end_date = approvedAt;
+  }
+
+  let updatedProject: ApprovalEffects["project"] = null;
+
+  if (Object.keys(projectUpdateData).length > 0) {
+    updatedProject = await tx.pengabdianProjects.update({
+      where: { id: document.project.id },
+      data: projectUpdateData,
+      select: {
+        id: true,
+        status: true,
+        overall_progress: true,
+        start_date: true,
+        end_date: true,
+      },
+    });
+  }
+
+  const nextSequence = document.milestone.sequence + 1;
+  const dueDate = new Date(approvedAt);
+  dueDate.setDate(dueDate.getDate() + 40);
+
+  const nextMilestoneRaw = await tx.pengabdianMilestones.findUnique({
+    where: {
+      project_id_sequence: {
+        project_id: document.milestone.project_id,
+        sequence: nextSequence,
+      },
+    },
+    select: {
+      id: true,
+      sequence: true,
+    },
+  });
+
+  let nextMilestone: ApprovalEffects["next_milestone"] = null;
+
+  if (nextMilestoneRaw) {
+    nextMilestone = await tx.pengabdianMilestones.update({
+      where: { id: nextMilestoneRaw.id },
+      data: {
+        status: PengabdianMilestoneStatus.ONGOING,
+        due_date: dueDate,
+      },
+      select: {
+        id: true,
+        sequence: true,
+        status: true,
+        due_date: true,
+      },
+    });
+  }
+
+  const docName = document.title?.trim() || document.document_type;
+
+  await tx.notifications.create({
+    data: {
+      user_id: document.project.proposal.lead_researcher_id,
+      title: "Dokumen Milestone Disetujui",
+      message: `Dokumen ${docName} telah disetujui.`,
+    },
+  });
+
+  return {
+    milestone: updatedMilestone,
+    project: updatedProject,
+    next_milestone: nextMilestone,
+  };
 };
 
 /**
@@ -111,6 +295,7 @@ export const uploadDocument = async (
     } = supabase.storage.from(SUPABASE_BUCKET).getPublicUrl(filePath);
 
     // Simpan ke database PengabdianDocuments
+    // (hanya LAPORAN_AKHIR yang menunggu admin; sisanya langsung APPROVED)
     const document = await prisma.pengabdianDocuments.create({
       data: {
         project_id: projectId,
@@ -120,7 +305,12 @@ export const uploadDocument = async (
         public_url: publicUrl,
         file_size: file.size,
         mime_type: file.mimetype,
-        verification_status: DocumentVerificationStatus.PENDING,
+        verification_status: requiresAdminApproval(documentType)
+          ? DocumentVerificationStatus.PENDING
+          : DocumentVerificationStatus.APPROVED,
+        verification_notes: requiresAdminApproval(documentType)
+          ? null
+          : AUTO_APPROVED_NOTE,
         uploaded_by: uploadedByUserId,
       },
     });
@@ -179,10 +369,6 @@ export const uploadMilestoneDocuments = async (
     );
   }
 
-  const initialStatus = (
-    isDraft ? "DRAFT" : DocumentVerificationStatus.PENDING
-  ) as DocumentVerificationStatus;
-
   const baseDocumentType = getBaseDocumentTypeFromMilestone(
     milestone.title,
     milestone.sequence,
@@ -220,6 +406,17 @@ export const uploadMilestoneDocuments = async (
       data: { publicUrl },
     } = supabase.storage.from(SUPABASE_BUCKET).getPublicUrl(filePath);
 
+    // Status per dokumen:
+    // - draft            -> DRAFT (menunggu dosen kirim final)
+    // - LAPORAN_AKHIR    -> PENDING (menunggu Admin LPPM)
+    // - selainnya        -> APPROVED otomatis
+    const isFinalReport = requiresAdminApproval(documentType);
+    const verificationStatus: DocumentVerificationStatus = isDraft
+      ? "DRAFT"
+      : isFinalReport
+        ? DocumentVerificationStatus.PENDING
+        : DocumentVerificationStatus.APPROVED;
+
     const createdDocument = await prisma.pengabdianDocuments.create({
       data: {
         project_id: projectId,
@@ -230,7 +427,8 @@ export const uploadMilestoneDocuments = async (
         public_url: publicUrl,
         file_size: file.size,
         mime_type: file.mimetype,
-        verification_status: initialStatus,
+        verification_status: verificationStatus,
+        verification_notes: !isDraft && !isFinalReport ? AUTO_APPROVED_NOTE : null,
         uploaded_by: userId,
       },
     });
@@ -245,17 +443,73 @@ export const uploadMilestoneDocuments = async (
   const uploadedDocuments = await Promise.all(uploadTasks);
 
   // Setelah semua dokumen berhasil diunggah:
-  // - Jangan set milestone COMPLETED saat upload.
-  // - Milestone tetap/diatur ke ONGOING sampai dokumen disetujui admin.
-  if (!isDraft) {
-    await prisma.pengabdianMilestones.updateMany({
-      where: {
-        id: milestoneId,
-        status: { not: PengabdianMilestoneStatus.COMPLETED },
-      },
-      data: { status: PengabdianMilestoneStatus.ONGOING },
+  // - Dokumen non-akhir (laporan kemajuan, logbook, bukti anggaran) langsung
+  //   APPROVED -> jalankan efek persetujuan SEKALI: milestone COMPLETED,
+  //   progres naik ke target milestone, milestone berikutnya dibuka (ONGOING),
+  //   dan notifikasi ke ketua peneliti.
+  // - Milestone "akhir" (judul akhir/final atau milestone terakhir) TIDAK pernah
+  //   di-auto-complete: proyek baru SELESAI setelah Admin LPPM menyetujui
+  //   LAPORAN_AKHIR.
+  // - Draft tetap menunggu dosen mengirim versi final.
+  const autoApprovedDocuments = uploadedDocuments.filter(
+    (doc) => doc.verification_status === DocumentVerificationStatus.APPROVED,
+  );
+
+  const moreMilestones = await prisma.pengabdianMilestones.count({
+    where: {
+      project_id: projectId,
+      sequence: { gt: milestone.sequence },
+    },
+  });
+
+  const isFinalMilestone =
+    baseDocumentType === PengabdianDocumentType.LAPORAN_AKHIR ||
+    moreMilestones === 0;
+
+  const shouldAutoComplete =
+    !isDraft &&
+    !isFinalMilestone &&
+    autoApprovedDocuments.length > 0 &&
+    milestone.status !== PengabdianMilestoneStatus.COMPLETED;
+
+  if (shouldAutoComplete) {
+    await prisma.$transaction(async (tx) => {
+      const context = await tx.pengabdianDocuments.findUnique({
+        where: { id: autoApprovedDocuments[0].id },
+        include: {
+          milestone: {
+            select: {
+              id: true,
+              sequence: true,
+              target_percentage: true,
+              project_id: true,
+            },
+          },
+          project: {
+            select: {
+              id: true,
+              status: true,
+              proposal: {
+                select: {
+                  lead_researcher_id: true,
+                },
+              },
+            },
+          },
+        },
+      });
+
+      if (!context) {
+        throw new HttpError(
+          `Dokumen dengan ID ${autoApprovedDocuments[0].id} tidak ditemukan.`,
+          404,
+        );
+      }
+
+      await applyApprovalEffects(tx, context, new Date());
     });
-  } else {
+  } else if (milestone.status !== PengabdianMilestoneStatus.COMPLETED) {
+    // Milestone tetap/diatur ke ONGOING sampai dokumen disetujui admin.
     await prisma.pengabdianMilestones.updateMany({
       where: {
         id: milestoneId,
@@ -367,131 +621,19 @@ export const approveDocument = async (
         },
       });
 
-      let updatedMilestone: {
-        id: number;
-        status: PengabdianMilestoneStatus;
-        completed_at: Date | null;
-      } | null = null;
+      let updatedMilestone: ApprovalEffects["milestone"] = null;
 
-      let updatedProject: {
-        id: number;
-        status: PengabdianStatus;
-        overall_progress: number;
-        start_date: Date | null;
-        end_date: Date | null;
-      } | null = null;
+      let updatedProject: ApprovalEffects["project"] = null;
 
-      let nextMilestone: {
-        id: number;
-        sequence: number;
-        status: PengabdianMilestoneStatus;
-        due_date: Date | null;
-      } | null = null;
+      let nextMilestone: ApprovalEffects["next_milestone"] = null;
 
       if (statusTujuan === DocumentVerificationStatus.APPROVED) {
-        if (!document.milestone) {
-          throw new HttpError(
-            "Dokumen tidak terhubung ke milestone, tidak dapat melakukan proses persetujuan milestone.",
-            400,
-          );
-        }
-
-        updatedMilestone = await tx.pengabdianMilestones.update({
-          where: { id: document.milestone.id },
-          data: {
-            status: PengabdianMilestoneStatus.COMPLETED,
-            completed_at: approvedAt,
-          },
-          select: {
-            id: true,
-            status: true,
-            completed_at: true,
-          },
-        });
-
-        const projectUpdateData: Prisma.PengabdianProjectsUpdateInput = {};
-
-        // Progres mengikuti target milestone (0 / 30 / 70 / 100), bukan hardcode sequence.
-        projectUpdateData.overall_progress = document.milestone.target_percentage;
-
-        // Proyek dianggap berjalan saat milestone pertama disetujui.
-        if (document.project.status === PengabdianStatus.PENDING) {
-          projectUpdateData.status = PengabdianStatus.SEDANG_BERJALAN;
-          projectUpdateData.start_date = approvedAt;
-        }
-
-        // Proyek hanya SELESAI jika milestone yang disetujui adalah yang terakhir
-        // (tidak ada milestone dengan sequence lebih besar). Dengan ini "Laporan
-        // Akhir" wajib disetujui lebih dulu sebelum proyek dianggap selesai.
-        const moreMilestones = await tx.pengabdianMilestones.count({
-          where: {
-            project_id: document.milestone.project_id,
-            sequence: { gt: document.milestone.sequence },
-          },
-        });
-
-        if (moreMilestones === 0) {
-          projectUpdateData.status = PengabdianStatus.SELESAI;
-          projectUpdateData.end_date = approvedAt;
-        }
-
-        if (Object.keys(projectUpdateData).length > 0) {
-          updatedProject = await tx.pengabdianProjects.update({
-            where: { id: document.project_id },
-            data: projectUpdateData,
-            select: {
-              id: true,
-              status: true,
-              overall_progress: true,
-              start_date: true,
-              end_date: true,
-            },
-          });
-        }
-
-        const nextSequence = document.milestone.sequence + 1;
-        const dueDate = new Date(approvedAt);
-        dueDate.setDate(dueDate.getDate() + 40);
-
-        const nextMilestoneRaw = await tx.pengabdianMilestones.findUnique({
-          where: {
-            project_id_sequence: {
-              project_id: document.milestone.project_id,
-              sequence: nextSequence,
-            },
-          },
-          select: {
-            id: true,
-            sequence: true,
-          },
-        });
-
-        if (nextMilestoneRaw) {
-          nextMilestone = await tx.pengabdianMilestones.update({
-            where: { id: nextMilestoneRaw.id },
-            data: {
-              status: PengabdianMilestoneStatus.ONGOING,
-              due_date: dueDate,
-            },
-            select: {
-              id: true,
-              sequence: true,
-              status: true,
-              due_date: true,
-            },
-          });
-        }
-
-        const docName =
-          updatedDocument.title?.trim() || updatedDocument.document_type;
-
-        await tx.notifications.create({
-          data: {
-            user_id: document.project.proposal.lead_researcher_id,
-            title: "Dokumen Milestone Disetujui",
-            message: `Dokumen ${docName} telah disetujui.`,
-          },
-        });
+        // Efek persetujuan (milestone COMPLETED, progres proyek, milestone
+        // berikutnya, notifikasi) dibagikan dengan auto-approve saat upload.
+        const effects = await applyApprovalEffects(tx, document, approvedAt);
+        updatedMilestone = effects.milestone;
+        updatedProject = effects.project;
+        nextMilestone = effects.next_milestone;
       }
 
       return {
