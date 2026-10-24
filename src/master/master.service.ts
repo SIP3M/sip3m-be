@@ -21,6 +21,17 @@ export const getProgramStudiByFakultasId = async (fakultasId: number) => {
   });
 };
 
+/** Seluruh program studi (untuk halaman kelola prodi datar) + fakultas & jumlah user. */
+export const getAllProgramStudi = async () => {
+  return await prisma.programStudi.findMany({
+    orderBy: [{ fakultas_id: "asc" }, { nama: "asc" }],
+    include: {
+      fakultas: { select: { id: true, nama: true } },
+      _count: { select: { users: true } },
+    },
+  });
+};
+
 // =============================================
 // CRUD (khusus ADMIN_SISTEM)
 // =============================================

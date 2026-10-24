@@ -101,6 +101,7 @@ export const getUsers = async (
       whereClause.OR = [
         { name: { contains: String(search), mode: "insensitive" } },
         { email: { contains: String(search), mode: "insensitive" } },
+        { nidn_nip: { contains: String(search), mode: "insensitive" } },
       ];
     }
 
@@ -112,6 +113,7 @@ export const getUsers = async (
           name: true,
           email: true,
           nidn_nip: true,
+          bidang_keahlian: true,
           Fakultas: { select: { id: true, nama: true } },
           ProgramStudi: { select: { id: true, nama: true } },
           is_active: true,
@@ -132,6 +134,26 @@ export const getUsers = async (
       prisma.users.count({ where: whereClause }),
     ]);
 
+    // Beban review (jumlah penugasan review) — hanya untuk reviewer.
+    const reviewerIds = users
+      .filter(
+        (user) =>
+          user.roles.roles === "REVIEWER" ||
+          user.roles.roles === "REVIEWER_EKSTERNAL",
+      )
+      .map((user) => user.id);
+    const bebanMap = new Map<number, number>();
+    if (reviewerIds.length > 0) {
+      const counts = await prisma.proposalReviewers.groupBy({
+        by: ["reviewer_id"],
+        where: { reviewer_id: { in: reviewerIds } },
+        _count: { _all: true },
+      });
+      for (const row of counts) {
+        bebanMap.set(row.reviewer_id, row._count._all);
+      }
+    }
+
     const totalPages = Math.max(1, Math.ceil(totalItems / perPage));
 
     return res.status(200).json({
@@ -140,6 +162,8 @@ export const getUsers = async (
         name: user.name,
         email: user.email,
         nidn: user.nidn_nip,
+        bidang_keahlian: user.bidang_keahlian,
+        beban_review: bebanMap.get(user.id) ?? null,
         fakultas: toRef(user.Fakultas),
         program_studi: toRef(user.ProgramStudi),
         is_active: user.is_active,
