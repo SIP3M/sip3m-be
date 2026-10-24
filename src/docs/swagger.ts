@@ -8264,6 +8264,234 @@ Endpoint untuk menandai satu notifikasi sebagai telah dibaca.
           },
         },
       },
+      // ===== Master Data (Fakultas & Program Studi) =====
+      "/fakultas": {
+        get: {
+          tags: ["Master Data"],
+          summary: "Daftar fakultas (publik, dipakai dropdown)",
+          description: "Read-only. Mengembalikan seluruh fakultas + `_count` (jumlah program studi & user terkait) — additive, aman untuk konsumen lama.",
+          responses: {
+            200: {
+              description: "Daftar fakultas",
+              content: {
+                "application/json": {
+                  example: {
+                    data: [
+                      { id: 1, nama: "Fakultas Teknik", _count: { program_studi: 4, users: 25 } },
+                    ],
+                  },
+                },
+              },
+            },
+          },
+        },
+        post: {
+          tags: ["Master Data"],
+          summary: "Tambah fakultas",
+          description: "**Role: ADMIN_SISTEM.** Nama wajib unik (case-insensitive) — bila sudah ada akan mengembalikan 409.",
+          security: [{ bearerAuth: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["nama"],
+                  properties: { nama: { type: "string", minLength: 3, maxLength: 100, example: "Fakultas Sains dan Teknologi" } },
+                },
+                example: { nama: "Fakultas Sains dan Teknologi" },
+              },
+            },
+          },
+          responses: {
+            201: {
+              description: "Fakultas ditambahkan",
+              content: {
+                "application/json": {
+                  example: { message: "Fakultas berhasil ditambahkan.", data: { id: 8, nama: "Fakultas Sains dan Teknologi" } },
+                },
+              },
+            },
+            400: { description: "Validasi gagal (nama < 3 karakter atau kosong)" },
+            401: { description: "Unauthorized" },
+            403: { description: "Forbidden — bukan ADMIN_SISTEM" },
+            409: { description: "Nama fakultas sudah ada" },
+          },
+        },
+      },
+      "/fakultas/{fakultasId}": {
+        parameters: [
+          { name: "fakultasId", in: "path", required: true, schema: { type: "integer", example: 1 } },
+        ],
+        patch: {
+          tags: ["Master Data"],
+          summary: "Ubah nama fakultas",
+          description: "**Role: ADMIN_SISTEM.** Nama unik (case-insensitive, kecuali dirinya sendiri).",
+          security: [{ bearerAuth: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["nama"],
+                  properties: { nama: { type: "string", minLength: 3, maxLength: 100 } },
+                },
+                example: { nama: "Fakultas Teknik (Baru)" },
+              },
+            },
+          },
+          responses: {
+            200: {
+              description: "Fakultas diperbarui",
+              content: {
+                "application/json": {
+                  example: { message: "Fakultas berhasil diperbarui.", data: { id: 1, nama: "Fakultas Teknik (Baru)" } },
+                },
+              },
+            },
+            401: { description: "Unauthorized" },
+            403: { description: "Forbidden — bukan ADMIN_SISTEM" },
+            404: { description: "Fakultas tidak ditemukan" },
+            409: { description: "Nama fakultas sudah ada" },
+          },
+        },
+        delete: {
+          tags: ["Master Data"],
+          summary: "Hapus fakultas",
+          description: "**Role: ADMIN_SISTEM.** Diblokir (409) bila masih ada program studi atau user terkait — data master tidak boleh yatim.",
+          security: [{ bearerAuth: [] }],
+          responses: {
+            200: {
+              description: "Fakultas dihapus",
+              content: {
+                "application/json": {
+                  example: { message: "Fakultas berhasil dihapus.", data: { id: 9 } },
+                },
+              },
+            },
+            401: { description: "Unauthorized" },
+            403: { description: "Forbidden — bukan ADMIN_SISTEM" },
+            404: { description: "Fakultas tidak ditemukan" },
+            409: { description: "Masih ada program studi / user terkait" },
+          },
+        },
+      },
+      "/fakultas/{fakultasId}/program-studi": {
+        parameters: [
+          { name: "fakultasId", in: "path", required: true, schema: { type: "integer", example: 1 } },
+        ],
+        get: {
+          tags: ["Master Data"],
+          summary: "Daftar program studi per fakultas (publik)",
+          description: "Read-only. Termasuk `_count` jumlah user pada tiap prodi.",
+          responses: {
+            200: {
+              description: "Daftar program studi",
+              content: {
+                "application/json": {
+                  example: {
+                    data: [
+                      { id: 1, nama: "S1 Teknik Informatika", fakultas_id: 1, _count: { users: 12 } },
+                    ],
+                  },
+                },
+              },
+            },
+          },
+        },
+        post: {
+          tags: ["Master Data"],
+          summary: "Tambah program studi di fakultas",
+          description: "**Role: ADMIN_SISTEM.** Tolak (409) bila nama sama dengan prodi lain di fakultas yang sama (case-insensitive). Nama prodi boleh sama antar fakultas.",
+          security: [{ bearerAuth: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["nama"],
+                  properties: { nama: { type: "string", minLength: 3, maxLength: 100, example: "S1 Teknik Komputer" } },
+                },
+                example: { nama: "S1 Teknik Komputer" },
+              },
+            },
+          },
+          responses: {
+            201: {
+              description: "Program studi ditambahkan",
+              content: {
+                "application/json": {
+                  example: { message: "Program studi berhasil ditambahkan.", data: { id: 10, nama: "S1 Teknik Komputer", fakultas_id: 1 } },
+                },
+              },
+            },
+            401: { description: "Unauthorized" },
+            403: { description: "Forbidden — bukan ADMIN_SISTEM" },
+            404: { description: "Fakultas tidak ditemukan" },
+            409: { description: "Nama prodi sudah ada di fakultas ini" },
+          },
+        },
+      },
+      "/program-studi/{programStudiId}": {
+        parameters: [
+          { name: "programStudiId", in: "path", required: true, schema: { type: "integer", example: 1 } },
+        ],
+        patch: {
+          tags: ["Master Data"],
+          summary: "Ubah nama program studi",
+          description: "**Role: ADMIN_SISTEM.** Nama unik dalam satu fakultas (kecuali dirinya sendiri).",
+          security: [{ bearerAuth: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["nama"],
+                  properties: { nama: { type: "string", minLength: 3, maxLength: 100 } },
+                },
+                example: { nama: "S1 Teknik Informatika (Baru)" },
+              },
+            },
+          },
+          responses: {
+            200: {
+              description: "Program studi diperbarui",
+              content: {
+                "application/json": {
+                  example: { message: "Program studi berhasil diperbarui.", data: { id: 1, nama: "S1 Teknik Informatika (Baru)", fakultas_id: 1 } },
+                },
+              },
+            },
+            401: { description: "Unauthorized" },
+            403: { description: "Forbidden — bukan ADMIN_SISTEM" },
+            404: { description: "Program studi tidak ditemukan" },
+            409: { description: "Nama prodi sudah ada di fakultas ini" },
+          },
+        },
+        delete: {
+          tags: ["Master Data"],
+          summary: "Hapus program studi",
+          description: "**Role: ADMIN_SISTEM.** Diblokir (409) bila masih ada user yang memakai prodi tersebut.",
+          security: [{ bearerAuth: [] }],
+          responses: {
+            200: {
+              description: "Program studi dihapus",
+              content: {
+                "application/json": {
+                  example: { message: "Program studi berhasil dihapus.", data: { id: 9 } },
+                },
+              },
+            },
+            401: { description: "Unauthorized" },
+            403: { description: "Forbidden — bukan ADMIN_SISTEM" },
+            404: { description: "Program studi tidak ditemukan" },
+            409: { description: "Masih ada user terkait" },
+          },
+        },
+      },
     },
   },
   apis: [],
