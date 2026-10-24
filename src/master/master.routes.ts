@@ -7,6 +7,7 @@ import {
   createProgramStudiController,
   deleteFakultasController,
   deleteProgramStudiController,
+  getAllProgramStudiController,
   getFakultasController,
   getProgramStudiController,
   updateFakultasController,
@@ -18,6 +19,8 @@ const router = Router();
 // Read-only (publik — dipakai dropdown AddUser/EditUser/proposal)
 router.get("/fakultas", getFakultasController);
 router.get("/fakultas/:fakultasId/program-studi", getProgramStudiController);
+// Seluruh prodi (dipakai halaman Kelola Program Studi datar)
+router.get("/program-studi", getAllProgramStudiController);
 
 // =============================================
 // Kelola master data — HANYA ADMIN_SISTEM

@@ -7,6 +7,7 @@ import {
   deleteFakultas,
   deleteProgramStudi,
   getAllFakultas,
+  getAllProgramStudi,
   getProgramStudiByFakultasId,
   updateFakultas,
   updateProgramStudi,
@@ -54,6 +55,17 @@ export const getProgramStudiController = async (req: Request, res: Response) => 
     }
 
     const programStudi = await getProgramStudiByFakultasId(fakultasId);
+    return res.status(200).json({ data: programStudi });
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  } catch (error) {
+    return res.status(500).json({ message: "Gagal mengambil data program studi." });
+  }
+};
+
+/** GET /program-studi — seluruh prodi (publik, dipakai halaman Kelola Program Studi). */
+export const getAllProgramStudiController = async (req: Request, res: Response) => {
+  try {
+    const programStudi = await getAllProgramStudi();
     return res.status(200).json({ data: programStudi });
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   } catch (error) {

@@ -1177,6 +1177,7 @@ Membuat user baru dengan role apapun.
 
 **Role akses:**
 - ADMIN_LPPM
+- ADMIN_SISTEM
 
 **Catatan:**
 - Field \`email\`, \`username\`, dan \`nidn_nip\` harus unik.
@@ -6751,7 +6752,7 @@ Kolom FE: TAHUN, NAMA PERIODE, JENIS, PELAKSANAAN, PENARIKAN, STATUS, AKSI.
         post: {
           tags: ["KKM Lokasi"],
           summary: "Tambah lokasi KKM (per Desa = 1 Kelompok)",
-          description: "Admin LPPM input langsung Desa-nya. 1 row = 1 Desa = 1 Kelompok. Contoh: Kec. Plumbon 4 kelompok = tambah 4x dengan desa beda. Tanpa tema, tanpa maks kelompok.",
+          description: "Admin LPPM / Admin Sistem input langsung Desa-nya. 1 row = 1 Desa = 1 Kelompok. Contoh: Kec. Plumbon 4 kelompok = tambah 4x dengan desa beda. Tanpa tema, tanpa maks kelompok.",
           security: [{ bearerAuth: [] }],
           requestBody: {
             required: true,
@@ -6838,7 +6839,7 @@ Kolom FE: TAHUN, NAMA PERIODE, JENIS, PELAKSANAAN, PENARIKAN, STATUS, AKSI.
         get: {
           tags: ["KKM DPL"],
           summary: "List DPL KKM (tabel Manajemen DPL KKM)",
-          description: "Paginated list Dosen. Kolom: NAMA DOSEN, FAKULTAS/PRODI, STATUS DPL (Aktif/Belum Ditugaskan), KELOMPOK (4/5 bar), DESA BIMBINGAN, PERIODE. Filter: search (nama/NIDN/desa), fakultas, status, periode_id.",
+          description: "Paginated list Dosen. Kolom: NAMA DOSEN, FAKULTAS/PRODI, STATUS DPL (Aktif/Belum Ditugaskan), KELOMPOK (4/5 bar), DESA BIMBINGAN, PERIODE. Filter: search (nama/NIDN/desa), fakultas, status, periode_id. Role: ADMIN_LPPM, STAFF_LPPM, ADMIN_SISTEM.",
           security: [{ bearerAuth: [] }],
           parameters: [
             { name: "periode_id", in: "query", required: false, schema: { type: "integer", example: 1 } },
@@ -8265,6 +8266,27 @@ Endpoint untuk menandai satu notifikasi sebagai telah dibaca.
         },
       },
       // ===== Master Data (Fakultas & Program Studi) =====
+      "/program-studi": {
+        get: {
+          tags: ["Master Data"],
+          summary: "Daftar seluruh program studi (publik)",
+          description: "Read-only. Semua prodi lintas fakultas + `fakultas` (id/nama) + `_count` jumlah user — dipakai halaman Kelola Program Studi (datar).",
+          responses: {
+            200: {
+              description: "Daftar program studi",
+              content: {
+                "application/json": {
+                  example: {
+                    data: [
+                      { id: 1, nama: "S1 Teknik Informatika", fakultas_id: 1, fakultas: { id: 1, nama: "Fakultas Teknik" }, _count: { users: 12 } },
+                    ],
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
       "/fakultas": {
         get: {
           tags: ["Master Data"],

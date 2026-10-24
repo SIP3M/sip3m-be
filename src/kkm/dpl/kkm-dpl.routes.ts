@@ -19,28 +19,28 @@ const router = Router();
 router.get(
   "/kkm/dpl",
   authMiddleware,
-  requireRole([ROLES.ADMIN_LPPM, ROLES.STAFF_LPPM]),
+  requireRole([ROLES.ADMIN_LPPM, ROLES.STAFF_LPPM, ROLES.ADMIN_SISTEM]),
   getDplListController,
 );
 
 router.get(
   "/kkm/dpl/stats",
   authMiddleware,
-  requireRole([ROLES.ADMIN_LPPM, ROLES.STAFF_LPPM]),
+  requireRole([ROLES.ADMIN_LPPM, ROLES.STAFF_LPPM, ROLES.ADMIN_SISTEM]),
   getDplStatsController,
 );
 
 router.get(
   "/kkm/dpl/dosen",
   authMiddleware,
-  requireRole([ROLES.ADMIN_LPPM]),
+  requireRole([ROLES.ADMIN_LPPM, ROLES.ADMIN_SISTEM]),
   searchDosenController,
 );
 
 router.get(
   "/kkm/dpl/kelompok",
   authMiddleware,
-  requireRole([ROLES.ADMIN_LPPM]),
+  requireRole([ROLES.ADMIN_LPPM, ROLES.ADMIN_SISTEM]),
   getKelompokForAssignController,
 );
 
@@ -54,14 +54,14 @@ router.get(
 router.post(
   "/kkm/dpl/assign",
   authMiddleware,
-  requireRole([ROLES.ADMIN_LPPM]),
+  requireRole([ROLES.ADMIN_LPPM, ROLES.ADMIN_SISTEM]),
   assignDplController,
 );
 
 router.post(
   "/kkm/dpl/cabut",
   authMiddleware,
-  requireRole([ROLES.ADMIN_LPPM]),
+  requireRole([ROLES.ADMIN_LPPM, ROLES.ADMIN_SISTEM]),
   cabutDplController,
 );
 
