@@ -14,6 +14,14 @@ async function main() {
   });
   console.log("✅ Role MAHASISWA siap.");
 
+  // Role ADMIN_SISTEM — pengelola master data (fakultas & program studi)
+  await prisma.roles.upsert({
+    where: { roles: "ADMIN_SISTEM" },
+    update: {},
+    create: { roles: "ADMIN_SISTEM" },
+  });
+  console.log("✅ Role ADMIN_SISTEM siap.");
+
   // Data master Fakultas dan Prodinya
   const dataFakultas = [
     {
