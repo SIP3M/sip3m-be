@@ -642,8 +642,11 @@ export const updateUser = async (
     }
     if (body.tempat_lahir !== undefined)
       updatedData.tempat_lahir = body.tempat_lahir;
+    // "" = instruksi mengosongkan tanggal (null); selain itu simpan tanggal valid
     if (body.tanggal_lahir !== undefined)
-      updatedData.tanggal_lahir = new Date(body.tanggal_lahir);
+      updatedData.tanggal_lahir = body.tanggal_lahir
+        ? new Date(body.tanggal_lahir)
+        : null;
     if (body.jenis_kelamin !== undefined)
       updatedData.jenis_kelamin = body.jenis_kelamin;
     if (body.alamat !== undefined) updatedData.alamat = body.alamat;

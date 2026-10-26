@@ -1748,9 +1748,11 @@ Memperbarui data user berdasarkan ID.
 
 **Role akses:**
 - ADMIN_LPPM
+- ADMIN_SISTEM
 
 **Catatan:**
 - Semua field bersifat opsional (partial update).
+- \`tanggal_lahir\` bersifat opsional: format YYYY-MM-DD; kirim \`""\` untuk mengosongkan (null); tidak dikirim = tidak berubah.
 - Jika \`password\` dikirim, akan otomatis di-hash ulang.
 - Jika \`roles\` dikirim, role user akan diganti.
 - Field \`email\`, \`username\`, dan \`nidn_nip\` dicek keunikannya terhadap user lain.

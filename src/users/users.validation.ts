@@ -73,9 +73,12 @@ export const updateUserSchema = z.object({
   fakultas: z.string().max(100).optional(),
   program_studi: z.string().max(100).optional(),
   tempat_lahir: z.string().max(100).optional(),
+  // Edit: opsional — "" = hapus tanggal (null); tanpa field = tidak diubah.
   tanggal_lahir: z
     .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, "Format tanggal harus YYYY-MM-DD"),
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Format tanggal harus YYYY-MM-DD")
+    .or(z.literal(""))
+    .optional(),
   jenis_kelamin: z.string().max(15).optional(),
   alamat: z.string().optional(),
   nomor_hp: z
