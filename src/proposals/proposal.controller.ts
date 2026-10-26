@@ -12,6 +12,7 @@ import {
   assignReviewerSchema,
   getAllProposalsQuerySchema,
 } from "./proposal.validation";
+import { normalizeProposalReferensi } from "../master/referensi/referensi.service";
 import {
   createProposal as createProposalService,
   deleteProposal,
@@ -50,7 +51,10 @@ export const createProposalController = async (
 
     const files = req.files as ProposalFiles | undefined;
 
-    const result = await createProposalService(userId, validation.data, files);
+    // Normalisasi skema/sumber_pendanaan ke master aktif (400 bila tak dikenal)
+    const data = await normalizeProposalReferensi(validation.data);
+
+    const result = await createProposalService(userId, data, files);
 
     return res.status(201).json(result);
   } catch (error) {
@@ -266,12 +270,10 @@ export const editProposalController = async (
 
     const files = req.files as ProposalFiles | undefined;
 
-    const result = await editProposal(
-      proposalId,
-      userId,
-      validation.data,
-      files,
-    );
+    // Normalisasi skema/sumber_pendanaan ke master aktif (400 bila tak dikenal)
+    const data = await normalizeProposalReferensi(validation.data);
+
+    const result = await editProposal(proposalId, userId, data, files);
 
     return res.status(200).json(result);
   } catch (error) {

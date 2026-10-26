@@ -70,12 +70,8 @@ export const swaggerSpec = swaggerJSDoc({
             faculty: { type: ["string", "null"], example: "Teknik" },
             skema: {
               type: ["string", "null"],
-              enum: [
-                "PENELITIAN_PENGEMBANGAN",
-                "PENELITIAN_TERAPAN",
-                "PENELITIAN_KOLABORASI",
-              ],
-              example: "PENELITIAN_PENGEMBANGAN",
+              example: "Penelitian Pengembangan",
+              description: "Nama kanonis dari MasterReferensi (GET /referensi/SKEMA).",
             },
             sumber_data_penelitian: {
               type: ["string", "null"],
@@ -83,8 +79,8 @@ export const swaggerSpec = swaggerJSDoc({
             },
             sumber_pendanaan: {
               type: ["string", "null"],
-              enum: ["Internal Kampus", "Kemendikbudristek", "Mandiri", "Lainnya"],
               example: "Internal Kampus",
+              description: "Nama kanonis dari MasterReferensi (GET /referensi/SUMBER_PENDANAAN).",
             },
             instansi: {
               type: ["string", "null"],
@@ -2305,17 +2301,9 @@ Endpoint untuk membuat proposal penelitian baru.
                     },
                     skema: {
                       type: "string",
-                      enum: [
-                        "Penelitian Pengembangan",
-                        "Penelitian Terapan",
-                        "Penelitian Kolaborasi",
-                        "PENELITIAN_PENGEMBANGAN",
-                        "PENELITIAN_TERAPAN",
-                        "PENELITIAN_KOLABORASI",
-                      ],
                       example: "Penelitian Pengembangan",
                       description:
-                        "Wajib. Kirim label skema (akan dipetakan ke enum di backend); kode enum (mis. PENELITIAN_TERAPAN) juga diterima.",
+                        "Wajib. Nama skema dari master referensi — ambil dari `GET /referensi/SKEMA` (hanya nilai aktif yang diterima; nilai di luar master → 400).",
                     },
                     sumber_data_penelitian: {
                       type: "string",
@@ -2746,7 +2734,7 @@ Endpoint untuk mengambil daftar proposal dengan pagination.
                           nidn_nip: "9876543210",
                         },
                         faculty: "MIPA",
-                        skema: "PENELITIAN_TERAPAN",
+                        skema: "Penelitian Terapan",
                         funding_request_amount: 20000000,
                         status: "DRAFT",
                         proposal_file_path: null,
@@ -3273,7 +3261,7 @@ Endpoint untuk mengedit proposal yang sudah ada.
                       type: "string",
                       example: "Penelitian Pengembangan",
                       description:
-                        "Opsional. Kirim label skema (akan dipetakan ke enum di backend); kode enum (mis. PENELITIAN_TERAPAN) juga diterima.",
+                        "Opsional. Nama skema dari `GET /referensi/SKEMA` — hanya nilai aktif yang diterima.",
                     },
                     funding_request_amount: {
                       type: "number",
@@ -6084,7 +6072,7 @@ Struktur data mencakup:
                       ],
                       kategoriChart: [
                         { skema: "PENELITIAN_PENGEMBANGAN", jumlah: 17 },
-                        { skema: "PENELITIAN_TERAPAN", jumlah: 14 },
+                        { skema: "Penelitian Terapan", jumlah: 14 },
                         { skema: "Tanpa Skema", jumlah: 11 },
                       ],
                       trendBulanan: [

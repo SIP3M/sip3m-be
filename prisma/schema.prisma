@@ -16,19 +16,6 @@ enum StatusPencairanDana {
   DITOLAK
 }
 
-enum SkemaProposal {
-  PENELITIAN_PENGEMBANGAN @map("Penelitian Pengembangan")
-  PENELITIAN_TERAPAN      @map("Penelitian Terapan")
-  PENELITIAN_KOLABORASI   @map("Penelitian Kolaborasi")
-}
-
-enum SumberPendanaan {
-  INTERNAL_KAMPUS  @map("Internal Kampus")
-  KEMENDIKBUDRISTEK @map("Kemendikbudristek")
-  MANDIRI          @map("Mandiri")
-  LAINNYA          @map("Lainnya")
-}
-
 enum ProposalStatus {
   DRAFT
   SUBMITTED
@@ -97,8 +84,10 @@ model proposals {
   funding_request_amount Int            @db.Integer
   status                 ProposalStatus @default(DRAFT)
 
-  skema              SkemaProposal
-  sumber_pendanaan   SumberPendanaan?
+  // Skema & sumber pendanaan dinamis — nilai = nama kanonis dari
+  // MasterReferensi (dikelola ADMIN_SISTEM), divalidasi saat tulis.
+  skema              String
+  sumber_pendanaan   String?
   proposal_file_path String? @db.VarChar(255)
   rab_file_path      String? @db.VarChar(255)
 
@@ -573,4 +562,22 @@ model AuditLog {
   @@index([modul])
   @@index([aksi])
   @@index([user_id])
+}
+
+// =============================================
+// Master Referensi — opsi dropdown dinamis
+// (Skema Penelitian & Sumber Pendanaan proposal,
+// dikelola ADMIN_SISTEM)
+// =============================================
+model MasterReferensi {
+  id         Int      @id @default(autoincrement())
+  jenis      String   // SKEMA | SUMBER_PENDANAAN
+  nama       String
+  is_aktif   Boolean  @default(true)
+  urut       Int      @default(0)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@unique([jenis, nama])
+  @@index([jenis, is_aktif])
 }
