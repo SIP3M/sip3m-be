@@ -13,6 +13,7 @@ import {
   deleteDokumen,
   getKelompokDetail,
   getKelompokList,
+  getKelompokSaya,
   getKelompokStats,
   removeAnggota,
   updateKelompok,
@@ -66,6 +67,18 @@ export const getKelompokDetailController = async (req: AuthenticatedRequest, res
     if (error instanceof HttpError) return res.status(error.statusCode).json({ message: error.message });
     console.error("[GET_KELOMPOK_DETAIL_ERROR]", error);
     return res.status(500).json({ message: "Terjadi kesalahan saat mengambil detail kelompok KKM." });
+  }
+};
+
+export const getKelompokSayaController = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    if (!req.user?.userId) throw new HttpError("Unauthorized", 401);
+    const data = await getKelompokSaya(Number(req.user.userId));
+    return res.status(200).json({ message: "Berhasil mengambil data kelompok saya.", data });
+  } catch (error) {
+    if (error instanceof HttpError) return res.status(error.statusCode).json({ message: error.message });
+    console.error("[GET_KELOMPOK_SAYA_ERROR]", error);
+    return res.status(500).json({ message: "Terjadi kesalahan saat mengambil data kelompok saya." });
   }
 };
 
