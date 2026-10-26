@@ -17,15 +17,31 @@ const skemaLabelToEnum: Record<string, SkemaProposal> = {
   "Penelitian Kolaborasi": SkemaProposal.PENELITIAN_KOLABORASI,
 };
 
+// Kode enum Prisma (bentuk yang dikembalikan API saat dibaca) — juga diterima
+// lalu dinormalkan ke enum, agar FE yang mengirim kode (mis. hasil prefill
+// GET detail) tetap lolos validasi.
+const skemaCodeToEnum: Record<string, SkemaProposal> = {
+  PENELITIAN_PENGEMBANGAN: SkemaProposal.PENELITIAN_PENGEMBANGAN,
+  PENELITIAN_TERAPAN: SkemaProposal.PENELITIAN_TERAPAN,
+  PENELITIAN_KOLABORASI: SkemaProposal.PENELITIAN_KOLABORASI,
+};
+
 const skemaField = z
   .enum(
-    ["Penelitian Pengembangan", "Penelitian Terapan", "Penelitian Kolaborasi"],
+    [
+      "Penelitian Pengembangan",
+      "Penelitian Terapan",
+      "Penelitian Kolaborasi",
+      "PENELITIAN_PENGEMBANGAN",
+      "PENELITIAN_TERAPAN",
+      "PENELITIAN_KOLABORASI",
+    ],
     {
       message:
         "Skema tidak valid. Pilihan: Penelitian Pengembangan, Penelitian Terapan, Penelitian Kolaborasi.",
     },
   )
-  .transform((value) => skemaLabelToEnum[value]);
+  .transform((value) => skemaLabelToEnum[value] ?? skemaCodeToEnum[value]);
 
 const sumberPendanaanLabelToEnum: Record<string, SumberPendanaan> = {
   "Internal Kampus": SumberPendanaan.INTERNAL_KAMPUS,
@@ -34,12 +50,35 @@ const sumberPendanaanLabelToEnum: Record<string, SumberPendanaan> = {
   Lainnya: SumberPendanaan.LAINNYA,
 };
 
+// Kode enum Prisma untuk sumber pendanaan — diterima & dinormalkan seperti skema.
+const sumberPendanaanCodeToEnum: Record<string, SumberPendanaan> = {
+  INTERNAL_KAMPUS: SumberPendanaan.INTERNAL_KAMPUS,
+  KEMENDIKBUDRISTEK: SumberPendanaan.KEMENDIKBUDRISTEK,
+  MANDIRI: SumberPendanaan.MANDIRI,
+  LAINNYA: SumberPendanaan.LAINNYA,
+};
+
 const sumberPendanaanField = z
-  .enum(["Internal Kampus", "Kemendikbudristek", "Mandiri", "Lainnya"], {
-    message:
-      "Sumber pendanaan tidak valid. Pilihan: Internal Kampus, Kemendikbudristek, Mandiri, Lainnya.",
-  })
-  .transform((value) => sumberPendanaanLabelToEnum[value]);
+  .enum(
+    [
+      "Internal Kampus",
+      "Kemendikbudristek",
+      "Mandiri",
+      "Lainnya",
+      "INTERNAL_KAMPUS",
+      "KEMENDIKBUDRISTEK",
+      "MANDIRI",
+      "LAINNYA",
+    ],
+    {
+      message:
+        "Sumber pendanaan tidak valid. Pilihan: Internal Kampus, Kemendikbudristek, Mandiri, Lainnya.",
+    },
+  )
+  .transform(
+    (value) =>
+      sumberPendanaanLabelToEnum[value] ?? sumberPendanaanCodeToEnum[value],
+  );
 
 const dosenTerlibatField = z.string().trim().max(1000).optional();
 const nidnDosenField = z.string().trim().max(1000).optional(); 
