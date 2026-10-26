@@ -276,6 +276,13 @@ export const updateUserRole = async (
     throw new HttpError("User not found.", 404);
   }
 
+  res.locals.audit = {
+    modul: "Pengguna",
+    aksi: "UPDATE",
+    objek: `Pengguna: ${user.name} — role diubah ke ${roles.toUpperCase()}`,
+    objekId: userId,
+  };
+
   // cari role_id berdasarkan nama role
   const roleRecord = await prisma.roles.findUnique({
     where: { roles: roles.toUpperCase() },
@@ -341,6 +348,13 @@ export const updateUserStatus = async (
     throw new HttpError("User not found.", 404);
   }
 
+  res.locals.audit = {
+    modul: "Pengguna",
+    aksi: "UPDATE",
+    objek: `Pengguna: ${user.name} — status ${is_active ? "Aktif" : "Nonaktif"}`,
+    objekId: userId,
+  };
+
   const updatedUser = await prisma.users.update({
     where: { id: userId },
     data: { is_active },
@@ -397,6 +411,12 @@ export const createUser = async (
       alamat?: string;
       nomor_hp?: string;
       is_active?: boolean;
+    };
+
+    res.locals.audit = {
+      modul: "Pengguna",
+      aksi: "CREATE",
+      objek: `Pengguna: ${body.name} (${body.nidn_nip || body.username || body.email})`,
     };
 
     const roleRecord = await prisma.roles.findUnique({
@@ -487,6 +507,13 @@ export const createUser = async (
       },
     });
 
+    res.locals.audit = {
+      modul: "Pengguna",
+      aksi: "CREATE",
+      objek: `Pengguna: ${newUser.name} (${newUser.nidn_nip || newUser.username || newUser.email})`,
+      objekId: newUser.id,
+    };
+
     return res.status(201).json({
       message: "User berhasil dibuat.",
       data: {
@@ -556,6 +583,13 @@ export const updateUser = async (
       alamat?: string;
       nomor_hp?: string;
       is_active?: boolean;
+    };
+
+    res.locals.audit = {
+      modul: "Pengguna",
+      aksi: "UPDATE",
+      objek: `Pengguna: ${body.name ?? user.name} (${user.nidn_nip || user.email})`,
+      objekId: userId,
     };
 
     let roleId = user.role_id;
@@ -671,6 +705,13 @@ export const updateUser = async (
       },
     });
 
+    res.locals.audit = {
+      modul: "Pengguna",
+      aksi: "UPDATE",
+      objek: `Pengguna: ${updatedUser.name} (${updatedUser.nidn_nip || updatedUser.email})`,
+      objekId: userId,
+    };
+
     return res.status(200).json({
       message: "User berhasil diperbarui.",
       data: {
@@ -724,6 +765,13 @@ export const deleteUser = async (
   if (!user) {
     throw new HttpError("User tidak ditemukan.", 404);
   }
+
+  res.locals.audit = {
+    modul: "Pengguna",
+    aksi: "DELETE",
+    objek: `Pengguna: ${user.name} (${user.nidn_nip || user.email})`,
+    objekId: userId,
+  };
 
   await prisma.users.delete({ where: { id: userId } });
 

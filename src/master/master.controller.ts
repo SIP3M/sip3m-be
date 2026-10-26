@@ -93,6 +93,12 @@ export const createFakultasController = async (
     }
 
     const data = await createFakultas(parsed.data.nama);
+    res.locals.audit = {
+      modul: "Fakultas",
+      aksi: "CREATE",
+      objek: `Fakultas: ${parsed.data.nama}`,
+      objekId: data?.id,
+    };
     return res.status(201).json({ message: "Fakultas berhasil ditambahkan.", data });
   } catch (error) {
     return handleError(res, error, "Gagal menambahkan fakultas.");
@@ -116,6 +122,12 @@ export const updateFakultasController = async (
     }
 
     const data = await updateFakultas(id, parsed.data.nama);
+    res.locals.audit = {
+      modul: "Fakultas",
+      aksi: "UPDATE",
+      objek: `Fakultas: ${parsed.data.nama}`,
+      objekId: id,
+    };
     return res.status(200).json({ message: "Fakultas berhasil diperbarui.", data });
   } catch (error) {
     return handleError(res, error, "Gagal memperbarui fakultas.");
@@ -130,6 +142,12 @@ export const deleteFakultasController = async (
     if (!req.user?.userId) throw new HttpError("Unauthorized", 401);
     const id = parseIdParam(req.params.fakultasId);
 
+    res.locals.audit = {
+      modul: "Fakultas",
+      aksi: "DELETE",
+      objek: `Fakultas (id ${id})`,
+      objekId: id,
+    };
     await deleteFakultas(id);
     return res.status(200).json({ message: "Fakultas berhasil dihapus.", data: { id } });
   } catch (error) {
@@ -154,6 +172,12 @@ export const createProgramStudiController = async (
     }
 
     const data = await createProgramStudi(fakultasId, parsed.data.nama);
+    res.locals.audit = {
+      modul: "Program Studi",
+      aksi: "CREATE",
+      objek: `Program Studi: ${parsed.data.nama}`,
+      objekId: data?.id,
+    };
     return res.status(201).json({ message: "Program studi berhasil ditambahkan.", data });
   } catch (error) {
     return handleError(res, error, "Gagal menambahkan program studi.");
@@ -177,6 +201,12 @@ export const updateProgramStudiController = async (
     }
 
     const data = await updateProgramStudi(id, parsed.data.nama);
+    res.locals.audit = {
+      modul: "Program Studi",
+      aksi: "UPDATE",
+      objek: `Program Studi: ${parsed.data.nama}`,
+      objekId: id,
+    };
     return res.status(200).json({ message: "Program studi berhasil diperbarui.", data });
   } catch (error) {
     return handleError(res, error, "Gagal memperbarui program studi.");
@@ -191,6 +221,12 @@ export const deleteProgramStudiController = async (
     if (!req.user?.userId) throw new HttpError("Unauthorized", 401);
     const id = parseIdParam(req.params.programStudiId);
 
+    res.locals.audit = {
+      modul: "Program Studi",
+      aksi: "DELETE",
+      objek: `Program Studi (id ${id})`,
+      objekId: id,
+    };
     await deleteProgramStudi(id);
     return res
       .status(200)

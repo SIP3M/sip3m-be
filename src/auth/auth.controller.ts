@@ -146,11 +146,27 @@ export const loginController = async (
     }
 
     const deviceId = (req.headers["x-device-id"] as string) || undefined;
+
+    // Audit: identitas dicatat sejak awal — login gagal pun terlacak.
+    res.locals.audit = {
+      modul: "Auth",
+      aksi: "LOGIN",
+      objek: `Login: ${validation.data.identifier}`,
+    };
+
     const result = await loginUser(validation.data, {
       deviceId,
       userAgent: req.headers["user-agent"],
       ip: (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() || req.ip,
     });
+
+    res.locals.audit = {
+      modul: "Auth",
+      aksi: "LOGIN",
+      objek: `Login: ${result.user.name} (${validation.data.identifier})`,
+      objekId: result.user.id,
+      userId: result.user.id,
+    };
 
     return res.status(200).json({
       message: "Login berhasil.",

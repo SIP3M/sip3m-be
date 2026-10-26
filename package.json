@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only -r dotenv/config src/server.ts",
     "build": "prisma generate && tsc",
-    "start": "node dist/server.js"
+    "start": "node dist/server.js",
+    "audit:prune": "ts-node -r dotenv/config prisma/prune-audit-log.ts"
   },
   "prisma": {
     "seed": "ts-node prisma/seed.ts"
