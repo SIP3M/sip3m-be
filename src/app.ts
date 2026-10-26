@@ -23,6 +23,8 @@ import kkmGenerateRoute from "./kkm/generate/kkm-generate.routes";
 import kkmKelompokRoute from "./kkm/kelompok/kkm-kelompok.routes";
 import kkmMonitoringRoute from "./kkm/monitoring/kkm-monitoring.routes";
 import kkmSkemaRoute from "./kkm/skema/kkm-skema.routes";
+import auditRoute from "./audit/audit.routes";
+import { auditMiddleware } from "./audit/audit.middleware";
 import swaggerUiDist from "swagger-ui-dist";
 import { swaggerSpec } from "./docs/swagger";
 
@@ -81,6 +83,8 @@ app.get("/docs", (_req, res) => {
 });
 
 // routes
+// audit middleware global: mencatat semua request mutasi (POST/PUT/PATCH/DELETE)
+app.use("/api", auditMiddleware);
 app.use("/api", authRoute);
 app.use("/api", usersRoute);
 app.use("/api", dosenRoute);
@@ -101,6 +105,7 @@ app.use("/api", kkmGenerateRoute);
 app.use("/api", kkmKelompokRoute);
 app.use("/api", kkmMonitoringRoute);
 app.use("/api", kkmSkemaRoute);
+app.use("/api", auditRoute);
 app.use("/api", master)
 
 // health check (penting buat test)

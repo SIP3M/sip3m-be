@@ -551,3 +551,26 @@ model KkmLogbookEntry {
   @@index([kelompok_id, tanggal])
   @@index([user_id])
 }
+
+// =============================================
+// Audit Log — rekam jejak aktivitas & perubahan
+// (ditampilkan di role ADMIN_SISTEM)
+// =============================================
+model AuditLog {
+  id         Int      @id @default(autoincrement())
+  user_id    Int?     // aktor (null = system/cron)
+  user_name  String?  // snapshot nama saat aksi — tetap ada walau user berubah/hapus
+  user_role  String?  // snapshot role saat aksi
+  modul      String   // Pengguna, Role, Fakultas, Program Studi, Auth, KKM, ...
+  aksi       String   // CREATE, UPDATE, DELETE, LOGIN, ACTIVATE, UPLOAD, ...
+  objek      String   // deskripsi manusia: "Pengguna: Budi Santoso (NIDN 061...)"
+  objek_id   String?
+  ip         String?
+  status     String   // SUCCESS | FAILED
+  created_at DateTime @default(now())
+
+  @@index([created_at(sort: Desc)])
+  @@index([modul])
+  @@index([aksi])
+  @@index([user_id])
+}

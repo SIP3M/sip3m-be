@@ -8292,6 +8292,93 @@ Endpoint untuk menandai satu notifikasi sebagai telah dibaca.
           },
         },
       },
+      /** ================= AUDIT LOG ================= */
+      "/audit-logs": {
+        get: {
+          tags: ["Audit Log"],
+          summary: "Daftar audit log",
+          description: `**Role: ADMIN_SISTEM.**
+
+Rekam jejak seluruh aktivitas mutasi (CREATE/UPDATE/DELETE/LOGIN/...) di sistem.
+
+- \`q\` — pencarian teks (objek / nama pengguna, case-insensitive)
+- \`modul\`, \`aksi\`, \`status\` — filter persis
+- \`from\`, \`to\` — rentang tanggal (format \`YYYY-MM-DD\`)
+- Hasil diurut terbaru + pagination; \`meta.filters\` berisi daftar modul/aksi unik untuk dropdown filter.`,
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            { name: "q", in: "query", schema: { type: "string", maxLength: 200 }, description: "Cari objek atau pengguna" },
+            { name: "modul", in: "query", schema: { type: "string" }, example: "Pengguna" },
+            { name: "aksi", in: "query", schema: { type: "string" }, example: "CREATE" },
+            { name: "status", in: "query", schema: { type: "string", enum: ["SUCCESS", "FAILED"] } },
+            { name: "from", in: "query", schema: { type: "string", format: "date" }, example: "2026-01-01" },
+            { name: "to", in: "query", schema: { type: "string", format: "date" }, example: "2026-01-31" },
+            { name: "page", in: "query", schema: { type: "integer", minimum: 1, default: 1 } },
+            { name: "limit", in: "query", schema: { type: "integer", minimum: 1, maximum: 100, default: 20 } },
+          ],
+          responses: {
+            200: {
+              description: "Daftar audit log",
+              content: {
+                "application/json": {
+                  example: {
+                    data: [
+                      {
+                        id: 1,
+                        user_id: 646,
+                        user_name: "Admin Sistem",
+                        user_role: "ADMIN_SISTEM",
+                        modul: "Pengguna",
+                        aksi: "CREATE",
+                        objek: "Pengguna: Budi Santoso (NIDN 061...)",
+                        objek_id: "11",
+                        ip: "192.168.1.10",
+                        status: "SUCCESS",
+                        created_at: "2026-01-15T03:23:41.000Z",
+                      },
+                    ],
+                    meta: {
+                      page: 1,
+                      limit: 20,
+                      total: 1,
+                      totalPages: 1,
+                      filters: { moduls: ["Pengguna", "Auth"], aksis: ["CREATE", "UPDATE", "LOGIN"] },
+                    },
+                  },
+                },
+              },
+            },
+            400: { description: "Query tidak valid" },
+            401: { description: "Unauthorized" },
+            403: { description: "Forbidden — bukan ADMIN_SISTEM" },
+          },
+        },
+      },
+      "/audit-logs/export": {
+        get: {
+          tags: ["Audit Log"],
+          summary: "Export audit log (CSV)",
+          description: `**Role: ADMIN_SISTEM.** Mengunduh CSV (UTF-8 BOM) dengan filter yang sama seperti \`GET /audit-logs\`, maksimal 10.000 baris terbaru.`,
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            { name: "q", in: "query", schema: { type: "string", maxLength: 200 } },
+            { name: "modul", in: "query", schema: { type: "string" } },
+            { name: "aksi", in: "query", schema: { type: "string" } },
+            { name: "status", in: "query", schema: { type: "string", enum: ["SUCCESS", "FAILED"] } },
+            { name: "from", in: "query", schema: { type: "string", format: "date" } },
+            { name: "to", in: "query", schema: { type: "string", format: "date" } },
+          ],
+          responses: {
+            200: {
+              description: "File CSV",
+              content: { "text/csv": { schema: { type: "string", format: "binary" } } },
+            },
+            400: { description: "Query tidak valid" },
+            401: { description: "Unauthorized" },
+            403: { description: "Forbidden — bukan ADMIN_SISTEM" },
+          },
+        },
+      },
       "/fakultas": {
         get: {
           tags: ["Master Data"],
