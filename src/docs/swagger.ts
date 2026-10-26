@@ -2309,10 +2309,13 @@ Endpoint untuk membuat proposal penelitian baru.
                         "Penelitian Pengembangan",
                         "Penelitian Terapan",
                         "Penelitian Kolaborasi",
+                        "PENELITIAN_PENGEMBANGAN",
+                        "PENELITIAN_TERAPAN",
+                        "PENELITIAN_KOLABORASI",
                       ],
                       example: "Penelitian Pengembangan",
                       description:
-                        "Wajib. Kirim label skema (akan dipetakan ke enum di backend).",
+                        "Wajib. Kirim label skema (akan dipetakan ke enum di backend); kode enum (mis. PENELITIAN_TERAPAN) juga diterima.",
                     },
                     sumber_data_penelitian: {
                       type: "string",
@@ -3270,7 +3273,7 @@ Endpoint untuk mengedit proposal yang sudah ada.
                       type: "string",
                       example: "Penelitian Pengembangan",
                       description:
-                        "Opsional. Kirim label skema (akan dipetakan ke enum di backend).",
+                        "Opsional. Kirim label skema (akan dipetakan ke enum di backend); kode enum (mis. PENELITIAN_TERAPAN) juga diterima.",
                     },
                     funding_request_amount: {
                       type: "number",
