@@ -8,6 +8,7 @@ import {
   deleteDokumenController,
   getKelompokDetailController,
   getKelompokListController,
+  getKelompokSayaController,
   getKelompokStatsController,
   removeAnggotaController,
   updateKelompokController,
@@ -43,6 +44,14 @@ router.get(
   authMiddleware,
   requireRole([ROLES.ADMIN_LPPM, ROLES.STAFF_LPPM]),
   getKelompokListController,
+);
+
+// Mahasiswa: kelompok saya (halaman "Kelompok Saya") — HARUS sebelum /:id
+router.get(
+  "/kkm/kelompok/me",
+  authMiddleware,
+  requireRole([ROLES.MAHASISWA]),
+  getKelompokSayaController,
 );
 
 router.get(

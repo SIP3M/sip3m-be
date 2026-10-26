@@ -376,6 +376,128 @@ export const getKelompokDetail = async (
 };
 
 // =============================================
+// "Kelompok Saya" — halaman mahasiswa (GET /kkm/kelompok/me)
+// =============================================
+
+/**
+ * Kelompok milik mahasiswa yang login. Utamakan baris peserta pada periode
+ * berstatus AKTIF; bila tidak ada, pakai baris kelompok mana pun (terbaru).
+ * 404 bila mahasiswa belum tergabung dalam kelompok mana pun.
+ */
+export const getKelompokSaya = async (userId: number) => {
+  const findRow = (aktifOnly: boolean) =>
+    prisma.kkmPeserta.findFirst({
+      where: {
+        user_id: userId,
+        kelompok_id: { not: null },
+        ...(aktifOnly ? { periode: { status: KkmPeriodStatus.AKTIF } } : {}),
+      },
+      orderBy: { updated_at: "desc" },
+      select: { kelompok_id: true },
+    });
+
+  const mine = (await findRow(true)) ?? (await findRow(false));
+  if (!mine?.kelompok_id) {
+    throw new HttpError(
+      "Kelompok KKM Anda belum ditetapkan. Hubungi panitia/LPPM.",
+      404,
+    );
+  }
+
+  const kelompok = await prisma.kkmKelompok.findUnique({
+    where: { id: mine.kelompok_id },
+    include: {
+      lokasi: { select: { desa: true, kecamatan: true, kabupaten: true, kuota: true } },
+      periode: { select: { id: true, nama_periode: true, tahun_akademik: true, status: true } },
+      dpl: {
+        select: {
+          id: true,
+          name: true,
+          nomor_hp: true,
+          Fakultas: { select: { nama: true } },
+          ProgramStudi: { select: { nama: true } },
+        },
+      },
+    },
+  });
+  if (!kelompok) {
+    throw new HttpError(
+      "Kelompok KKM Anda belum ditetapkan. Hubungi panitia/LPPM.",
+      404,
+    );
+  }
+
+  const pesertaRows = await prisma.kkmPeserta.findMany({
+    where: { kelompok_id: kelompok.id },
+    orderBy: { created_at: "asc" },
+    include: {
+      user: {
+        select: {
+          id: true,
+          name: true,
+          nidn_nip: true,
+          Fakultas: { select: { nama: true } },
+          ProgramStudi: { select: { nama: true } },
+        },
+      },
+    },
+  });
+
+  // Jendela minggu berjalan (Senin 00:00 s.d. Senin berikutnya) utk logbook.
+  const now = new Date();
+  const weekStart = new Date(now);
+  weekStart.setDate(now.getDate() - ((now.getDay() + 6) % 7));
+  weekStart.setHours(0, 0, 0, 0);
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekStart.getDate() + 7);
+
+  const [logbookMingguIni, dokumenKelompok] = await Promise.all([
+    prisma.kkmLogbookEntry.count({
+      where: { kelompok_id: kelompok.id, tanggal: { gte: weekStart, lt: weekEnd } },
+    }),
+    prisma.kkmKelompokDocument.count({ where: { kelompok_id: kelompok.id } }),
+  ]);
+
+  return {
+    kelompok: {
+      id: kelompok.id,
+      nama: kelompok.nama,
+      status: deriveStatus(pesertaRows.length, kelompok.lokasi.kuota),
+      periode: kelompok.periode,
+      lokasi: {
+        desa: kelompok.lokasi.desa,
+        kecamatan: kelompok.lokasi.kecamatan,
+        kabupaten: kelompok.lokasi.kabupaten,
+      },
+    },
+    jumlah_anggota: pesertaRows.length,
+    dpl: kelompok.dpl
+      ? {
+          user_id: kelompok.dpl.id,
+          nama: kelompok.dpl.name,
+          nomor_hp: kelompok.dpl.nomor_hp,
+          fakultas: kelompok.dpl.Fakultas?.nama ?? null,
+          prodi: kelompok.dpl.ProgramStudi?.nama ?? null,
+        }
+      : null,
+    anggota: pesertaRows.map((p) => ({
+      peserta_id: p.id,
+      user_id: p.user.id,
+      nim: p.user.nidn_nip,
+      nama: p.user.name,
+      fakultas: p.user.Fakultas?.nama ?? null,
+      prodi: p.user.ProgramStudi?.nama ?? null,
+      status: p.status,
+      is_saya: p.user.id === userId,
+    })),
+    stats: {
+      logbook_minggu_ini: logbookMingguIni,
+      dokumen_kelompok: dokumenKelompok,
+    },
+  };
+};
+
+// =============================================
 // Edit kelompok (DPL; desa read-only — 1 Desa = 1 Kelompok)
 // =============================================
 

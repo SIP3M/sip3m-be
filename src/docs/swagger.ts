@@ -7264,6 +7264,60 @@ Kolom FE: TAHUN, NAMA PERIODE, JENIS, PELAKSANAAN, PENARIKAN, STATUS, AKSI.
           },
         },
       },
+      "/kkm/kelompok/me": {
+        get: {
+          tags: ["KKM Kelompok"],
+          summary: "Kelompok saya (mahasiswa)",
+          description:
+            "Kelompok milik mahasiswa yang login untuk halaman \"Kelompok Saya\": identitas kelompok + periode + lokasi, DPL (nama/prodi/fakultas/nomor HP), daftar anggota (dengan penanda is_saya), dan statistik (logbook minggu berjalan, jumlah dokumen kelompok). Utamakan peserta pada periode AKTIF; 404 bila mahasiswa belum tergabung kelompok mana pun.",
+          security: [{ bearerAuth: [] }],
+          responses: {
+            200: {
+              description: "Berhasil",
+              content: {
+                "application/json": {
+                  example: {
+                    message: "Berhasil mengambil data kelompok saya.",
+                    data: {
+                      kelompok: {
+                        id: 7,
+                        nama: "Kelompok 07",
+                        status: "AKTIF",
+                        periode: { id: 2, nama_periode: "KKM Reguler 2026", tahun_akademik: "2025/2026", status: "AKTIF" },
+                        lokasi: { desa: "Astanajapura", kecamatan: "Astanajapura", kabupaten: "Cirebon" },
+                      },
+                      jumlah_anggota: 10,
+                      dpl: {
+                        user_id: 10,
+                        nama: "Dr. Ahmad Fauzi, M.Kom",
+                        nomor_hp: "081234567890",
+                        fakultas: "Fakultas Teknik",
+                        prodi: "Teknik Informatika",
+                      },
+                      anggota: [
+                        {
+                          peserta_id: 101,
+                          user_id: 201,
+                          nim: "2210512001",
+                          nama: "Andi Pratama",
+                          fakultas: "Fakultas Teknik",
+                          prodi: "Teknik Informatika",
+                          status: "VERIFIED",
+                          is_saya: true,
+                        },
+                      ],
+                      stats: { logbook_minggu_ini: 4, dokumen_kelompok: 3 },
+                    },
+                  },
+                },
+              },
+            },
+            401: { description: "Unauthorized" },
+            403: { description: "Hanya untuk role MAHASISWA" },
+            404: { description: "Kelompok KKM Anda belum ditetapkan. Hubungi panitia/LPPM." },
+          },
+        },
+      },
       "/kkm/kelompok/{id}": {
         get: {
           tags: ["KKM Kelompok"],
