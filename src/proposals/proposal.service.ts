@@ -5,8 +5,8 @@ import { HttpError } from "../common/errors/http-error";
 import {
   PengabdianStatus,
   ProposalStatus,
-  SkemaProposal,
 } from "../generated/prisma/enums";
+import { resolveSkemaForSearch } from "../master/referensi/referensi.service";
 import type { ProposalFiles } from "./proposal.types";
 import type {
   CreateProposalInput,
@@ -22,26 +22,19 @@ const buildProjectCode = (proposalId: number): string => {
   return `PENG-${new Date().getFullYear()}-${proposalId}`;
 };
 
-const normalizeSkemaSearch = (value?: string): SkemaProposal | undefined => {
+/**
+ * Filter `?skema=` — resolve label/kode ke nama kanonis di MasterReferensi;
+ * nilai yang tidak dikenal diabaikan (tanpa filter skema), sama seperti
+ * perilaku lamanya.
+ */
+const normalizeSkemaSearch = async (
+  value?: string,
+): Promise<string | undefined> => {
   if (!value) {
     return undefined;
   }
 
-  const normalized = value.trim().toLowerCase();
-  const mapping: Record<string, SkemaProposal> = {
-    "penelitian pengembangan": SkemaProposal.PENELITIAN_PENGEMBANGAN,
-    "penelitian terapan": SkemaProposal.PENELITIAN_TERAPAN,
-    "penelitian kolaborasi": SkemaProposal.PENELITIAN_KOLABORASI,
-    penelitian_pengembangan: SkemaProposal.PENELITIAN_PENGEMBANGAN,
-    penelitian_terapan: SkemaProposal.PENELITIAN_TERAPAN,
-    penelitian_kolaborasi: SkemaProposal.PENELITIAN_KOLABORASI,
-  };
-
-  if (mapping[normalized]) {
-    return mapping[normalized];
-  }
-
-  return undefined;
+  return resolveSkemaForSearch(value);
 };
 
 const extractFileName = (pathOrUrl: string | null): string | null => {
@@ -162,7 +155,7 @@ export const getAllProposals = async ({
   status?: ProposalStatus;
 }) => {
   const skip = (page - 1) * PROPOSALS_PER_PAGE;
-  const skemaSearch = normalizeSkemaSearch(search);
+  const skemaSearch = await normalizeSkemaSearch(search);
 
   const orFilters: Prisma.proposalsWhereInput[] = [];
   if (search) {
@@ -281,7 +274,7 @@ export const getAssignedProposalsForReviewer = async ({
   status?: ProposalStatus;
 }) => {
   const skip = (page - 1) * PROPOSALS_PER_PAGE;
-  const skemaSearch = normalizeSkemaSearch(search);
+  const skemaSearch = await normalizeSkemaSearch(search);
   const effectiveStatus = status ?? ProposalStatus.UNDER_REVIEW;
 
   const orFilters: Prisma.proposalsWhereInput[] = [];
@@ -420,7 +413,7 @@ export const getMyProposals = async ({
   status?: ProposalStatus;
 }) => {
   const skip = (page - 1) * PROPOSALS_PER_PAGE;
-  const skemaSearch = normalizeSkemaSearch(search);
+  const skemaSearch = await normalizeSkemaSearch(search);
 
   const orFilters: Prisma.proposalsWhereInput[] = [];
   if (search) {

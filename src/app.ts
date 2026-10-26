@@ -25,6 +25,7 @@ import kkmMonitoringRoute from "./kkm/monitoring/kkm-monitoring.routes";
 import kkmSkemaRoute from "./kkm/skema/kkm-skema.routes";
 import auditRoute from "./audit/audit.routes";
 import { auditMiddleware } from "./audit/audit.middleware";
+import referensiRoute from "./master/referensi/referensi.routes";
 import swaggerUiDist from "swagger-ui-dist";
 import { swaggerSpec } from "./docs/swagger";
 
@@ -106,6 +107,7 @@ app.use("/api", kkmKelompokRoute);
 app.use("/api", kkmMonitoringRoute);
 app.use("/api", kkmSkemaRoute);
 app.use("/api", auditRoute);
+app.use("/api", referensiRoute);
 app.use("/api", master)
 
 // health check (penting buat test)

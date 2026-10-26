@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ProposalStatus, SkemaProposal, SumberPendanaan } from "../generated/prisma/enums";
+import { ProposalStatus } from "../generated/prisma/enums";
 
 // =============================================
 // Base Fields (DRY - reusable across schemas)
@@ -11,74 +11,20 @@ const titleField = z
 
 const facultyField = z.string().max(100, "Fakultas maksimal 100 karakter.");
 
-const skemaLabelToEnum: Record<string, SkemaProposal> = {
-  "Penelitian Pengembangan": SkemaProposal.PENELITIAN_PENGEMBANGAN,
-  "Penelitian Terapan": SkemaProposal.PENELITIAN_TERAPAN,
-  "Penelitian Kolaborasi": SkemaProposal.PENELITIAN_KOLABORASI,
-};
-
-// Kode enum Prisma (bentuk yang dikembalikan API saat dibaca) — juga diterima
-// lalu dinormalkan ke enum, agar FE yang mengirim kode (mis. hasil prefill
-// GET detail) tetap lolos validasi.
-const skemaCodeToEnum: Record<string, SkemaProposal> = {
-  PENELITIAN_PENGEMBANGAN: SkemaProposal.PENELITIAN_PENGEMBANGAN,
-  PENELITIAN_TERAPAN: SkemaProposal.PENELITIAN_TERAPAN,
-  PENELITIAN_KOLABORASI: SkemaProposal.PENELITIAN_KOLABORASI,
-};
-
+// Skema & sumber pendanaan kini dinamis (tabel MasterReferensi, dikelola
+// ADMIN_SISTEM). Validasi nilai terhadap master aktif + normalisasi ke nama
+// kanonis dilakukan asinkron di controller (normalizeProposalReferensi).
 const skemaField = z
-  .enum(
-    [
-      "Penelitian Pengembangan",
-      "Penelitian Terapan",
-      "Penelitian Kolaborasi",
-      "PENELITIAN_PENGEMBANGAN",
-      "PENELITIAN_TERAPAN",
-      "PENELITIAN_KOLABORASI",
-    ],
-    {
-      message:
-        "Skema tidak valid. Pilihan: Penelitian Pengembangan, Penelitian Terapan, Penelitian Kolaborasi.",
-    },
-  )
-  .transform((value) => skemaLabelToEnum[value] ?? skemaCodeToEnum[value]);
-
-const sumberPendanaanLabelToEnum: Record<string, SumberPendanaan> = {
-  "Internal Kampus": SumberPendanaan.INTERNAL_KAMPUS,
-  Kemendikbudristek: SumberPendanaan.KEMENDIKBUDRISTEK,
-  Mandiri: SumberPendanaan.MANDIRI,
-  Lainnya: SumberPendanaan.LAINNYA,
-};
-
-// Kode enum Prisma untuk sumber pendanaan — diterima & dinormalkan seperti skema.
-const sumberPendanaanCodeToEnum: Record<string, SumberPendanaan> = {
-  INTERNAL_KAMPUS: SumberPendanaan.INTERNAL_KAMPUS,
-  KEMENDIKBUDRISTEK: SumberPendanaan.KEMENDIKBUDRISTEK,
-  MANDIRI: SumberPendanaan.MANDIRI,
-  LAINNYA: SumberPendanaan.LAINNYA,
-};
+  .string({ message: "Skema wajib dipilih." })
+  .trim()
+  .min(1, "Skema wajib dipilih.")
+  .max(100, "Skema maksimal 100 karakter.");
 
 const sumberPendanaanField = z
-  .enum(
-    [
-      "Internal Kampus",
-      "Kemendikbudristek",
-      "Mandiri",
-      "Lainnya",
-      "INTERNAL_KAMPUS",
-      "KEMENDIKBUDRISTEK",
-      "MANDIRI",
-      "LAINNYA",
-    ],
-    {
-      message:
-        "Sumber pendanaan tidak valid. Pilihan: Internal Kampus, Kemendikbudristek, Mandiri, Lainnya.",
-    },
-  )
-  .transform(
-    (value) =>
-      sumberPendanaanLabelToEnum[value] ?? sumberPendanaanCodeToEnum[value],
-  );
+  .string()
+  .trim()
+  .min(1, "Sumber pendanaan tidak boleh kosong.")
+  .max(100, "Sumber pendanaan maksimal 100 karakter.");
 
 const dosenTerlibatField = z.string().trim().max(1000).optional();
 const nidnDosenField = z.string().trim().max(1000).optional(); 
