@@ -265,6 +265,10 @@ export const me = async (
         roles: user.roles.roles,
       },
       nidn: user.nidn_nip,
+      // NIM mahasiswa (kolom yang sama dengan NIDN dosen) + semester —
+      // dipakai prefill & syarat pendaftaran KKM mandiri.
+      nim: user.nidn_nip,
+      semester: user.semester,
       fakultas: user.fakultas_id,
       program_studi: user.program_studi_id,
       instansi: user.instansi,

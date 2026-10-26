@@ -7614,6 +7614,94 @@ Kolom FE: TAHUN, NAMA PERIODE, JENIS, PELAKSANAAN, PENARIKAN, STATUS, AKSI.
           },
         },
       },
+      "/kkm/pendaftaran/me": {
+        get: {
+          tags: ["KKM Pendaftaran"],
+          summary: "Riwayat pendaftaran KKM milik mahasiswa login",
+          description: "Khusus role MAHASISWA. Tanpa parameter mengembalikan seluruh riwayat; dengan `periode_id` mengembalikan pendaftaran pada periode tertentu (dipakai FE untuk status tombol/gembok menu: DRAFT/PENDING/VERIFIED/REJECTED).",
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            { name: "periode_id", in: "query", required: false, schema: { type: "integer", example: 3 } },
+          ],
+          responses: {
+            200: {
+              description: "Berhasil",
+              content: {
+                "application/json": {
+                  example: {
+                    data: [
+                      {
+                        id: 12,
+                        periode_id: 3,
+                        status: "PENDING",
+                        no_wa: "081234567890",
+                        ukuran_jaket: "L",
+                        nama_kontak_darurat: "Budi Santoso",
+                        no_hp_kontak_darurat: "08111111111",
+                        alamat_domisili: "Jl. Merdeka No. 1, Cirebon",
+                        bukti_ukt_url: "https://.../kkm/ukt/7_..._bukti.pdf",
+                        periode: { id: 3, nama_periode: "KKM TERBARU 2026", tahun_akademik: "2026/2027", jenis: "REGULER", status: "AKTIF" },
+                        created_at: "2026-10-26T08:00:00.000Z",
+                        updated_at: "2026-10-26T09:00:00.000Z",
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+            400: { description: "Query tidak valid" },
+          },
+        },
+      },
+      "/kkm/pendaftaran": {
+        post: {
+          tags: ["KKM Pendaftaran"],
+          summary: "Simpan draft / kirim pendaftaran KKM mandiri (mahasiswa)",
+          description:
+            "Khusus role MAHASISWA — **multipart/form-data**. `aksi=draft` menyimpan setengah jalan (data wajib boleh kosong, tanpa berkas); `aksi=kirim` menerapkan seluruh syarat: mahasiswa **semester 7**, periode AKTIF & masih dalam jendela `tgl_buka_daftar`→`tgl_tutup_daftar`, seluruh data wajib terisi, `pernyataan=true`, dan **bukti pembayaran UKT wajib terunggah** (PDF/JPG/PNG, maks 5 MB, field `bukti_ukt`; bila sudah pernah diunggah saat draft, tidak wajib diunggah ulang). Berhasil kirim → status `PENDING` (menunggu verifikasi admin LPPM). Baris `DRAFT`/`REJECTED` dapat diperbarui/diulang; `PENDING`/`VERIFIED` terkunci (409).",
+          security: [{ bearerAuth: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              "multipart/form-data": {
+                schema: {
+                  type: "object",
+                  required: ["periode_id", "aksi"],
+                  properties: {
+                    periode_id: { type: "integer", example: 3 },
+                    aksi: { type: "string", enum: ["draft", "kirim"], example: "kirim" },
+                    no_wa: { type: "string", example: "081234567890" },
+                    ukuran_jaket: { type: "string", enum: ["S", "M", "L", "XL", "XXL", "XXXL"] },
+                    nama_kontak_darurat: { type: "string", example: "Budi Santoso (Ayah)" },
+                    no_hp_kontak_darurat: { type: "string", example: "08111111111" },
+                    alamat_domisili: { type: "string", example: "Jl. Merdeka No. 1, Cirebon" },
+                    pernyataan: { type: "string", enum: ["true", "false"], example: "true", description: "Pernyataan kebenaran data & kelunasan UKT (wajib true saat aksi=kirim)." },
+                    bukti_ukt: { type: "string", format: "binary", description: "Bukti pembayaran UKT (PDF/JPG/PNG, maks 5 MB)." },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            201: {
+              description: "Pendaftaran dibuat (draft baru)",
+              content: {
+                "application/json": {
+                  example: {
+                    message: "Pendaftaran berhasil dikirim — menunggu verifikasi admin LPPM.",
+                    data: { id: 12, periode_id: 3, status: "PENDING", ukuran_jaket: "L" },
+                  },
+                },
+              },
+            },
+            200: { description: "Draft/Pendaftaran REJECTED diperbarui" },
+            400: { description: "Validasi gagal / periode tutup / berkas UKT tidak ada / bukan masa pendaftaran" },
+            403: { description: "Bukan role MAHASISWA / semester bukan 7" },
+            404: { description: "Periode tidak ditemukan" },
+            409: { description: "Sudah PENDING/VERIFIED (terkunci)" },
+          },
+        },
+      },
       "/kkm/skema": {
         get: {
           tags: ["KKM Skema"],
