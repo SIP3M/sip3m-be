@@ -6698,13 +6698,14 @@ Kolom FE: TAHUN, NAMA PERIODE, JENIS, PELAKSANAAN, PENARIKAN, STATUS, AKSI.
         get: {
           tags: ["KKM Periode"],
           summary: "Detail periode KKM (Lihat Detail / pre-fill Edit)",
-          description: "Ambil 1 periode by ID. Untuk icon mata & pensil di kolom AKSI Gambar 1. Role: ADMIN_LPPM, STAFF_LPPM.",
+          description: "Ambil 1 periode by ID. Untuk icon mata & pensil di kolom AKSI Gambar 1, dan oleh **formulir pendaftaran mahasiswa** (baca periode). Role: MAHASISWA, ADMIN_LPPM, STAFF_LPPM.",
           security: [{ bearerAuth: [] }],
           parameters: [{ name: "id", in: "path", required: true, schema: { type: "integer", example: 1 } }],
           responses: {
             200: { description: "Berhasil", content: { "application/json": { example: { message: "Berhasil mengambil detail periode KKM.", data: { id: 1, nama_periode: "KKM Reguler 2026", tahun_akademik: "2025/2026", status: "AKTIF" } } } } },
             400: { description: "ID tidak valid" },
             401: { description: "Unauthorized" },
+            403: { description: "Role tidak berhak" },
             404: { description: "Periode tidak ditemukan" },
           },
         },
@@ -7683,7 +7684,7 @@ Kolom FE: TAHUN, NAMA PERIODE, JENIS, PELAKSANAAN, PENARIKAN, STATUS, AKSI.
               },
             },
             200: { description: "Draft/Pendaftaran REJECTED diperbarui" },
-            400: { description: "Validasi gagal / periode tutup / berkas UKT tidak ada / bukan masa pendaftaran" },
+            400: { description: "Validasi gagal / periode belum dibuka (bukan status AKTIF — cth: DIJADWALKAN) / jendela tutup / berkas UKT tidak ada" },
             403: { description: "Bukan role MAHASISWA / semester bukan 7" },
             404: { description: "Periode tidak ditemukan" },
             409: { description: "Sudah PENDING/VERIFIED (terkunci)" },
@@ -7694,7 +7695,7 @@ Kolom FE: TAHUN, NAMA PERIODE, JENIS, PELAKSANAAN, PENARIKAN, STATUS, AKSI.
         get: {
           tags: ["KKM Skema"],
           summary: "Portal Skema KKM (kartu pilihan untuk mahasiswa)",
-          description: "Daftar KKM yang **terbuka pendaftarannya** (status AKTIF/DIJADWALKAN + masih dalam jendela `tgl_buka_daftar`→`tgl_tutup_daftar`), disajikan sebagai kartu untuk halaman Portal Mahasiswa. Tiap periode = 1 kartu (Jalur A — model KkmSkema menyusul). Per kartu: nama, deskripsi, jenis, durasi (derive), tanggal, kuota (`target_peserta`) + terisi (peserta VERIFIED) + menunggu (PENDING), sisa, persentase, wilayah (kabupaten), batas_daftar. `stats` = agregat seluruh kartu (di atas filter). Filter `jenis` & `wilayah` opsional.",
+          description: "Daftar KKM yang **terbuka pendaftarannya** (status AKTIF/DIJADWALKAN + masih dalam jendela `tgl_buka_daftar`→`tgl_tutup_daftar`), disajikan sebagai kartu untuk halaman Portal Mahasiswa. Tiap periode = 1 kartu (Jalur A — model KkmSkema menyusul). Per kartu: nama, deskripsi, jenis, durasi (derive), tanggal, kuota (`target_peserta`) + terisi (peserta VERIFIED) + menunggu (PENDING), sisa, persentase, wilayah (kabupaten), batas_daftar, **status** (`AKTIF`/`DIJADWALKAN` — FE menampilkan kartu `DIJADWALKAN` sbg \"segera dibuka\" dgn tombol nonaktif). `stats` = agregat seluruh kartu (di atas filter). Filter `jenis` & `wilayah` opsional.",
           security: [{ bearerAuth: [] }],
           parameters: [
             { name: "jenis", in: "query", required: false, schema: { type: "string", enum: ["REGULER", "TEMATIK"] } },
@@ -7728,6 +7729,7 @@ Kolom FE: TAHUN, NAMA PERIODE, JENIS, PELAKSANAAN, PENARIKAN, STATUS, AKSI.
                         persentase_terisi: 9,
                         wilayah: ["Cirebon", "Indramayu", "Kuningan", "Majalengka"],
                         batas_daftar: "2026-10-31T00:00:00.000Z",
+                        status: "AKTIF",
                       },
                     ],
                     stats: { total_skema: 2, akumulasi_kuota: 4000, akumulasi_terisi: 183, batas_akhir: "2026-10-31T00:00:00.000Z" },

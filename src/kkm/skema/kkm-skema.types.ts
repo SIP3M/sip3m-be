@@ -22,6 +22,8 @@ export interface SkemaCard {
   persentase_terisi: number; // 0-100
   wilayah: string[]; // distinct kabupaten dari KkmLocation
   batas_daftar: string | null; // tgl_tutup_daftar
+  /** AKTIF | DIJADWALKAN — DIJADWALKAN ditampilkan FE sbg "segera dibuka". */
+  status: string;
 }
 
 export interface SkemaPeriodeRef {

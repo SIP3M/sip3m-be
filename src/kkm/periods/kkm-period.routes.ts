@@ -45,11 +45,12 @@ router.post(
   runAutoCompleteController,
 );
 
-// Detail / update by id
+// Detail / update by id — baca dibuka utk mahasiswa (formulir pendaftaran
+// memuat info periode; sebelumnya 403 & form tak bisa tampil), tulis tetap admin
 router.get(
   "/kkm/periods/:id",
   authMiddleware,
-  requireRole([ROLES.ADMIN_LPPM, ROLES.STAFF_LPPM]),
+  requireRole([ROLES.MAHASISWA, ROLES.ADMIN_LPPM, ROLES.STAFF_LPPM]),
   getKkmPeriodByIdController,
 );
 
