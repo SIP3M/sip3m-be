@@ -134,6 +134,7 @@ export const getSkemaPortal = async (query: KkmSkemaPortalQuery): Promise<SkemaP
         a.localeCompare(b),
       ),
       batas_daftar: iso(p.tgl_tutup_daftar),
+      status: p.status,
     };
   };
 

@@ -153,7 +153,7 @@ export const upsertPendaftaran = async (
   if (!periode) throw new HttpError("Periode KKM tidak ditemukan.", 404);
   if (periode.status !== KkmPeriodStatus.AKTIF) {
     throw new HttpError(
-      "Periode KKM tidak dalam masa pendaftaran (bukan status AKTIF).",
+      "Pendaftaran pada periode ini belum dibuka (status periode bukan AKTIF). Periode DIJADWALKAN baru dapat didaftarkan setelah diaktifkan panitia.",
       400,
     );
   }
