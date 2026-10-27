@@ -7550,11 +7550,56 @@ Kolom FE: TAHUN, NAMA PERIODE, JENIS, PELAKSANAAN, PENARIKAN, STATUS, AKSI.
           },
         },
       },
+      "/kkm/logbook/me": {
+        get: {
+          tags: ["KKM Monitoring"],
+          summary: "Logbook saya (mahasiswa)",
+          description:
+            "Entri logbook milik mahasiswa yang login untuk halaman \"Logbook Kegiatan\": identitas kelompok + periode, daftar entri (tanggal, judul, deskripsi, status PENDING/APPROVED/REVISI, catatan revisi, URL file PDF bila ada), terbaru dulu. Utamakan peserta pada periode AKTIF; 404 bila mahasiswa belum tergabung kelompok mana pun. Statistik (Total/Approved/Pending/Revisi) dihitung FE dari daftar ini.",
+          security: [{ bearerAuth: [] }],
+          responses: {
+            200: {
+              description: "Berhasil",
+              content: {
+                "application/json": {
+                  example: {
+                    message: "Berhasil mengambil logbook saya.",
+                    data: {
+                      kelompok: {
+                        id: 7,
+                        nama: "Kelompok 07",
+                        periode: { id: 3, nama_periode: "KKM Reguler 2026", status: "AKTIF" },
+                      },
+                      entries: [
+                        {
+                          id: 51,
+                          tanggal: "2026-02-07T00:00:00.000Z",
+                          judul: "Pembuatan Media Sosial UMKM",
+                          deskripsi: "Membantu pelaku UMKM membuat akun Instagram dan WhatsApp Business.",
+                          lokasi_kegiatan: null,
+                          status: "REVISI",
+                          file_url: "https://.../kkm-logbook/7/1770...-logbook-minggu-1.pdf",
+                          file_size: 245000,
+                          catatan_revisi: "Lampirkan bukti pendukung kegiatan.",
+                          created_at: "2026-02-07T10:00:00.000Z",
+                        },
+                      ],
+                    },
+                  },
+                },
+              },
+            },
+            401: { description: "Unauthorized" },
+            403: { description: "Hanya untuk role MAHASISWA" },
+            404: { description: "Kelompok KKM Anda belum ditetapkan, logbook belum bisa diisi. Hubungi panitia/LPPM." },
+          },
+        },
+      },
       "/kkm/kelompok/{id}/logbook": {
         get: {
           tags: ["KKM Monitoring"],
           summary: "Daftar entri logbook kelompok",
-          description: "Mengembalikan seluruh entri logbook milik sebuah kelompok (terbaru dulu), lengkap dengan penulisnya. Bisa diakses mahasiswa anggota, DPL, admin, dan staff.",
+          description: "Mengembalikan seluruh entri logbook milik sebuah kelompok (terbaru dulu), lengkap dengan penulisnya, status review (PENDING/APPROVED/REVISI), catatan revisi, dan URL file PDF bila ada. Mahasiswa hanya boleh membaca kelompoknya sendiri; DPL hanya kelompok bimbingannya; admin & staff bebas.",
           security: [{ bearerAuth: [] }],
           parameters: [{ name: "id", in: "path", required: true, schema: { type: "integer", example: 1 } }],
           responses: {
@@ -7571,6 +7616,10 @@ Kolom FE: TAHUN, NAMA PERIODE, JENIS, PELAKSANAAN, PENARIKAN, STATUS, AKSI.
                         judul: "Sosialisasi Program Kerja",
                         deskripsi: "Melaksanakan sosialisasi program kerja kepada warga desa.",
                         lokasi_kegiatan: "Balai Desa Astanajapura",
+                        status: "PENDING",
+                        file_url: null,
+                        file_size: null,
+                        catatan_revisi: null,
                         created_at: "2026-10-18T09:15:00.000Z",
                         penulis: { id: 201, nama: "Budi Santoso", nim_nip: "210411001" },
                       },
@@ -7579,14 +7628,14 @@ Kolom FE: TAHUN, NAMA PERIODE, JENIS, PELAKSANAAN, PENARIKAN, STATUS, AKSI.
                 },
               },
             },
-            403: { description: "Dosen bukan DPL aktif (belum ditugaskan sebagai DPL) atau bukan anggota kelompok" },
+            403: { description: "Dosen bukan DPL aktif (belum ditugaskan sebagai DPL) atau mahasiswa bukan anggota kelompok" },
             404: { description: "Kelompok tidak ditemukan" },
           },
         },
         post: {
           tags: ["KKM Monitoring"],
           summary: "Tambah entri logbook kelompok",
-          description: "Menambah satu catatan aktivitas (logbook) ke kelompok. Hanya boleh oleh **mahasiswa anggota** kelompok tersebut atau **DPL** kelompok. Menambah entri akan menaikkan progres & indikator aktivitas kelompok.",
+          description: "Menambah satu catatan aktivitas (logbook) ke kelompok. Hanya boleh oleh **mahasiswa anggota** kelompok tersebut atau **DPL** kelompok. Entri baru selalu berstatus `PENDING` sampai direview DPL/admin. Mendukung lampiran **file logbook PDF** (opsional, maks 10 MB) via multipart/form-data; tanpa lampiran tetap bisa dikirim sebagai JSON.",
           security: [{ bearerAuth: [] }],
           parameters: [{ name: "id", in: "path", required: true, schema: { type: "integer", example: 1 } }],
           requestBody: {
@@ -7604,6 +7653,19 @@ Kolom FE: TAHUN, NAMA PERIODE, JENIS, PELAKSANAAN, PENARIKAN, STATUS, AKSI.
                   },
                 },
               },
+              "multipart/form-data": {
+                schema: {
+                  type: "object",
+                  required: ["tanggal", "judul", "deskripsi"],
+                  properties: {
+                    tanggal: { type: "string", format: "date", example: "2026-10-18" },
+                    judul: { type: "string", minLength: 3, example: "Sosialisasi Program Kerja" },
+                    deskripsi: { type: "string", minLength: 3, example: "Melaksanakan sosialisasi program kerja kepada warga desa." },
+                    lokasi_kegiatan: { type: "string", maxLength: 255, example: "Balai Desa Astanajapura" },
+                    file: { type: "string", format: "binary", description: "File logbook PDF, opsional, maks 10 MB" },
+                  },
+                },
+              },
             },
           },
           responses: {
@@ -7613,14 +7675,58 @@ Kolom FE: TAHUN, NAMA PERIODE, JENIS, PELAKSANAAN, PENARIKAN, STATUS, AKSI.
                 "application/json": {
                   example: {
                     message: "Entri logbook berhasil ditambahkan.",
-                    data: { id: 1, tanggal: "2026-10-18T00:00:00.000Z", judul: "Sosialisasi Program Kerja", created_at: "2026-10-18T09:15:00.000Z" },
+                    data: { id: 1, tanggal: "2026-10-18T00:00:00.000Z", judul: "Sosialisasi Program Kerja", created_at: "2026-10-18T09:15:00.000Z", file_url: null, file_size: null },
                   },
                 },
               },
             },
-            400: { description: "Validasi data gagal / periode SELESAI" },
+            400: { description: "Validasi data gagal / file bukan PDF / file > 10 MB / periode SELESAI" },
             403: { description: "Dosen bukan DPL aktif (belum ditugaskan sebagai DPL) / bukan anggota kelompok / bukan DPL kelompok" },
             404: { description: "Kelompok tidak ditemukan" },
+          },
+        },
+      },
+      "/kkm/kelompok/{id}/logbook/{entryId}/review": {
+        patch: {
+          tags: ["KKM Monitoring"],
+          summary: "Review entri logbook (DPL/admin)",
+          description: "DPL kelompok (atau admin/staff LPPM) menetapkan status review sebuah entri logbook: `APPROVED` atau `REVISI`. `catatan` wajib diisi minimal 3 karakter saat status REVISI dan akan dilihat mahasiswa; saat APPROVED `catatan` diabaikan (dikosongkan). Menyetel `reviewed_by` & `reviewed_at`.",
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            { name: "id", in: "path", required: true, schema: { type: "integer", example: 7 }, description: "ID kelompok" },
+            { name: "entryId", in: "path", required: true, schema: { type: "integer", example: 51 }, description: "ID entri logbook" },
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["status"],
+                  properties: {
+                    status: { type: "string", enum: ["APPROVED", "REVISI"], example: "REVISI" },
+                    catatan: { type: "string", maxLength: 500, example: "Lampirkan bukti pendukung kegiatan." },
+                  },
+                },
+                example: { status: "REVISI", catatan: "Lampirkan bukti pendukung kegiatan." },
+              },
+            },
+          },
+          responses: {
+            200: {
+              description: "Berhasil",
+              content: {
+                "application/json": {
+                  example: {
+                    message: "Review logbook berhasil disimpan.",
+                    data: { id: 51, status: "REVISI", catatan_revisi: "Lampirkan bukti pendukung kegiatan.", reviewed_at: "2026-02-08T03:00:00.000Z" },
+                  },
+                },
+              },
+            },
+            400: { description: "Validasi data gagal (catatan wajib saat REVISI)" },
+            403: { description: "Bukan DPL kelompok / bukan admin LPPM / dosen bukan DPL aktif" },
+            404: { description: "Kelompok atau entri logbook tidak ditemukan" },
           },
         },
       },

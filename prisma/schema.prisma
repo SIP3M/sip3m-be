@@ -246,6 +246,7 @@ model users {
   sessions                 UserSession[]
   kkmKelompokDocsUploaded  KkmKelompokDocument[] @relation("KkmKelompokDocUploader")
   kkmLogbookEntries        KkmLogbookEntry[]
+  kkmLogbookReviews        KkmLogbookEntry[] @relation("KkmLogbookReviewer")
 
   @@index([role_id])
 }
@@ -431,6 +432,12 @@ enum KkmKelompokDocumentType {
   LAPORAN_AKHIR
 }
 
+enum KkmLogbookStatus {
+  PENDING
+  APPROVED
+  REVISI
+}
+
 model KkmKelompok {
   id         Int      @id @default(autoincrement())
   periode_id Int
@@ -539,8 +546,17 @@ model KkmLogbookEntry {
   deskripsi      String   @db.Text
   lokasi_kegiatan String? @db.VarChar(255)
 
+  // Review logbook (DPL/admin): status awal PENDING, bisa APPROVED/REVISI
+  status          KkmLogbookStatus @default(PENDING)
+  file_path       String?          @db.VarChar(500) // file logbook PDF (opsional)
+  file_size       Int?             // byte
+  catatan_revisi  String?          @db.VarChar(500)
+  reviewed_by     Int?
+  reviewed_at     DateTime?
+
   kelompok       KkmKelompok @relation(fields: [kelompok_id], references: [id], onDelete: Cascade)
   author         users       @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  reviewer       users?      @relation("KkmLogbookReviewer", fields: [reviewed_by], references: [id], onDelete: SetNull)
 
   created_at     DateTime    @default(now())
   updated_at     DateTime    @updatedAt
@@ -548,6 +564,7 @@ model KkmLogbookEntry {
   @@index([kelompok_id])
   @@index([kelompok_id, tanggal])
   @@index([user_id])
+  @@index([status])
 }
 
 // =============================================

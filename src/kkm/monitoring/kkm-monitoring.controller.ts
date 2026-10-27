@@ -4,14 +4,17 @@ import { HttpError } from "../../common/errors/http-error";
 import { ROLES } from "../../auth/role";
 import {
   kkmLogbookCreateSchema,
+  kkmLogbookReviewSchema,
   kkmMonitoringMarkSchema,
   kkmMonitoringQuerySchema,
 } from "./kkm-monitoring.validation";
 import {
   createLogbookEntry,
   getLogbookEntries,
+  getLogbookSaya,
   getMonitoringList,
   markMonitored,
+  reviewLogbookEntry,
 } from "./kkm-monitoring.service";
 
 const parseIdParam = (raw: string | string[]): number => {
@@ -50,7 +53,10 @@ export const getLogbookEntriesController = async (req: AuthenticatedRequest, res
   try {
     if (!req.user?.userId) throw new HttpError("Unauthorized", 401);
     const id = parseIdParam(req.params.id);
-    const data = await getLogbookEntries(id);
+    const data = await getLogbookEntries(id, {
+      userId: Number(req.user.userId),
+      role: req.user.role ?? req.user.roles,
+    });
     return res.status(200).json({ message: "Berhasil mengambil entri logbook kelompok.", data });
   } catch (error) {
     if (error instanceof HttpError) return res.status(error.statusCode).json({ message: error.message });
@@ -72,12 +78,47 @@ export const createLogbookEntryController = async (req: AuthenticatedRequest, re
         .status(400)
         .json({ message: "Validasi data gagal.", errors: parsed.error.flatten().fieldErrors });
     }
-    const data = await createLogbookEntry(id, parsed.data, Number(userId), role);
+    const data = await createLogbookEntry(id, parsed.data, Number(userId), role, req.file);
     return res.status(201).json({ message: "Entri logbook berhasil ditambahkan.", data });
   } catch (error) {
     if (error instanceof HttpError) return res.status(error.statusCode).json({ message: error.message });
     console.error("[CREATE_LOGBOOK_ENTRY_ERROR]", error);
     return res.status(500).json({ message: "Terjadi kesalahan saat menambah entri logbook." });
+  }
+};
+
+export const getLogbookSayaController = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    if (!req.user?.userId) throw new HttpError("Unauthorized", 401);
+    const data = await getLogbookSaya(Number(req.user.userId));
+    return res.status(200).json({ message: "Berhasil mengambil logbook saya.", data });
+  } catch (error) {
+    if (error instanceof HttpError) return res.status(error.statusCode).json({ message: error.message });
+    console.error("[GET_LOGBOOK_SAYA_ERROR]", error);
+    return res.status(500).json({ message: "Terjadi kesalahan saat mengambil logbook saya." });
+  }
+};
+
+export const reviewLogbookEntryController = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    const role = req.user?.role ?? req.user?.roles;
+    if (!userId || !role) throw new HttpError("Unauthorized", 401);
+
+    const kelompokId = parseIdParam(req.params.id);
+    const entryId = parseIdParam(req.params.entryId);
+    const parsed = kkmLogbookReviewSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res
+        .status(400)
+        .json({ message: "Validasi data gagal.", errors: parsed.error.flatten().fieldErrors });
+    }
+    const data = await reviewLogbookEntry(kelompokId, entryId, parsed.data, Number(userId), role);
+    return res.status(200).json({ message: "Review logbook berhasil disimpan.", data });
+  } catch (error) {
+    if (error instanceof HttpError) return res.status(error.statusCode).json({ message: error.message });
+    console.error("[REVIEW_LOGBOOK_ENTRY_ERROR]", error);
+    return res.status(500).json({ message: "Terjadi kesalahan saat me-review logbook." });
   }
 };
 
