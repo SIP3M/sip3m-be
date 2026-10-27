@@ -7595,6 +7595,102 @@ Kolom FE: TAHUN, NAMA PERIODE, JENIS, PELAKSANAAN, PENARIKAN, STATUS, AKSI.
           },
         },
       },
+      "/kkm/logbook/validasi": {
+        get: {
+          tags: ["KKM Monitoring"],
+          summary: "Daftar entri logbook untuk validasi (DPL/admin)",
+          description:
+            "Daftar entri logbook lintas kelompok untuk halaman \"Validasi Logbook\": DOSEN melihat entri dari kelompok bimbingannya saja (`dpl_id` = dia); ADMIN_LPPM/STAFF_LPPM melihat semua. Query opsional: `status` (PENDING/APPROVED/REVISI, filter tab), `page` (default 1, 15/halaman), `search` (nama mahasiswa/judul/nama kelompok/desa). Respons menyertakan `stats {menunggu, approved, revisi}` yang dihitung dari seluruh cakupan (tanpa filter search/status) untuk kartu statistik, plus `meta` paginasi.",
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: "status",
+              in: "query",
+              required: false,
+              schema: { type: "string", enum: ["PENDING", "APPROVED", "REVISI"] },
+            },
+            { name: "page", in: "query", required: false, schema: { type: "integer", minimum: 1, default: 1 } },
+            { name: "search", in: "query", required: false, schema: { type: "string", maxLength: 100 } },
+          ],
+          responses: {
+            200: {
+              description: "Berhasil",
+              content: {
+                "application/json": {
+                  example: {
+                    message: "Berhasil mengambil daftar validasi logbook.",
+                    data: [
+                      {
+                        id: 51,
+                        kelompok_id: 7,
+                        kelompok: { nama: "Kelompok 07", desa: "Astanajapura" },
+                        mahasiswa: { id: 201, nama: "Budi Santoso", nim: "210411001" },
+                        tanggal: "2026-02-07T00:00:00.000Z",
+                        judul: "Pembuatan Media Sosial UMKM",
+                        deskripsi: "Membantu pelaku UMKM membuat akun Instagram.",
+                        status: "PENDING",
+                        catatan_revisi: null,
+                        file_url: "https://.../kkm-logbook/7/1770...-logbook.pdf",
+                        file_size: 245000,
+                        created_at: "2026-02-07T10:00:00.000Z",
+                      },
+                    ],
+                    stats: { menunggu: 5, approved: 12, revisi: 2 },
+                    meta: { totalData: 19, totalPages: 2, currentPage: 1, limit: 15 },
+                  },
+                },
+              },
+            },
+            400: { description: "Query tidak valid" },
+            401: { description: "Unauthorized" },
+            403: { description: "Hanya DPL aktif / admin / staff LPPM" },
+          },
+        },
+      },
+      "/kkm/logbook/validasi/{entryId}": {
+        get: {
+          tags: ["KKM Monitoring"],
+          summary: "Detail entri logbook untuk validasi (DPL/admin)",
+          description:
+            "Detail satu entri logbook: identitas mahasiswa & kelompok, tanggal, judul, deskripsi, status, catatan revisi, URL file PDF (untuk pratinjau di halaman detail), reviewer & waktu review. DOSEN hanya boleh membaca entri kelompok bimbingannya; admin/staff bebas. `kelompok_id` disertakan karena dibutuhkan path endpoint review.",
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            { name: "entryId", in: "path", required: true, schema: { type: "integer", example: 51 } },
+          ],
+          responses: {
+            200: {
+              description: "Berhasil",
+              content: {
+                "application/json": {
+                  example: {
+                    message: "Berhasil mengambil detail logbook.",
+                    data: {
+                      id: 51,
+                      kelompok_id: 7,
+                      kelompok: { nama: "Kelompok 07", lokasi: { desa: "Astanajapura", kecamatan: "Astanajapura", kabupaten: "Cirebon" } },
+                      mahasiswa: { id: 201, nama: "Budi Santoso", nim: "210411001" },
+                      tanggal: "2026-02-07T00:00:00.000Z",
+                      judul: "Pembuatan Media Sosial UMKM",
+                      deskripsi: "Membantu pelaku UMKM membuat akun Instagram dan WhatsApp Business.",
+                      lokasi_kegiatan: null,
+                      status: "PENDING",
+                      catatan_revisi: null,
+                      file_url: "https://.../kkm-logbook/7/1770...-logbook.pdf",
+                      file_size: 245000,
+                      reviewer: null,
+                      reviewed_at: null,
+                      created_at: "2026-02-07T10:00:00.000Z",
+                    },
+                  },
+                },
+              },
+            },
+            401: { description: "Unauthorized" },
+            403: { description: "Dosen bukan DPL kelompok entri ini" },
+            404: { description: "Entri logbook tidak ditemukan" },
+          },
+        },
+      },
       "/kkm/kelompok/{id}/logbook": {
         get: {
           tags: ["KKM Monitoring"],

@@ -5,6 +5,7 @@ import { ROLES } from "../../auth/role";
 import {
   kkmLogbookCreateSchema,
   kkmLogbookReviewSchema,
+  kkmLogbookValidasiQuerySchema,
   kkmMonitoringMarkSchema,
   kkmMonitoringQuerySchema,
 } from "./kkm-monitoring.validation";
@@ -12,6 +13,8 @@ import {
   createLogbookEntry,
   getLogbookEntries,
   getLogbookSaya,
+  getLogbookValidasi,
+  getLogbookValidasiDetail,
   getMonitoringList,
   markMonitored,
   reviewLogbookEntry,
@@ -119,6 +122,47 @@ export const reviewLogbookEntryController = async (req: AuthenticatedRequest, re
     if (error instanceof HttpError) return res.status(error.statusCode).json({ message: error.message });
     console.error("[REVIEW_LOGBOOK_ENTRY_ERROR]", error);
     return res.status(500).json({ message: "Terjadi kesalahan saat me-review logbook." });
+  }
+};
+
+export const getLogbookValidasiController = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    const role = req.user?.role ?? req.user?.roles;
+    if (!userId || !role) throw new HttpError("Unauthorized", 401);
+
+    const parsed = kkmLogbookValidasiQuerySchema.safeParse(req.query);
+    if (!parsed.success) {
+      return res
+        .status(400)
+        .json({ message: "Validasi query gagal.", errors: parsed.error.flatten().fieldErrors });
+    }
+
+    const result = await getLogbookValidasi(parsed.data, {
+      userId: Number(userId),
+      role,
+    });
+    return res.status(200).json({ message: "Berhasil mengambil daftar validasi logbook.", ...result });
+  } catch (error) {
+    if (error instanceof HttpError) return res.status(error.statusCode).json({ message: error.message });
+    console.error("[GET_LOGBOOK_VALIDASI_ERROR]", error);
+    return res.status(500).json({ message: "Terjadi kesalahan saat mengambil daftar validasi logbook." });
+  }
+};
+
+export const getLogbookValidasiDetailController = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    const role = req.user?.role ?? req.user?.roles;
+    if (!userId || !role) throw new HttpError("Unauthorized", 401);
+
+    const entryId = parseIdParam(req.params.entryId);
+    const data = await getLogbookValidasiDetail(entryId, { userId: Number(userId), role });
+    return res.status(200).json({ message: "Berhasil mengambil detail logbook.", data });
+  } catch (error) {
+    if (error instanceof HttpError) return res.status(error.statusCode).json({ message: error.message });
+    console.error("[GET_LOGBOOK_VALIDASI_DETAIL_ERROR]", error);
+    return res.status(500).json({ message: "Terjadi kesalahan saat mengambil detail logbook." });
   }
 };
 

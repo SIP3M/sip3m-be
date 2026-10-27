@@ -8,6 +8,8 @@ import {
   createLogbookEntryController,
   getLogbookEntriesController,
   getLogbookSayaController,
+  getLogbookValidasiController,
+  getLogbookValidasiDetailController,
   getMonitoringListController,
   markMonitoredController,
   reviewLogbookEntryController,
@@ -30,6 +32,23 @@ router.get(
   authMiddleware,
   requireRole([ROLES.MAHASISWA]),
   getLogbookSayaController,
+);
+
+// ===== Validasi logbook (DPL bimbingan / admin LPPM) =====
+router.get(
+  "/kkm/logbook/validasi",
+  authMiddleware,
+  requireRole([ROLES.DOSEN, ROLES.ADMIN_LPPM, ROLES.STAFF_LPPM]),
+  requireDplAktif,
+  getLogbookValidasiController,
+);
+
+router.get(
+  "/kkm/logbook/validasi/:entryId",
+  authMiddleware,
+  requireRole([ROLES.DOSEN, ROLES.ADMIN_LPPM, ROLES.STAFF_LPPM]),
+  requireDplAktif,
+  getLogbookValidasiDetailController,
 );
 
 // ===== Logbook kelompok (mahasiswa anggota / DPL) =====
