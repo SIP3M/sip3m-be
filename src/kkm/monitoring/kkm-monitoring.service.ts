@@ -661,6 +661,159 @@ export const getLogbookSaya = async (userId: number) => {
 };
 
 // =============================================
+// Validasi logbook (DPL / admin LPPM)
+// =============================================
+
+const VALIDASI_PER_PAGE = 15;
+
+/**
+ * Daftar entri logbook untuk halaman "Validasi Logbook" (lintas kelompok).
+ * Stats dihitung dari seluruh cakupan (tanpa filter status/search).
+ */
+export const getLogbookValidasi = async (
+  query: { status?: "PENDING" | "APPROVED" | "REVISI"; page?: number; search?: string },
+  viewer: { userId: number; role?: string },
+) => {
+  const whereScope = {
+    ...(viewer.role === "DOSEN" ? { kelompok: { dpl_id: viewer.userId } } : {}),
+  };
+
+  const [stats, rows] = await Promise.all([
+    prisma.kkmLogbookEntry.groupBy({
+      by: ["status"],
+      where: whereScope,
+      _count: { _all: true },
+    }),
+    prisma.kkmLogbookEntry.findMany({
+      where: {
+        ...whereScope,
+        ...(query.status ? { status: query.status } : {}),
+      },
+      orderBy: [{ created_at: "desc" }],
+      select: {
+        id: true,
+        kelompok_id: true,
+        tanggal: true,
+        judul: true,
+        deskripsi: true,
+        status: true,
+        catatan_revisi: true,
+        file_path: true,
+        file_size: true,
+        created_at: true,
+        author: { select: { id: true, name: true, nidn_nip: true } },
+        kelompok: {
+          select: { id: true, nama: true, lokasi: { select: { desa: true } } },
+        },
+      },
+    }),
+  ]);
+
+  const statsByStatus = { menunggu: 0, approved: 0, revisi: 0 };
+  for (const s of stats) {
+    if (s.status === "PENDING") statsByStatus.menunggu = s._count._all;
+    else if (s.status === "APPROVED") statsByStatus.approved = s._count._all;
+    else if (s.status === "REVISI") statsByStatus.revisi = s._count._all;
+  }
+
+  // Filter teks (in-memory, konsisten dgn pola monitoring list).
+  const search = query.search?.toLowerCase();
+  const filtered = rows.filter((r) => {
+    if (!search) return true;
+    const haystack = [r.author.name, r.judul, r.kelompok.nama, r.kelompok.lokasi.desa]
+      .join(" ")
+      .toLowerCase();
+    return haystack.includes(search);
+  });
+
+  const page = query.page ?? 1;
+  const start = (page - 1) * VALIDASI_PER_PAGE;
+  const data = filtered.slice(start, start + VALIDASI_PER_PAGE).map((r) => ({
+    id: r.id,
+    kelompok_id: r.kelompok_id,
+    kelompok: { nama: r.kelompok.nama, desa: r.kelompok.lokasi.desa },
+    mahasiswa: { id: r.author.id, nama: r.author.name, nim: r.author.nidn_nip },
+    tanggal: r.tanggal.toISOString(),
+    judul: r.judul,
+    deskripsi: r.deskripsi,
+    status: r.status,
+    catatan_revisi: r.catatan_revisi,
+    file_url: fileUrlOf(r.file_path),
+    file_size: r.file_size,
+    created_at: r.created_at.toISOString(),
+  }));
+
+  return {
+    data,
+    stats: statsByStatus,
+    meta: {
+      totalData: filtered.length,
+      totalPages: Math.max(1, Math.ceil(filtered.length / VALIDASI_PER_PAGE)),
+      currentPage: page,
+      limit: VALIDASI_PER_PAGE,
+    },
+  };
+};
+
+/** Detail satu entri logbook utk halaman detail validasi (DPL kelompok / admin). */
+export const getLogbookValidasiDetail = async (
+  entryId: number,
+  viewer: { userId: number; role?: string },
+) => {
+  const entry = await prisma.kkmLogbookEntry.findUnique({
+    where: { id: entryId },
+    select: {
+      id: true,
+      kelompok_id: true,
+      tanggal: true,
+      judul: true,
+      deskripsi: true,
+      lokasi_kegiatan: true,
+      status: true,
+      catatan_revisi: true,
+      file_path: true,
+      file_size: true,
+      reviewed_at: true,
+      created_at: true,
+      author: { select: { id: true, name: true, nidn_nip: true } },
+      reviewer: { select: { id: true, name: true } },
+      kelompok: {
+        select: {
+          id: true,
+          nama: true,
+          dpl_id: true,
+          lokasi: { select: { desa: true, kecamatan: true, kabupaten: true } },
+        },
+      },
+    },
+  });
+  if (!entry) throw new HttpError("Entri logbook tidak ditemukan.", 404);
+
+  // DPL hanya boleh membaca entri kelompok bimbingannya sendiri.
+  if (viewer.role === "DOSEN" && entry.kelompok.dpl_id !== viewer.userId) {
+    throw new HttpError("Anda bukan DPL kelompok entri ini.", 403);
+  }
+
+  return {
+    id: entry.id,
+    kelompok_id: entry.kelompok_id,
+    kelompok: { nama: entry.kelompok.nama, lokasi: entry.kelompok.lokasi },
+    mahasiswa: { id: entry.author.id, nama: entry.author.name, nim: entry.author.nidn_nip },
+    tanggal: entry.tanggal.toISOString(),
+    judul: entry.judul,
+    deskripsi: entry.deskripsi,
+    lokasi_kegiatan: entry.lokasi_kegiatan,
+    status: entry.status,
+    catatan_revisi: entry.catatan_revisi,
+    file_url: fileUrlOf(entry.file_path),
+    file_size: entry.file_size,
+    reviewer: entry.reviewer ? { id: entry.reviewer.id, nama: entry.reviewer.name } : null,
+    reviewed_at: entry.reviewed_at?.toISOString() ?? null,
+    created_at: entry.created_at.toISOString(),
+  };
+};
+
+// =============================================
 // Monitoring DPL (set last_monitored_at)
 // =============================================
 

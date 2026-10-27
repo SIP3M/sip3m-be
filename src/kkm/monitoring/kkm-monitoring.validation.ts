@@ -42,6 +42,13 @@ export const kkmLogbookReviewSchema = z
     path: ["catatan"],
   });
 
+// Query daftar validasi logbook (DPL / admin LPPM)
+export const kkmLogbookValidasiQuerySchema = z.object({
+  status: z.enum(["PENDING", "APPROVED", "REVISI"]).optional(),
+  page: z.coerce.number().int().min(1).default(1).optional(),
+  search: z.string().trim().optional(),
+});
+
 // Tandai monitoring oleh DPL (catatan opsional)
 export const kkmMonitoringMarkSchema = z.object({
   catatan: z.string().trim().max(500).optional(),
@@ -50,4 +57,5 @@ export const kkmMonitoringMarkSchema = z.object({
 export type KkmMonitoringQuery = z.infer<typeof kkmMonitoringQuerySchema>;
 export type KkmLogbookCreateInput = z.infer<typeof kkmLogbookCreateSchema>;
 export type KkmLogbookReviewInput = z.infer<typeof kkmLogbookReviewSchema>;
+export type KkmLogbookValidasiQuery = z.infer<typeof kkmLogbookValidasiQuerySchema>;
 export type KkmMonitoringMarkInput = z.infer<typeof kkmMonitoringMarkSchema>;
