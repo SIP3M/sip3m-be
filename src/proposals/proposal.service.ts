@@ -1176,6 +1176,23 @@ export const evaluateProposal = async (
     throw new HttpError("Proposal tidak ditemukan.", 404);
   }
 
+  // Review hanya boleh dilakukan saat proposal masih dalam proses review.
+  // REVIEW_DONE = sudah direview menunggu keputusan admin; ACCEPTED/REJECTED =
+  // keputusan final. Tanpa guard ini reviewer bisa meninjau ulang dan
+  // mengubah keputusan final tanpa melalui Admin LPPM.
+  if (
+    proposal.status === ProposalStatus.REVIEW_DONE ||
+    proposal.status === ProposalStatus.ACCEPTED ||
+    proposal.status === ProposalStatus.REJECTED
+  ) {
+    throw new HttpError(
+      proposal.status === ProposalStatus.REVIEW_DONE
+        ? "Proposal sudah direview dan menunggu keputusan akhir Admin LPPM."
+        : "Proposal sudah mendapatkan keputusan final dan tidak dapat direview ulang.",
+      400,
+    );
+  }
+
   const assignment = await prisma.proposalReviewers.findFirst({
     where: {
       proposal_id: proposalId,
