@@ -1,9 +1,11 @@
 import { prisma } from "../../prisma";
 import { KkmPeriodStatus } from "../../generated/prisma/enums";
 import { HttpError } from "../../common/errors/http-error";
+import { supabase } from "../../config/storage";
 import type { KkmPeriodeRef } from "../../dashboard/dashboard.types";
 import type {
   KkmLogbookCreateInput,
+  KkmLogbookReviewInput,
   KkmMonitoringMarkInput,
   KkmMonitoringQuery,
 } from "./kkm-monitoring.validation";
@@ -382,8 +384,16 @@ export const getMonitoringList = async (query: KkmMonitoringQuery): Promise<Moni
 };
 
 // =============================================
-// Logbook entries (daftar + tambah)
+// Logbook entries (daftar + tambah + review + "logbook saya")
 // =============================================
+
+const LOGBOOK_BUCKET = "lppm_documents";
+const LOGBOOK_MAX_FILE_BYTES = 10 * 1024 * 1024; // 10 MB (PDF)
+
+const safeFileName = (name: string) => name.replace(/[^a-zA-Z0-9._-]/g, "_");
+
+const fileUrlOf = (filePath: string | null): string | null =>
+  filePath ? supabase.storage.from(LOGBOOK_BUCKET).getPublicUrl(filePath).data.publicUrl : null;
 
 const assertMembership = async (kelompokId: number, userId: number, role: string) => {
   const kelompok = await prisma.kkmKelompok.findUnique({
@@ -418,12 +428,30 @@ const assertMembership = async (kelompokId: number, userId: number, role: string
   throw new HttpError("Hanya mahasiswa anggota atau DPL kelompok yang boleh menulis logbook.", 403);
 };
 
-export const getLogbookEntries = async (kelompokId: number) => {
+export const getLogbookEntries = async (
+  kelompokId: number,
+  viewer?: { userId: number; role?: string },
+) => {
   const kelompok = await prisma.kkmKelompok.findUnique({
     where: { id: kelompokId },
-    select: { id: true },
+    select: {
+      id: true,
+      dpl_id: true,
+      peserta: { select: { user_id: true } },
+    },
   });
   if (!kelompok) throw new HttpError("Kelompok KKM tidak ditemukan.", 404);
+
+  // Penegakan akses per-kelompok: mahasiswa harus anggota, dosen harus DPL.
+  if (viewer) {
+    const { userId, role } = viewer;
+    if (role === "MAHASISWA" && !kelompok.peserta.some((p) => p.user_id === userId)) {
+      throw new HttpError("Anda bukan anggota kelompok ini.", 403);
+    }
+    if (role === "DOSEN" && kelompok.dpl_id !== userId) {
+      throw new HttpError("Anda bukan DPL kelompok ini.", 403);
+    }
+  }
 
   const rows = await prisma.kkmLogbookEntry.findMany({
     where: { kelompok_id: kelompokId },
@@ -434,6 +462,10 @@ export const getLogbookEntries = async (kelompokId: number) => {
       judul: true,
       deskripsi: true,
       lokasi_kegiatan: true,
+      status: true,
+      file_path: true,
+      file_size: true,
+      catatan_revisi: true,
       created_at: true,
       author: { select: { id: true, name: true, nidn_nip: true } },
     },
@@ -445,6 +477,10 @@ export const getLogbookEntries = async (kelompokId: number) => {
     judul: r.judul,
     deskripsi: r.deskripsi,
     lokasi_kegiatan: r.lokasi_kegiatan,
+    status: r.status,
+    file_url: fileUrlOf(r.file_path),
+    file_size: r.file_size,
+    catatan_revisi: r.catatan_revisi,
     created_at: r.created_at.toISOString(),
     penulis: { id: r.author.id, nama: r.author.name, nim_nip: r.author.nidn_nip },
   }));
@@ -455,8 +491,28 @@ export const createLogbookEntry = async (
   input: KkmLogbookCreateInput,
   userId: number,
   role: string,
+  file?: Express.Multer.File,
 ) => {
   await assertMembership(kelompokId, userId, role);
+
+  // File logbook PDF (opsional) — simpan ke Supabase sebelum row dibuat,
+  // agar row tidak menunjuk file yang gagal terupload.
+  let filePath: string | null = null;
+  if (file) {
+    if (file.mimetype !== "application/pdf") {
+      throw new HttpError("File logbook harus berformat PDF.", 400);
+    }
+    if (file.size > LOGBOOK_MAX_FILE_BYTES) {
+      throw new HttpError("Ukuran file logbook terlalu besar. Maksimal 10 MB.", 400);
+    }
+    filePath = `kkm-logbook/${kelompokId}/${Date.now()}-${safeFileName(file.originalname)}`;
+    const { error: uploadError } = await supabase.storage
+      .from(LOGBOOK_BUCKET)
+      .upload(filePath, file.buffer, { contentType: file.mimetype, cacheControl: "3600" });
+    if (uploadError) {
+      throw new HttpError(`Gagal upload ke Supabase: ${uploadError.message}`, 500);
+    }
+  }
 
   const created = await prisma.kkmLogbookEntry.create({
     data: {
@@ -466,8 +522,10 @@ export const createLogbookEntry = async (
       judul: input.judul,
       deskripsi: input.deskripsi,
       lokasi_kegiatan: input.lokasi_kegiatan ?? null,
+      file_path: filePath,
+      file_size: file?.size ?? null,
     },
-    select: { id: true, tanggal: true, judul: true, created_at: true },
+    select: { id: true, tanggal: true, judul: true, created_at: true, file_path: true, file_size: true },
   });
 
   return {
@@ -475,6 +533,130 @@ export const createLogbookEntry = async (
     tanggal: created.tanggal.toISOString(),
     judul: created.judul,
     created_at: created.created_at.toISOString(),
+    file_url: fileUrlOf(created.file_path),
+    file_size: created.file_size,
+  };
+};
+
+/**
+ * Review entri logbook (DPL kelompok / admin LPPM): APPROVED atau REVISI.
+ * Catatan wajib saat REVISI (sudah divalidasi zod).
+ */
+export const reviewLogbookEntry = async (
+  kelompokId: number,
+  entryId: number,
+  input: KkmLogbookReviewInput,
+  userId: number,
+  role: string,
+) => {
+  const kelompok = await prisma.kkmKelompok.findUnique({
+    where: { id: kelompokId },
+    select: { id: true, dpl_id: true },
+  });
+  if (!kelompok) throw new HttpError("Kelompok KKM tidak ditemukan.", 404);
+
+  const isDpl = role === "DOSEN" && kelompok.dpl_id === userId;
+  const isAdmin = role === "ADMIN_LPPM" || role === "STAFF_LPPM";
+  if (!isDpl && !isAdmin) {
+    throw new HttpError("Hanya DPL kelompok atau admin LPPM yang bisa me-review logbook.", 403);
+  }
+
+  const entry = await prisma.kkmLogbookEntry.findFirst({
+    where: { id: entryId, kelompok_id: kelompokId },
+    select: { id: true },
+  });
+  if (!entry) throw new HttpError("Entri logbook tidak ditemukan.", 404);
+
+  const updated = await prisma.kkmLogbookEntry.update({
+    where: { id: entryId },
+    data: {
+      status: input.status,
+      catatan_revisi: input.status === "REVISI" ? input.catatan ?? null : null,
+      reviewed_by: userId,
+      reviewed_at: new Date(),
+    },
+    select: { id: true, status: true, catatan_revisi: true, reviewed_at: true },
+  });
+
+  return updated;
+};
+
+/**
+ * "Logbook Saya" — halaman logbook mahasiswa (GET /kkm/logbook/me).
+ * Kelompok dari keanggotaan (prioritas periode AKTIF), entri = milik sendiri.
+ */
+export const getLogbookSaya = async (userId: number) => {
+  const findRow = (aktifOnly: boolean) =>
+    prisma.kkmPeserta.findFirst({
+      where: {
+        user_id: userId,
+        kelompok_id: { not: null },
+        ...(aktifOnly ? { periode: { status: KkmPeriodStatus.AKTIF } } : {}),
+      },
+      orderBy: { updated_at: "desc" },
+      select: { kelompok_id: true },
+    });
+
+  const mine = (await findRow(true)) ?? (await findRow(false));
+  if (!mine?.kelompok_id) {
+    throw new HttpError(
+      "Kelompok KKM Anda belum ditetapkan, logbook belum bisa diisi. Hubungi panitia/LPPM.",
+      404,
+    );
+  }
+
+  const kelompok = await prisma.kkmKelompok.findUnique({
+    where: { id: mine.kelompok_id },
+    select: {
+      id: true,
+      nama: true,
+      periode: { select: { id: true, nama_periode: true, status: true } },
+    },
+  });
+  if (!kelompok) {
+    throw new HttpError(
+      "Kelompok KKM Anda belum ditetapkan, logbook belum bisa diisi. Hubungi panitia/LPPM.",
+      404,
+    );
+  }
+
+  const rows = await prisma.kkmLogbookEntry.findMany({
+    where: { kelompok_id: kelompok.id, user_id: userId },
+    orderBy: [{ tanggal: "desc" }, { created_at: "desc" }],
+    select: {
+      id: true,
+      tanggal: true,
+      judul: true,
+      deskripsi: true,
+      lokasi_kegiatan: true,
+      status: true,
+      file_path: true,
+      file_size: true,
+      catatan_revisi: true,
+      created_at: true,
+    },
+  });
+
+  const entries = rows.map((r) => ({
+    id: r.id,
+    tanggal: r.tanggal.toISOString(),
+    judul: r.judul,
+    deskripsi: r.deskripsi,
+    lokasi_kegiatan: r.lokasi_kegiatan,
+    status: r.status,
+    file_url: fileUrlOf(r.file_path),
+    file_size: r.file_size,
+    catatan_revisi: r.catatan_revisi,
+    created_at: r.created_at.toISOString(),
+  }));
+
+  return {
+    kelompok: {
+      id: kelompok.id,
+      nama: kelompok.nama,
+      periode: kelompok.periode,
+    },
+    entries,
   };
 };
 
