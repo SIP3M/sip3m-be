@@ -7,6 +7,7 @@ import {
   ProposalStatus,
 } from "../generated/prisma/enums";
 import { resolveSkemaForSearch } from "../master/referensi/referensi.service";
+import { ROLES } from "../auth/role";
 import type { ProposalFiles } from "./proposal.types";
 import type {
   CreateProposalInput,
@@ -830,6 +831,12 @@ const ROLE_STATUS_TRANSITIONS: Record<
       ProposalStatus.ADMIN_VERIFIED,
       ProposalStatus.REJECTED,
     ],
+    // Keputusan akhir: hanya Admin LPPM yang menentukan Diterima/Tolak
+    // setelah reviewer memberi rekomendasi (status REVIEW_DONE).
+    [ProposalStatus.REVIEW_DONE]: [
+      ProposalStatus.ACCEPTED,
+      ProposalStatus.REJECTED,
+    ],
   },
   STAFF_LPPM: {
     [ProposalStatus.SUBMITTED]: [
@@ -839,19 +846,13 @@ const ROLE_STATUS_TRANSITIONS: Record<
   },
   REVIEWER: {
     [ProposalStatus.ADMIN_VERIFIED]: [ProposalStatus.UNDER_REVIEW],
-    [ProposalStatus.UNDER_REVIEW]: [
-      ProposalStatus.ACCEPTED,
-      ProposalStatus.REJECTED,
-      ProposalStatus.REVISION,
-    ],
+    // Reviewer TIDAK punya hak menetapkan ACCEPTED/REJECTED —
+    // keputusan final ada di tangan Admin LPPM (REVIEW_DONE → ACCEPTED/REJECTED).
+    [ProposalStatus.UNDER_REVIEW]: [ProposalStatus.REVISION],
   },
   REVIEWER_EKSTERNAL: {
     [ProposalStatus.ADMIN_VERIFIED]: [ProposalStatus.UNDER_REVIEW],
-    [ProposalStatus.UNDER_REVIEW]: [
-      ProposalStatus.ACCEPTED,
-      ProposalStatus.REJECTED,
-      ProposalStatus.REVISION,
-    ],
+    [ProposalStatus.UNDER_REVIEW]: [ProposalStatus.REVISION],
   },
 };
 
@@ -927,15 +928,20 @@ export const updateProposalStatus = async (
       data: { status: newStatus },
     });
 
-    // 2. Simpan riwayat review
-    await tx.proposalReviews.create({
-      data: {
-        proposal_id: proposalId,
-        reviewer_id: userId,
-        status: newStatus,
-        notes: input.notes ?? "",
-      },
-    });
+    // 2. Simpan riwayat review — HANYA untuk aksi reviewer.
+    // Keputusan admin (verifikasi administratif, keputusan akhir ACCEPTED/REJECTED)
+    // tidak boleh menulis baris ProposalReviews: baris itu berisi nama admin sebagai
+    // "reviewer" dan akan menimpa tab "Catatan Reviewer" (latestReview).
+    if (userRole === ROLES.REVIEWER || userRole === ROLES.REVIEWER_EKSTERNAL) {
+      await tx.proposalReviews.create({
+        data: {
+          proposal_id: proposalId,
+          reviewer_id: userId,
+          status: newStatus,
+          notes: input.notes ?? "",
+        },
+      });
+    }
 
     // 3. Simpan notifikasi untuk Dosen (lead researcher)
     await tx.notifications.create({
@@ -1170,6 +1176,23 @@ export const evaluateProposal = async (
     throw new HttpError("Proposal tidak ditemukan.", 404);
   }
 
+  // Review hanya boleh dilakukan saat proposal masih dalam proses review.
+  // REVIEW_DONE = sudah direview menunggu keputusan admin; ACCEPTED/REJECTED =
+  // keputusan final. Tanpa guard ini reviewer bisa meninjau ulang dan
+  // mengubah keputusan final tanpa melalui Admin LPPM.
+  if (
+    proposal.status === ProposalStatus.REVIEW_DONE ||
+    proposal.status === ProposalStatus.ACCEPTED ||
+    proposal.status === ProposalStatus.REJECTED
+  ) {
+    throw new HttpError(
+      proposal.status === ProposalStatus.REVIEW_DONE
+        ? "Proposal sudah direview dan menunggu keputusan akhir Admin LPPM."
+        : "Proposal sudah mendapatkan keputusan final dan tidak dapat direview ulang.",
+      400,
+    );
+  }
+
   const assignment = await prisma.proposalReviewers.findFirst({
     where: {
       proposal_id: proposalId,
@@ -1269,11 +1292,14 @@ export const evaluateProposal = async (
   });
 
   // Determine proposal status based on decision
+  // Revisi tetap langsung ke REVISION (loop revisi dosen).
+  // APPROVED = rekomendasi "Layak Didanai" → menunggu keputusan akhir Admin LPPM.
+  // REJECTED = "Tidak Layak Didanai" → keputusan final reviewer (langsung ditolak).
   const getProposalStatusFromDecision = (decision: string | null | undefined): ProposalStatus => {
     if (!decision) return ProposalStatus.UNDER_REVIEW;
     
     if (decision === "APPROVED") {
-      return ProposalStatus.ACCEPTED;
+      return ProposalStatus.REVIEW_DONE;
     } else if (decision === "REJECTED") {
       return ProposalStatus.REJECTED;
     } else if (decision === "REVISION_MINOR" || decision === "REVISION_MAJOR") {
@@ -1329,12 +1355,12 @@ export const evaluateProposal = async (
     let notifTitle = "Proposal Sudah Direview";
     let notifMessage = `Proposal "${proposal.title}" telah direview reviewer dengan hasil ${input.decision ?? "PENDING"}.`;
 
-    if (input.decision === "APPROVED" || newProposalStatus === ProposalStatus.ACCEPTED) {
-      notifTitle = "Proposal Diterima 🎉";
-      notifMessage = `Selamat! Proposal "${proposal.title}" telah diterima dan disetujui. Proyek pengabdian Anda telah dibuat secara otomatis.`;
+    if (newProposalStatus === ProposalStatus.REVIEW_DONE) {
+      notifTitle = "Review Selesai — Menunggu Keputusan";
+      notifMessage = `Proposal "${proposal.title}" telah direview dan direkomendasikan LAYAK DIDANAI. Keputusan akhir (diterima/tidak) menunggu persetujuan Admin LPPM.`;
     } else if (input.decision === "REJECTED" || newProposalStatus === ProposalStatus.REJECTED) {
       notifTitle = "Proposal Ditolak";
-      notifMessage = `Maaf, Proposal "${proposal.title}" telah ditolak oleh reviewer.`;
+      notifMessage = `Maaf, Proposal "${proposal.title}" telah ditolak oleh reviewer karena tidak layak didanai.`;
     } else if (input.decision === "REVISION_MINOR" || input.decision === "REVISION_MAJOR") {
       notifTitle = "Proposal Perlu Revisi";
       const revisionType = input.decision === "REVISION_MINOR" ? "kecil" : "besar";
@@ -1349,56 +1375,9 @@ export const evaluateProposal = async (
       },
     });
 
-    // Jika proposal ACCEPTED, otomatis buat PengabdianProject + Milestones default
-    if (newProposalStatus === ProposalStatus.ACCEPTED) {
-      const existingProject = await tx.pengabdianProjects.findUnique({
-        where: { proposal_id: proposalId },
-      });
-
-      if (!existingProject) {
-        const newProject = await tx.pengabdianProjects.create({
-          data: {
-            proposal_id: proposalId,
-            title: proposal.title,
-            status: "PENDING",
-            disbursement_status: "MENUNGGU_PERSETUJUAN",
-          },
-        });
-
-        await tx.pengabdianMilestones.createMany({
-          data: [
-            {
-              project_id: newProject.id,
-              sequence: 1,
-              title: "Penandatanganan Kontrak & Persiapan",
-              target_percentage: 0,
-              status: "PENDING",
-            },
-            {
-              project_id: newProject.id,
-              sequence: 2,
-              title: "Laporan Kemajuan 1",
-              target_percentage: 30,
-              status: "PENDING",
-            },
-            {
-              project_id: newProject.id,
-              sequence: 3,
-              title: "Laporan Kemajuan 2",
-              target_percentage: 70,
-              status: "PENDING",
-            },
-            {
-              project_id: newProject.id,
-              sequence: 4,
-              title: "Laporan Akhir",
-              target_percentage: 100,
-              status: "PENDING",
-            },
-          ],
-        });
-      }
-    }
+    // Catatan: pembuatan otomatis PengabdianProject + Milestones TIDAK dilakukan
+    // di sini. Proyek hanya dibuat saat Admin LPPM mengambil keputusan akhir
+    // ACCEPTED melalui updateProposalStatus.
 
     return {
       review,

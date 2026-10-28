@@ -128,6 +128,7 @@ export const swaggerSpec = swaggerJSDoc({
                 "ADMIN_VERIFIED",
                 "UNDER_REVIEW",
                 "REVISION",
+                "REVIEW_DONE",
                 "ACCEPTED",
                 "REJECTED",
               ],
@@ -193,10 +194,11 @@ export const swaggerSpec = swaggerJSDoc({
                 "ADMIN_VERIFIED",
                 "UNDER_REVIEW",
                 "REVISION",
+                "REVIEW_DONE",
                 "ACCEPTED",
                 "REJECTED",
               ],
-              example: "ACCEPTED",
+              example: "REVIEW_DONE",
             },
             notes: {
               type: ["string", "null"],
@@ -325,6 +327,7 @@ export const swaggerSpec = swaggerJSDoc({
                     "ADMIN_VERIFIED",
                     "UNDER_REVIEW",
                     "REVISION",
+                    "REVIEW_DONE",
                     "ACCEPTED",
                     "REJECTED",
                   ],
@@ -2540,6 +2543,7 @@ Endpoint untuk mengambil daftar proposal dengan pagination.
                   "ADMIN_VERIFIED",
                   "UNDER_REVIEW",
                   "REVISION",
+                  "REVIEW_DONE",
                   "ACCEPTED",
                   "REJECTED",
                 ],
@@ -2689,6 +2693,7 @@ Endpoint untuk mengambil daftar proposal dengan pagination.
                   "ADMIN_VERIFIED",
                   "UNDER_REVIEW",
                   "REVISION",
+                  "REVIEW_DONE",
                   "ACCEPTED",
                   "REJECTED",
                 ],
@@ -2849,6 +2854,7 @@ Endpoint untuk mengambil daftar proposal milik user yang sedang login (role DOSE
                   "ADMIN_VERIFIED",
                   "UNDER_REVIEW",
                   "REVISION",
+                  "REVIEW_DONE",
                   "ACCEPTED",
                   "REJECTED",
                 ],
@@ -2993,6 +2999,7 @@ Endpoint untuk mengambil daftar proposal yang **ditugaskan** ke reviewer yang se
                   "ADMIN_VERIFIED",
                   "UNDER_REVIEW",
                   "REVISION",
+                  "REVIEW_DONE",
                   "ACCEPTED",
                   "REJECTED",
                 ],
@@ -3744,12 +3751,18 @@ Endpoint untuk mengubah status proposal oleh Admin atau Reviewer.
 
 | Role | Dari Status | Ke Status |
 |------|-------------|------------|
-| ADMIN_LPPM / STAFF_LPPM | SUBMITTED | ADMIN_VERIFIED, REJECTED |
+| ADMIN_LPPM | SUBMITTED | ADMIN_VERIFIED, REJECTED |
+| ADMIN_LPPM | REVIEW_DONE | ACCEPTED, REJECTED |
+| STAFF_LPPM | SUBMITTED | ADMIN_VERIFIED, REJECTED |
 | REVIEWER / REVIEWER_EKSTERNAL | ADMIN_VERIFIED | UNDER_REVIEW |
-| REVIEWER / REVIEWER_EKSTERNAL | UNDER_REVIEW | ACCEPTED, REJECTED, REVISION |
+| REVIEWER / REVIEWER_EKSTERNAL | UNDER_REVIEW | REVISION |
+
+**Alur keputusan:**
+- Reviewer hanya memberikan **rekomendasi** melalui endpoint evaluate: \`APPROVED\` → status \`REVIEW_DONE\` (menunggu keputusan akhir), \`REJECTED\` → \`REJECTED\` (final), revisi → \`REVISION\`.
+- **Keputusan akhir (ACCEPTED/REJECTED) hanya oleh ADMIN_LPPM** dari status \`REVIEW_DONE\`.
 
 **Catatan:**
-- Setiap perubahan status akan mencatat riwayat review di tabel \`ProposalReviews\`.
+- Keputusan admin (ADMIN_LPPM/STAFF_LPPM) **tidak** mencatat riwayat review di tabel \`ProposalReviews\` — riwayat review hanya berisi catatan reviewer asli.
 - Notifikasi otomatis akan dikirim ke lead researcher.
 - **Otomatisasi ACCEPTED:** Jika status diubah menjadi \`ACCEPTED\`, sistem akan otomatis membuat record di tabel \`PengabdianProjects\` (status: \`PENDING\`, disbursement: \`MENUNGGU_PERSETUJUAN\`) dan membuat 4 tahapan milestone default (\`Penandatanganan Kontrak\`, \`Laporan Kemajuan 1 & 2\`, \`Laporan Akhir\`).
 - Field \`notes\` bersifat opsional, maks 500 karakter.
@@ -3777,6 +3790,7 @@ Endpoint untuk mengubah status proposal oleh Admin atau Reviewer.
                         "ADMIN_VERIFIED",
                         "UNDER_REVIEW",
                         "REVISION",
+                        "REVIEW_DONE",
                         "ACCEPTED",
                         "REJECTED",
                       ],
@@ -3967,10 +3981,10 @@ Endpoint untuk reviewer melakukan penilaian proposal.
 - 'is_draft: true' → simpan draft (boleh parsial, tidak mengubah status proposal).
 - 'is_draft: false' → submit final (semua field penilaian wajib, status proposal berubah sesuai keputusan reviewer).
 
-**Keputusan submit yang diperbolehkan:**
-- ACCEPTED (Memicu pembuatan Proyek Pengabdian & Milestone otomatis)
-- REJECTED
-- REVISION
+**Keputusan submit yang diperbolehkan (status hasil review):**
+- REVIEW_DONE → rekomendasi "Layak Didanai" (\`decision: APPROVED\`). Status proposal menjadi \`REVIEW_DONE\` (menunggu keputusan akhir Admin LPPM — proyek pengabdian belum dibuat).
+- REJECTED → "Tidak Layak Didanai" (\`decision: REJECTED\`). Keputusan final reviewer, proposal langsung \`REJECTED\`.
+- REVISION → proposal dikembalikan ke dosen untuk revisi.
           `,
           security: [{ bearerAuth: [] }],
           parameters: [
@@ -3999,7 +4013,7 @@ Endpoint untuk reviewer melakukan penilaian proposal.
                         },
                         status: {
                           type: "string",
-                          enum: ["ACCEPTED", "REJECTED", "REVISION"],
+                          enum: ["REVIEW_DONE", "REJECTED", "REVISION"],
                           example: "REVISION",
                         },
                         score_perumusan: {
@@ -4075,8 +4089,8 @@ Endpoint untuk reviewer melakukan penilaian proposal.
                         },
                         status: {
                           type: "string",
-                          enum: ["ACCEPTED", "REJECTED", "REVISION"],
-                          example: "ACCEPTED",
+                          enum: ["REVIEW_DONE", "REJECTED", "REVISION"],
+                          example: "REVIEW_DONE",
                         },
                         score_perumusan: {
                           type: "number",
