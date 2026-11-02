@@ -11,10 +11,15 @@ export const registerDosenSchema = z
       .string()
       .min(1, "Tempat lahir wajib diisi.")
       .max(100, "Tempat lahir hanya boleh maksimal 100 karakter."),
-    tanggal_lahir: z.string().refine((date) => !isNaN(Date.parse(date)), {
-      message:
-        "Tanggal lahir harus berupa tanggal yang valid (gunakan YYYY-MM-DD).",
-    }),
+    tanggal_lahir: z
+      .string()
+      .refine((date) => !isNaN(Date.parse(date)), {
+        message:
+          "Tanggal lahir harus berupa tanggal yang valid (gunakan YYYY-MM-DD).",
+      })
+      .refine((date) => new Date(date) <= new Date(), {
+        message: "Tanggal lahir tidak boleh di masa depan.",
+      }),
     jenis_kelamin: z.enum(["Laki-laki", "Perempuan"], {
       error: 'Jenis kelamin harus "Laki-laki" atau "Perempuan".',
     }),
@@ -25,12 +30,13 @@ export const registerDosenSchema = z
     nomor_hp: z
       .string()
       .min(1, "Nomor HP wajib diisi.")
-      .max(20, "Nomor HP hanya bisa maksimal 20 characters."),
+      .max(20, "Nomor HP hanya boleh maksimal 20 karakter."),
 
     email: z
       .string()
       .min(1, "Email wajib diisi.")
-      .email("Email format tidak valid."),
+      .email("Email format tidak valid.")
+      .max(100, "Email hanya boleh maksimal 100 karakter."),
 
     // step 2
     nidn: z
@@ -58,12 +64,10 @@ export const registerDosenSchema = z
       ),
     password: z
       .string()
-      .min(1, "Password wajib diisi.")
       .min(8, "Password harus minimal 8 karakter.")
       .max(100, "Password hanya boleh maksimal 100 karakter."),
     konfirmasi_password: z
       .string()
-      .min(1, "Konfirmasi password wajib diisi.")
       .min(8, "Konfirmasi password harus minimal 8 karakter.")
       .max(100, "Konfirmasi password hanya boleh maksimal 100 karakter."),
   })
