@@ -8103,7 +8103,8 @@ Endpoint ini **tidak memerlukan autentikasi**.
               schema: {
                 type: "string",
               },
-              description: "Pencarian berdasarkan judul project.",
+              description:
+                "Pencarian berdasarkan judul project atau nama ketua pengabdi.",
             },
           ],
           responses: {
@@ -8159,6 +8160,128 @@ Endpoint ini **tidak memerlukan autentikasi**.
                     errors: {
                       page: ["page minimal 1."],
                     },
+                  },
+                },
+              },
+            },
+            500: { description: "Internal server error" },
+          },
+        },
+      },
+
+      "/public/repository/publikasi": {
+        get: {
+          tags: ["Public Repository"],
+          summary: "Cari publikasi dosen dari OpenAlex",
+          description: `
+Endpoint publik untuk mencari publikasi ilmiah (jurnal, proseding, dll) dari **OpenAlex** (https://openalex.org) — sumber data akademik terbuka pengganti Google Scholar.
+
+Setiap pencarian menjalankan dua query lalu digabung:
+- filter nama author (\`raw_author_name.search\`) — cocok untuk **nama dosen**
+- pencarian teks (\`search\`) — cocok untuk **judul / kata kunci**
+
+Hasil digabung, di-dedup, dan dicache di memori server selama 24 jam. Endpoint ini **tidak memerlukan autentikasi**.
+          `,
+          parameters: [
+            {
+              name: "search",
+              in: "query",
+              required: true,
+              schema: {
+                type: "string",
+                minLength: 2,
+              },
+              description:
+                "Kata kunci: nama dosen, judul, atau topik (minimal 2 karakter).",
+            },
+            {
+              name: "page",
+              in: "query",
+              required: false,
+              schema: {
+                type: "integer",
+                minimum: 1,
+                default: 1,
+              },
+              description: "Nomor halaman (default 1).",
+            },
+            {
+              name: "limit",
+              in: "query",
+              required: false,
+              schema: {
+                type: "integer",
+                minimum: 1,
+                maximum: 20,
+                default: 10,
+              },
+              description: "Jumlah data per halaman (default 10, maksimal 20).",
+            },
+            {
+              name: "sort",
+              in: "query",
+              required: false,
+              schema: {
+                type: "string",
+                enum: ["relevance", "terbaru", "terpopuler"],
+                default: "relevance",
+              },
+              description: "Urutan hasil.",
+            },
+          ],
+          responses: {
+            200: {
+              description: "Publikasi dosen berhasil diambil",
+              content: {
+                "application/json": {
+                  example: {
+                    message: "Berhasil mengambil publikasi dosen.",
+                    data: [
+                      {
+                        id: "https://openalex.org/W4385847291",
+                        title:
+                          "Sistem Informasi Pencatatan Data Bimbingan Konseling",
+                        authors: ["Haryudi Haryudi", "Harry Gunawan", "Agust Isa Martinus"],
+                        author_count: 3,
+                        year: 2024,
+                        venue: "Jurnal Teknologi Informasi",
+                        cited_by_count: 2,
+                        doi: "https://doi.org/10.32534/int.v14i1.3157",
+                        pdf_url: null,
+                        url: "https://doi.org/10.32534/int.v14i1.3157",
+                      },
+                    ],
+                    meta: {
+                      totalData: 42,
+                      totalPages: 5,
+                      currentPage: 1,
+                      limit: 10,
+                      source: "openalex",
+                    },
+                  },
+                },
+              },
+            },
+            400: {
+              description: "Validasi query gagal",
+              content: {
+                "application/json": {
+                  example: {
+                    message: "Validasi query gagal.",
+                    errors: {
+                      search: ["search minimal 2 karakter."],
+                    },
+                  },
+                },
+              },
+            },
+            502: {
+              description: "Layanan OpenAlex tidak tersedia",
+              content: {
+                "application/json": {
+                  example: {
+                    message:
+                      "Layanan publikasi eksternal sedang tidak tersedia. Silakan coba lagi nanti.",
                   },
                 },
               },
