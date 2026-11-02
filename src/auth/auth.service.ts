@@ -33,6 +33,25 @@ export const registerDosen = async (
       throw new HttpError("NIDN sudah digunakan.", 400);
   }
 
+  const fakultas = await prisma.fakultas.findUnique({
+    where: { id: data.fakultas_id },
+  });
+
+  if (!fakultas) {
+    throw new HttpError("Fakultas tidak ditemukan.", 400);
+  }
+
+  const programStudi = await prisma.programStudi.findFirst({
+    where: { id: data.program_studi_id, fakultas_id: data.fakultas_id },
+  });
+
+  if (!programStudi) {
+    throw new HttpError(
+      "Program Studi tidak ditemukan di fakultas tersebut.",
+      400,
+    );
+  }
+
   const dosenRole = await prisma.roles.findFirst({
     where: { roles: "DOSEN" },
   });

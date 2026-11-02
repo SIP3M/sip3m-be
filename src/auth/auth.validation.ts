@@ -6,15 +6,26 @@ export const registerDosenSchema = z
     name: z
       .string()
       .min(3, "Nama lengkap minimal 3 karakter")
-      .max(100, "Nama lengkap hanya boleh maksimal 100 karakter."),
+      .max(100, "Nama lengkap hanya boleh maksimal 100 karakter.")
+      .refine((value) => /[A-Za-z]/.test(value), {
+        message: "Nama harus mengandung minimal 1 huruf.",
+      }),
     tempat_lahir: z
       .string()
       .min(1, "Tempat lahir wajib diisi.")
       .max(100, "Tempat lahir hanya boleh maksimal 100 karakter."),
-    tanggal_lahir: z.string().refine((date) => !isNaN(Date.parse(date)), {
-      message:
-        "Tanggal lahir harus berupa tanggal yang valid (gunakan YYYY-MM-DD).",
-    }),
+    tanggal_lahir: z
+      .string()
+      .refine((date) => !isNaN(Date.parse(date)), {
+        message:
+          "Tanggal lahir harus berupa tanggal yang valid (gunakan YYYY-MM-DD).",
+      })
+      .refine((date) => new Date(date) <= new Date(), {
+        message: "Tanggal lahir tidak boleh di masa depan.",
+      })
+      .refine((date) => new Date(date).getFullYear() >= 1940, {
+        message: "Tanggal lahir tidak boleh sebelum tahun 1940.",
+      }),
     jenis_kelamin: z.enum(["Laki-laki", "Perempuan"], {
       error: 'Jenis kelamin harus "Laki-laki" atau "Perempuan".',
     }),
@@ -24,20 +35,28 @@ export const registerDosenSchema = z
       .optional(),
     nomor_hp: z
       .string()
+      .trim()
       .min(1, "Nomor HP wajib diisi.")
-      .max(20, "Nomor HP hanya bisa maksimal 20 characters."),
+      .max(20, "Nomor HP hanya boleh maksimal 20 karakter.")
+      // Standar sistem (sama dengan isValidPhone pendaftaran KKM):
+      // digit, boleh diawali +, 9–15 digit (spasi/dash diabaikan).
+      .refine((value) => /^\+?\d{9,15}$/.test(value.replace(/[\s-]/g, "")), {
+        message: "Nomor HP tidak valid. Gunakan 9–15 digit (boleh diawali +).",
+      }),
 
     email: z
       .string()
       .min(1, "Email wajib diisi.")
-      .email("Email format tidak valid."),
+      .email("Email format tidak valid.")
+      .max(100, "Email hanya boleh maksimal 100 karakter."),
 
     // step 2
     nidn: z
       .string()
       .min(1, "NIDN wajib diisi.")
       .max(20, "NIDN hanya boleh maksimal 20 karakter.")
-      .regex(/^\d+$/, "NIDN hanya boleh berisi angka"),
+      .regex(/^\d+$/, "NIDN hanya boleh berisi angka")
+      .min(6, "NIDN minimal 6 digit."),
       
     fakultas_id: z.coerce
       .number({ message: "Fakultas tidak valid." })
@@ -58,12 +77,14 @@ export const registerDosenSchema = z
       ),
     password: z
       .string()
-      .min(1, "Password wajib diisi.")
       .min(8, "Password harus minimal 8 karakter.")
-      .max(100, "Password hanya boleh maksimal 100 karakter."),
+      .max(100, "Password hanya boleh maksimal 100 karakter.")
+      .refine(
+        (value) => /[A-Za-z]/.test(value) && /\d/.test(value),
+        { message: "Password harus mengandung minimal 1 huruf dan 1 angka." },
+      ),
     konfirmasi_password: z
       .string()
-      .min(1, "Konfirmasi password wajib diisi.")
       .min(8, "Konfirmasi password harus minimal 8 karakter.")
       .max(100, "Konfirmasi password hanya boleh maksimal 100 karakter."),
   })
