@@ -131,6 +131,8 @@ export const getAllProposalsController = async (
     const proposals = await getAllProposalsService({
       page: queryValidation.data.page,
       search: queryValidation.data.search,
+      skema: queryValidation.data.skema,
+      tahun: queryValidation.data.tahun,
       status: queryValidation.data.status as ProposalStatus | undefined,
     });
 
