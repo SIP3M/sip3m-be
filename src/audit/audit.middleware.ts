@@ -35,6 +35,7 @@ const MODULE_RULES: Array<[RegExp, string]> = [
   [/^\/pengabdian/, "Pengabdian"],
   [/^\/reviews?(\/|$)/, "Review"],
   [/^\/kkm(\/|$)/, "KKM"],
+  [/^\/pengumuman(\/|$)/, "KKM"],
   [/^\/notifications/, "Notifikasi"],
   [/^\/publikasi|\/repository/, "Publikasi"],
   [/^\/export(\/|$)/, "Ekspor"],
