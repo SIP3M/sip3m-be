@@ -15,7 +15,7 @@ const parseJenis = (raw: string | string[]): JenisReferensi => {
   const jenis = String(Array.isArray(raw) ? raw[0] : raw);
   if (!(JENIS_REFERENSI as readonly string[]).includes(jenis)) {
     throw new HttpError(
-      "Jenis tidak valid. Pilihan: SKEMA, SUMBER_PENDANAAN.",
+      `Jenis tidak valid. Pilihan: ${JENIS_REFERENSI.join(", ")}.`,
       400,
     );
   }

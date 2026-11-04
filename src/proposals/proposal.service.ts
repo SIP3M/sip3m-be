@@ -49,11 +49,13 @@ const extractFileName = (pathOrUrl: string | null): string | null => {
   return fileName ? decodeURIComponent(fileName) : null;
 };
 
+type UploadedFile = { publicUrl: string; objectPath: string };
+
 const uploadToSupabase = async (
   file: Express.Multer.File,
   folder: string,
   userId: number,
-): Promise<string> => {
+): Promise<UploadedFile> => {
   const sanitizedName = file.originalname.replace(/\s+/g, "_");
   const fileName = `${folder}/${userId}_${Date.now()}_${sanitizedName}`;
 
@@ -70,29 +72,85 @@ const uploadToSupabase = async (
 
   const { data } = supabase.storage.from(BUCKET_NAME).getPublicUrl(fileName);
 
-  return data.publicUrl;
+  return { publicUrl: data.publicUrl, objectPath: fileName };
+};
+
+type UploadedProposalFiles = {
+  proposalFilePath: string | null;
+  rabFilePath: string | null;
+  /** Path objek di storage — dipakai untuk membuang file bila langkah berikutnya gagal. */
+  uploadedObjectPaths: string[];
 };
 
 const uploadProposalFiles = async (
   files: ProposalFiles | undefined,
   userId: number,
-): Promise<{ proposalFilePath: string | null; rabFilePath: string | null }> => {
+): Promise<UploadedProposalFiles> => {
+  const uploadedObjectPaths: string[] = [];
   let proposalFilePath: string | null = null;
   let rabFilePath: string | null = null;
 
   if (files?.proposal_file?.[0]) {
-    proposalFilePath = await uploadToSupabase(
+    const uploaded = await uploadToSupabase(
       files.proposal_file[0],
       "proposals",
       userId,
     );
+    proposalFilePath = uploaded.publicUrl;
+    uploadedObjectPaths.push(uploaded.objectPath);
   }
 
   if (files?.rab_file?.[0]) {
-    rabFilePath = await uploadToSupabase(files.rab_file[0], "rabs", userId);
+    const uploaded = await uploadToSupabase(files.rab_file[0], "rabs", userId);
+    rabFilePath = uploaded.publicUrl;
+    uploadedObjectPaths.push(uploaded.objectPath);
   }
 
-  return { proposalFilePath, rabFilePath };
+  return { proposalFilePath, rabFilePath, uploadedObjectPaths };
+};
+
+/**
+ * Buang file yang baru terupload bila langkah sesudahnya gagal (mis. INSERT
+ * ke database error) supaya tidak menumpuk sebagai file orphan di storage.
+ * Selalu menelan error — pembersihan tidak boleh menutupi error aslinya.
+ */
+const removeUploadedFiles = async (objectPaths: string[]): Promise<void> => {
+  if (objectPaths.length === 0) {
+    return;
+  }
+
+  try {
+    const { error } = await supabase.storage
+      .from(BUCKET_NAME)
+      .remove(objectPaths);
+    if (error) {
+      console.error(
+        "[PROPOSAL_CLEANUP] Gagal menghapus file sementara:",
+        error.message,
+      );
+    }
+  } catch (cleanupError) {
+    console.error(
+      "[PROPOSAL_CLEANUP] Gagal menghapus file sementara:",
+      cleanupError,
+    );
+  }
+};
+
+/**
+ * Jalankan langkah tulis ke database; bila gagal, buang file yang baru
+ * terupload dulu lalu lempar error aslinya kembali.
+ */
+const withUploadedFileCleanup = async <T>(
+  objectPaths: string[],
+  write: () => Promise<T>,
+): Promise<T> => {
+  try {
+    return await write();
+  } catch (error) {
+    await removeUploadedFiles(objectPaths);
+    throw error;
+  }
 };
 
 export const createProposal = async (
@@ -103,42 +161,46 @@ export const createProposal = async (
   const isDraft = input.is_draft;
   const status = isDraft ? ProposalStatus.DRAFT : ProposalStatus.SUBMITTED;
 
-  const { proposalFilePath, rabFilePath } = await uploadProposalFiles(
-    files,
-    userId,
-  );
-
-  // Jika bukan draft (submit), file wajib ada
-  if (!isDraft && (!proposalFilePath || !rabFilePath)) {
+  // Jika bukan draft (submit), file wajib ada — dicek SEBELUM upload supaya
+  // tidak ada file yang terupload lalu ditinggalkan saat validasi ini gagal.
+  if (!isDraft && (!files?.proposal_file?.[0] || !files?.rab_file?.[0])) {
     throw new HttpError(
       "File Proposal dan RAB wajib diunggah untuk melakukan Submit.",
       400,
     );
   }
 
-  const proposal = await prisma.proposals.create({
-    data: {
-      title: input.title,
-      faculty: input.faculty,
-      skema: input.skema,
-      sumber_pendanaan: input.sumber_pendanaan,
-      funding_request_amount: input.funding_request_amount,
-      sumber_data_penelitian: input.sumber_data_penelitian,
-      detail_sumber_penelitian: input.detail_sumber_penelitian,
-      instansi: input.instansi,
-      dosen_terlibat: input.dosen_terlibat,
-      nidn_dosen_terlibat: input.nidn_dosen_terlibat,
-      nama_anggota: input.nama_anggota,
-      nim_anggota: input.nim_anggota,
-      nama_ketua: input.nama_ketua?.trim() ? input.nama_ketua.trim() : null,
-      nidn_ketua: input.nidn_ketua?.trim() ? input.nidn_ketua.trim() : null,
-      status,
-      lead_researcher_id: userId,
-      proposal_file_path: proposalFilePath,
-      rab_file_path: rabFilePath,
-      submitted_at: isDraft ? null : new Date(),
-    },
-  });
+  const {
+    proposalFilePath,
+    rabFilePath,
+    uploadedObjectPaths,
+  } = await uploadProposalFiles(files, userId);
+
+  const proposal = await withUploadedFileCleanup(uploadedObjectPaths, () =>
+    prisma.proposals.create({
+      data: {
+        title: input.title,
+        faculty: input.faculty,
+        skema: input.skema,
+        sumber_pendanaan: input.sumber_pendanaan,
+        funding_request_amount: input.funding_request_amount,
+        sumber_data_penelitian: input.sumber_data_penelitian,
+        detail_sumber_penelitian: input.detail_sumber_penelitian,
+        instansi: input.instansi,
+        dosen_terlibat: input.dosen_terlibat,
+        nidn_dosen_terlibat: input.nidn_dosen_terlibat,
+        nama_anggota: input.nama_anggota,
+        nim_anggota: input.nim_anggota,
+        nama_ketua: input.nama_ketua?.trim() ? input.nama_ketua.trim() : null,
+        nidn_ketua: input.nidn_ketua?.trim() ? input.nidn_ketua.trim() : null,
+        status,
+        lead_researcher_id: userId,
+        proposal_file_path: proposalFilePath,
+        rab_file_path: rabFilePath,
+        submitted_at: isDraft ? null : new Date(),
+      },
+    }),
+  );
 
   return {
     message: isDraft ? "Draf berhasil disimpan." : "Proposal berhasil dikirim.",
@@ -595,11 +657,6 @@ export const editProposal = async (
     );
   }
 
-  const { proposalFilePath, rabFilePath } = await uploadProposalFiles(
-    files,
-    userId,
-  );
-
   // === PERUBAHAN 2: Perbaiki logika penentuan status ===
   // Jika input.is_draft bernilai true (hanya simpan/edit, tidak submit),
   // maka statusnya tetap menggunakan status yang sekarang (DRAFT atau REVISION).
@@ -658,12 +715,16 @@ export const editProposal = async (
     }
   }
 
-  // Jika submit (bukan draft), pastikan file tersedia
+  // Jika submit (bukan draft), pastikan file tersedia — dicek SEBELUM upload
+  // supaya validasi yang gagal tidak meninggalkan file orphan di storage.
   if (!isDraft) {
-    const finalProposalFile =
-      proposalFilePath || existingProposal.proposal_file_path;
-    const finalRabFile = rabFilePath || existingProposal.rab_file_path;
-    if (!finalProposalFile || !finalRabFile) {
+    const willHaveProposalFile =
+      Boolean(files?.proposal_file?.[0]) ||
+      Boolean(existingProposal.proposal_file_path);
+    const willHaveRabFile =
+      Boolean(files?.rab_file?.[0]) ||
+      Boolean(existingProposal.rab_file_path);
+    if (!willHaveProposalFile || !willHaveRabFile) {
       throw new HttpError(
         "File Proposal dan RAB wajib diunggah untuk melakukan Submit.",
         400,
@@ -671,38 +732,50 @@ export const editProposal = async (
     }
   }
 
-  const updatedProposal = await prisma.proposals.update({
-    where: { id: proposalId },
-    data: {
-      ...(input.title !== undefined && { title: input.title }),
-      ...(input.faculty !== undefined && { faculty: input.faculty }),
-      ...(input.skema !== undefined && { skema: input.skema }),
-      ...(input.funding_request_amount !== undefined && {
-        funding_request_amount: input.funding_request_amount,
+  const {
+    proposalFilePath,
+    rabFilePath,
+    uploadedObjectPaths,
+  } = await uploadProposalFiles(files, userId);
+
+  const updatedProposal = await withUploadedFileCleanup(
+    uploadedObjectPaths,
+    () =>
+      prisma.proposals.update({
+        where: { id: proposalId },
+        data: {
+          ...(input.title !== undefined && { title: input.title }),
+          ...(input.faculty !== undefined && { faculty: input.faculty }),
+          ...(input.skema !== undefined && { skema: input.skema }),
+          ...(input.funding_request_amount !== undefined && {
+            funding_request_amount: input.funding_request_amount,
+          }),
+          ...(input.sumber_data_penelitian !== undefined && {
+            sumber_data_penelitian: input.sumber_data_penelitian,
+          }),
+          ...(input.detail_sumber_penelitian !== undefined && {
+            detail_sumber_penelitian: input.detail_sumber_penelitian,
+          }),
+          ...(input.nama_ketua !== undefined && {
+            nama_ketua: input.nama_ketua?.trim()
+              ? input.nama_ketua.trim()
+              : null,
+          }),
+          ...(input.nidn_ketua !== undefined && {
+            nidn_ketua: input.nidn_ketua?.trim() ? input.nidn_ketua.trim() : null,
+          }),
+          ...(input.sumber_pendanaan !== undefined && {
+            sumber_pendanaan: input.sumber_pendanaan,
+          }),
+          ...(input.instansi !== undefined && { instansi: input.instansi }),
+          status: newStatus,
+          proposal_file_path:
+            proposalFilePath || existingProposal.proposal_file_path,
+          rab_file_path: rabFilePath || existingProposal.rab_file_path,
+          submitted_at: !isDraft ? new Date() : existingProposal.submitted_at,
+        },
       }),
-      ...(input.sumber_data_penelitian !== undefined && {
-        sumber_data_penelitian: input.sumber_data_penelitian,
-      }),
-      ...(input.detail_sumber_penelitian !== undefined && {
-        detail_sumber_penelitian: input.detail_sumber_penelitian,
-      }),
-      ...(input.nama_ketua !== undefined && {
-        nama_ketua: input.nama_ketua?.trim() ? input.nama_ketua.trim() : null,
-      }),
-      ...(input.nidn_ketua !== undefined && {
-        nidn_ketua: input.nidn_ketua?.trim() ? input.nidn_ketua.trim() : null,
-      }),
-      ...(input.sumber_pendanaan !== undefined && {
-        sumber_pendanaan: input.sumber_pendanaan,
-      }),
-      ...(input.instansi !== undefined && { instansi: input.instansi }),
-      status: newStatus,
-      proposal_file_path:
-        proposalFilePath || existingProposal.proposal_file_path,
-      rab_file_path: rabFilePath || existingProposal.rab_file_path,
-      submitted_at: !isDraft ? new Date() : existingProposal.submitted_at,
-    },
-  });
+  );
 
   return {
     message: isDraft

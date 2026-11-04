@@ -30,10 +30,24 @@ export const getPublicPengabdianRepository = async ({
     },
     ...(search
       ? {
-          title: {
-            contains: search,
-            mode: "insensitive",
-          },
+          OR: [
+            {
+              title: {
+                contains: search,
+                mode: "insensitive",
+              },
+            },
+            {
+              proposal: {
+                user: {
+                  name: {
+                    contains: search,
+                    mode: "insensitive",
+                  },
+                },
+              },
+            },
+          ],
         }
       : {}),
   };

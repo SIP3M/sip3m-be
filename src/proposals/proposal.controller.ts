@@ -11,6 +11,7 @@ import {
   updateProposalStatusSchema,
   assignReviewerSchema,
   getAllProposalsQuerySchema,
+  FUNDING_MAX_MESSAGE,
 } from "./proposal.validation";
 import { normalizeProposalReferensi } from "../master/referensi/referensi.service";
 import {
@@ -29,6 +30,44 @@ import {
 } from "./proposal.service";
 import type { ProposalFiles } from "./proposal.types";
 
+/**
+ * Tangkap error Prisma yang disebabkan input user supaya TIDAK berujung pada
+ * 500 generik "Terjadi kesalahan pada server saat menyimpan proposal.".
+ *
+ * - Integer overflow (funding_request_amount > 2.147.483.647 / INT4) -> 400
+ *   dengan pesan batas nominal, agar FE menampilkannya per-field.
+ * - PrismaClientValidationError (nilai tidak valid lain) -> 400.
+ *
+ * Mengembalikan Response bila cocok, null kalau bukan kandidat (lanjut ke 500).
+ */
+const handleProposalWriteError = (
+  error: unknown,
+  res: Response,
+): Response | null => {
+  if (!(error instanceof Error)) {
+    return null;
+  }
+
+  const isIntOverflow =
+    /Unable to fit integer value|out of range for type integer|value out of range|Expected Int, provided/i.test(
+      error.message,
+    );
+
+  if (isIntOverflow) {
+    return res.status(400).json({
+      message: FUNDING_MAX_MESSAGE,
+      errors: { funding_request_amount: [FUNDING_MAX_MESSAGE] },
+    });
+  }
+
+  if (error instanceof Prisma.PrismaClientValidationError) {
+    return res.status(400).json({
+      message: "Data proposal tidak valid. Periksa kembali isian form Anda.",
+    });
+  }
+
+  return null;
+};
 
 export const createProposalController = async (
   req: AuthenticatedRequest,
@@ -63,6 +102,8 @@ export const createProposalController = async (
     }
 
     console.error("[CREATE_PROPOSAL_ERROR]", error);
+    const handled = handleProposalWriteError(error, res);
+    if (handled) return handled;
     return res.status(500).json({
       message: "Terjadi kesalahan pada server saat menyimpan proposal.",
     });
@@ -282,6 +323,8 @@ export const editProposalController = async (
     }
 
     console.error("[EDIT_PROPOSAL_ERROR]", error);
+    const handled = handleProposalWriteError(error, res);
+    if (handled) return handled;
     return res.status(500).json({
       message: "Terjadi kesalahan pada server saat mengedit proposal.",
     });

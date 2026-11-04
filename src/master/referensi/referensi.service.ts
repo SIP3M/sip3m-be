@@ -205,10 +205,15 @@ export const deleteReferensi = async (id: number) => {
     row.jenis === "SKEMA"
       ? { skema: row.nama }
       : { sumber_pendanaan: row.nama };
-  const count = await prisma.proposals.count({ where: usageWhere });
+  const count =
+    row.jenis === "KATEGORI_PENGUMUMAN"
+      ? await prisma.pengumuman.count({ where: { kategori: row.nama } })
+      : await prisma.proposals.count({ where: usageWhere });
   if (count > 0) {
+    const dipakaiOleh =
+      row.jenis === "KATEGORI_PENGUMUMAN" ? "pengumuman" : "proposal";
     throw new HttpError(
-      `Tidak dapat menghapus — dipakai oleh ${count} proposal. Nonaktifkan saja opsi ini.`,
+      `Tidak dapat menghapus — dipakai oleh ${count} ${dipakaiOleh}. Nonaktifkan saja opsi ini.`,
       409,
     );
   }
