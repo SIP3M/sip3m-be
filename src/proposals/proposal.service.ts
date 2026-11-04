@@ -149,14 +149,40 @@ export const createProposal = async (
 export const getAllProposals = async ({
   page,
   search,
+  skema,
+  tahun,
   status,
 }: {
   page: number;
   search?: string;
+  skema?: string;
+  tahun?: number;
   status?: ProposalStatus;
 }) => {
   const skip = (page - 1) * PROPOSALS_PER_PAGE;
-  const skemaSearch = await normalizeSkemaSearch(search);
+  const skemaSearchFromSearch = await normalizeSkemaSearch(search);
+  const skemaFilterNormalized = await normalizeSkemaSearch(skema);
+
+  const andFilters: Prisma.proposalsWhereInput[] = [];
+
+  if (status) {
+    andFilters.push({ status });
+  }
+
+  if (skemaFilterNormalized) {
+    andFilters.push({ skema: skemaFilterNormalized });
+  }
+
+  if (tahun) {
+    const startDate = new Date(`${tahun}-01-01T00:00:00.000Z`);
+    const endDate = new Date(`${tahun + 1}-01-01T00:00:00.000Z`);
+    andFilters.push({
+      created_at: {
+        gte: startDate,
+        lt: endDate,
+      },
+    });
+  }
 
   const orFilters: Prisma.proposalsWhereInput[] = [];
   if (search) {
@@ -206,16 +232,18 @@ export const getAllProposals = async ({
         },
       },
     );
+
+    if (skemaSearchFromSearch) {
+      orFilters.push({ skema: skemaSearchFromSearch });
+    }
   }
 
-  if (skemaSearch) {
-    orFilters.push({ skema: skemaSearch });
+  if (orFilters.length > 0) {
+    andFilters.push({ OR: orFilters });
   }
 
-  const whereClause: Prisma.proposalsWhereInput = {
-    ...(status ? { status } : {}),
-    ...(orFilters.length > 0 ? { OR: orFilters } : {}),
-  };
+  const whereClause: Prisma.proposalsWhereInput =
+    andFilters.length > 0 ? { AND: andFilters } : {};
 
   const [totalData, data] = await prisma.$transaction([
     prisma.proposals.count({ where: whereClause }),

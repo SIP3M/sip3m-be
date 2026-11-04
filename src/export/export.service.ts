@@ -29,6 +29,30 @@ const getPengabdianExportData = async (): Promise<
   });
 };
 
+const getProposalsExportData = async () => {
+  return prisma.proposals.findMany({
+    select: {
+      title: true,
+      faculty: true,
+      skema: true,
+      funding_request_amount: true,
+      status: true,
+      created_at: true,
+      nama_ketua: true,
+      nidn_ketua: true,
+      user: {
+        select: {
+          name: true,
+          nidn_nip: true,
+        },
+      },
+    },
+    orderBy: {
+      created_at: "desc",
+    },
+  });
+};
+
 const toNodeBuffer = (value: WritableBuffer): Buffer => {
   if (value instanceof Buffer) {
     return value;
@@ -39,6 +63,40 @@ const toNodeBuffer = (value: WritableBuffer): Buffer => {
   }
 
   return Buffer.from(value);
+};
+
+export const exportProposalsExcel = async (): Promise<Buffer> => {
+  const proposals = await getProposalsExportData();
+
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet("Daftar Proposal");
+
+  worksheet.columns = [
+    { header: "No", key: "no", width: 8 },
+    { header: "Judul Proposal", key: "title", width: 45 },
+    { header: "Ketua Peneliti", key: "ketua_peneliti", width: 28 },
+    { header: "Skema", key: "skema", width: 25 },
+    { header: "Tahun", key: "tahun", width: 12 },
+    { header: "Anggaran", key: "anggaran", width: 20 },
+    { header: "Status", key: "status", width: 22 },
+  ];
+
+  proposals.forEach((proposal, index) => {
+    const ketuaName = proposal.nama_ketua || proposal.user.name || "-";
+    const tahun = proposal.created_at ? new Date(proposal.created_at).getFullYear() : "-";
+    worksheet.addRow({
+      no: index + 1,
+      title: proposal.title ?? "-",
+      ketua_peneliti: ketuaName,
+      skema: proposal.skema ?? "-",
+      tahun,
+      anggaran: proposal.funding_request_amount ?? 0,
+      status: proposal.status ?? "-",
+    });
+  });
+
+  const excelBuffer = await workbook.xlsx.writeBuffer();
+  return toNodeBuffer(excelBuffer);
 };
 
 export const exportPengabdianExcel = async (): Promise<Buffer> => {

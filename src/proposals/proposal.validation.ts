@@ -363,6 +363,11 @@ export const getAllProposalsQuerySchema = z.object({
     .min(1, "page minimal 1.")
     .default(1),
   search: z.string().trim().optional(),
+  skema: z.string().trim().optional(),
+  tahun: z.coerce
+    .number({ message: "tahun harus berupa angka." })
+    .int("tahun harus berupa bilangan bulat.")
+    .optional(),
   status: z
     .enum(Object.values(ProposalStatus) as [string, ...string[]], {
       message: `status tidak valid. Status yang diperbolehkan: ${Object.values(ProposalStatus).join(", ")}.`,

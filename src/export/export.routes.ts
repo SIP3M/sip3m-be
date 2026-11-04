@@ -5,6 +5,7 @@ import { ROLES } from "../auth/role";
 import {
   exportExcelController,
   exportPdfController,
+  exportProposalsExcelController,
 } from "./export.controller";
 
 const router = Router();
@@ -14,6 +15,13 @@ router.get(
   authMiddleware,
   requireRole([ROLES.ADMIN_LPPM]),
   exportExcelController,
+);
+
+router.get(
+  "/proposals/export/excel",
+  authMiddleware,
+  requireRole([ROLES.ADMIN_LPPM]),
+  exportProposalsExcelController,
 );
 
 router.get(
