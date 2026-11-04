@@ -77,6 +77,28 @@ enum KkmPeriodStatus {
   SELESAI
 }
 
+// Pengumuman KKM — SCHEDULED = menunggu jadwal, PUBLISHED = sudah tersebar
+enum PengumumanStatus {
+  SCHEDULED
+  PUBLISHED
+}
+
+enum PengumumanPrioritas {
+  PENTING
+  SEDANG
+  INFORMASI
+}
+
+// Centang audiens di form buat pengumuman (union antar pilihan)
+enum PengumumanTargetType {
+  PESERTA
+  DPL
+  KELOMPOK
+  DESA
+  PERIODE
+  FAKULTAS
+}
+
 model proposals {
   id                     Int            @id @default(autoincrement())
   title                  String         @db.VarChar(255)
@@ -163,9 +185,15 @@ model Notifications {
   title      String
   message    String   @db.Text 
   is_read    Boolean  @default(false) 
+  // Opsional: notifikasi yang berasal dari pengumuman (hapusan pengumuman
+  // otomatis menghapus notifikasi turunannya via cascade)
+  pengumuman_id Int?
   created_at DateTime @default(now())
 
-  user users @relation(fields: [user_id], references: [id])
+  user       users        @relation(fields: [user_id], references: [id])
+  pengumuman Pengumuman?  @relation(fields: [pengumuman_id], references: [id], onDelete: Cascade)
+
+  @@index([pengumuman_id])
 }
 
 model roles {
@@ -248,6 +276,8 @@ model users {
   kkmKelompokDocsUploaded  KkmKelompokDocument[] @relation("KkmKelompokDocUploader")
   kkmLogbookEntries        KkmLogbookEntry[]
   kkmLogbookReviews        KkmLogbookEntry[] @relation("KkmLogbookReviewer")
+  pengumumanCreated        Pengumuman[]
+  pengumumanRecipients     PengumumanRecipient[]
 
   @@index([role_id])
 }
@@ -566,6 +596,66 @@ model KkmLogbookEntry {
   @@index([kelompok_id, tanggal])
   @@index([user_id])
   @@index([status])
+}
+
+// =============================================
+// Pengumuman KKM — broadcast ke notifikasi + statistik "dibaca X/Y"
+// =============================================
+model Pengumuman {
+  id            Int                 @id @default(autoincrement())
+  judul         String              @db.VarChar(255)
+  isi           String              @db.Text
+  kategori      String              @db.VarChar(100) // nama dari MasterReferensi (KATEGORI_PENGUMUMAN)
+  prioritas     PengumumanPrioritas @default(SEDANG)
+  status        PengumumanStatus    @default(SCHEDULED)
+  published_at  DateTime?
+  scheduled_at  DateTime?
+  is_pinned     Boolean             @default(false)
+
+  // Lampiran opsional (Supabase Storage, bucket lppm_documents)
+  lampiran_path String? @db.VarChar(500)
+  lampiran_name String? @db.VarChar(255)
+  lampiran_size Int?
+  lampiran_mime String? @db.VarChar(100)
+
+  created_by Int
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  creator       users                @relation(fields: [created_by], references: [id], onDelete: Cascade)
+  targets       PengumumanTarget[]
+  recipients    PengumumanRecipient[]
+  notifications Notifications[]
+
+  @@index([status])
+  @@index([published_at])
+  @@index([created_at])
+  @@index([is_pinned])
+}
+
+model PengumumanTarget {
+  id            Int                  @id @default(autoincrement())
+  pengumuman_id Int
+  target_type   PengumumanTargetType
+  ref_id        Int? // id kelompok/lokasi/periode/fakultas (null untuk PESERTA/DPL)
+
+  pengumuman Pengumuman @relation(fields: [pengumuman_id], references: [id], onDelete: Cascade)
+
+  @@unique([pengumuman_id, target_type, ref_id])
+  @@index([target_type, ref_id])
+}
+
+model PengumumanRecipient {
+  id            Int       @id @default(autoincrement())
+  pengumuman_id Int
+  user_id       Int
+  read_at       DateTime? // null = belum dibaca (sumber "dibaca X/Y")
+
+  pengumuman Pengumuman @relation(fields: [pengumuman_id], references: [id], onDelete: Cascade)
+  user       users      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([pengumuman_id, user_id])
+  @@index([user_id])
 }
 
 // =============================================

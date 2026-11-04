@@ -8954,6 +8954,236 @@ Rekam jejak seluruh aktivitas mutasi (CREATE/UPDATE/DELETE/LOGIN/...) di sistem.
           },
         },
       },
+      "/kkm/pengumuman": {
+        get: {
+          tags: ["KKM Pengumuman"],
+          summary: "Daftar pengumuman + statistik (admin/staff)",
+          description: "**Role: ADMIN_LPPM / STAFF_LPPM / ADMIN_SISTEM.** Mengembalikan `data` (dengan hitung `dibaca/total_penerima` per pengumuman), `stats` (total/penting/sedang/informasi/dipinned/terjadwal, tanpa terpengaruh filter), dan `meta` paginasi. Urut: disematkan dulu, lalu terbaru.",
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            { name: "page", in: "query", required: false, schema: { type: "integer", minimum: 1, default: 1 } },
+            { name: "search", in: "query", required: false, schema: { type: "string", example: "deadline" } },
+            { name: "kategori", in: "query", required: false, schema: { type: "string", example: "Deadline" } },
+            { name: "prioritas", in: "query", required: false, schema: { type: "string", enum: ["PENTING", "SEDANG", "INFORMASI"] } },
+            { name: "status", in: "query", required: false, schema: { type: "string", enum: ["SCHEDULED", "PUBLISHED"] } },
+            { name: "audiens", in: "query", required: false, schema: { type: "string", enum: ["PESERTA", "DPL", "KELOMPOK", "DESA", "PERIODE", "FAKULTAS"] } },
+          ],
+          responses: {
+            200: {
+              description: "Berhasil",
+              content: {
+                "application/json": {
+                  example: {
+                    message: "Berhasil mengambil daftar pengumuman.",
+                    data: [
+                      {
+                        id: 1, judul: "Pembekalan KKM Reguler 2026", isi: "Seluruh peserta wajib hadir...",
+                        kategori: "Pembekalan", prioritas: "PENTING", status: "PUBLISHED",
+                        published_at: "2026-01-20T00:00:00.000Z", scheduled_at: null, is_pinned: true,
+                        lampiran: { name: "jadwal.pdf", size: 204800, mime: "application/pdf", url: "https://.../pengumuman/1-jadwal.pdf" },
+                        created_by: "Admin LPPM", created_at: "2026-01-19T08:00:00.000Z",
+                        audiens: ["Semua Peserta KKM"], total_penerima: 1295, dibaca: 1195,
+                      },
+                    ],
+                    stats: { total: 12, penting: 5, sedang: 6, informasi: 1, dipinned: 1, terjadwal: 2 },
+                    meta: { totalData: 12, totalPages: 2, currentPage: 1, limit: 10 },
+                  },
+                },
+              },
+            },
+            400: { description: "Validasi query gagal" },
+            401: { description: "Unauthorized" },
+            403: { description: "Forbidden — bukan ADMIN_LPPM/STAFF/ADMIN_SISTEM" },
+          },
+        },
+        post: {
+          tags: ["KKM Pengumuman"],
+          summary: "Buat pengumuman (multipart: + lampiran, publish langsung atau terjadwal)",
+          description: [
+            "**Role: ADMIN_LPPM.** Field `targets` dikirim sebagai string JSON, contoh:",
+            '`[{"type":"PESERTA"},{"type":"KELOMPOK","ref_id":3},{"type":"DESA","ref_id":7}]`',
+            "",
+            "- `publish_mode: \"now\"` → fan-out notifikasi + recipient langsung dalam satu transaksi.",
+            "- `publish_mode: \"scheduled\"` → status SCHEDULED, diterbitkan cron tiap 60 detik saat `scheduled_at` jatuh tempo.",
+            "- `lampiran` (opsional): PDF/JPG/PNG/DOCX maksimal 10 MB — gagal simpan DB = file ikut dibersihkan.",
+            "- `kategori` wajib ada di master aktif `KATEGORI_PENGUMUMAN`.",
+          ].join("\n"),
+          security: [{ bearerAuth: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              "multipart/form-data": {
+                schema: {
+                  type: "object",
+                  required: ["judul", "isi", "kategori", "targets"],
+                  properties: {
+                    judul: { type: "string", maxLength: 255, example: "Deadline Laporan Awal KKM" },
+                    isi: { type: "string", example: "Laporan awal wajib dikumpulkan sebelum 10 Februari 2026. Gunakan **teks** untuk bold." },
+                    kategori: { type: "string", example: "Deadline" },
+                    prioritas: { type: "string", enum: ["PENTING", "SEDANG", "INFORMASI"], default: "SEDANG" },
+                    targets: { type: "string", example: '[{"type":"PESERTA"},{"type":"DPL"}]' },
+                    publish_mode: { type: "string", enum: ["now", "scheduled"], default: "now" },
+                    scheduled_at: { type: "string", format: "date-time", description: "Wajib & harus masa depan bila publish_mode=scheduled", example: "2026-02-01T08:00:00.000Z" },
+                    lampiran: { type: "string", format: "binary", description: "PDF/JPG/PNG/DOCX, maks 10 MB" },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            201: {
+              description: "Pengumuman dibuat (SCHEDULED/PUBLISHED)",
+              content: {
+                "application/json": {
+                  example: { message: "Pengumuman berhasil diterbitkan.", data: { id: 12, judul: "Deadline Laporan Awal KKM", status: "PUBLISHED", audiens: ["Semua Peserta KKM"], total_penerima: 1295, dibaca: 0 } },
+                },
+              },
+            },
+            400: { description: "Validasi gagal / kategori tak dikenal / target tanpa penerima / lampiran salah tipe atau >10 MB" },
+            401: { description: "Unauthorized" },
+            403: { description: "Forbidden — bukan ADMIN_LPPM" },
+          },
+        },
+      },
+      "/kkm/pengumuman/{id}": {
+        get: {
+          tags: ["KKM Pengumuman"],
+          summary: "Detail pengumuman + statistik dibaca",
+          security: [{ bearerAuth: [] }],
+          parameters: [{ name: "id", in: "path", required: true, schema: { type: "integer", example: 1 } }],
+          responses: {
+            200: { description: "Berhasil", content: { "application/json": { example: { message: "Berhasil mengambil detail pengumuman.", data: { id: 1, judul: "Pembekalan KKM Reguler 2026", audiens: ["Semua Peserta KKM"], total_penerima: 1295, dibaca: 1195 } } } } },
+            401: { description: "Unauthorized" },
+            404: { description: "Pengumuman tidak ditemukan" },
+          },
+        },
+        patch: {
+          tags: ["KKM Pengumuman"],
+          summary: "Ubah judul/isi/kategori/prioritas (target & jadwal hanya sebelum terbit)",
+          security: [{ bearerAuth: [] }],
+          parameters: [{ name: "id", in: "path", required: true, schema: { type: "integer", example: 1 } }],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    judul: { type: "string", maxLength: 255 },
+                    isi: { type: "string" },
+                    kategori: { type: "string" },
+                    prioritas: { type: "string", enum: ["PENTING", "SEDANG", "INFORMASI"] },
+                    targets: { type: "string", description: "JSON string — hanya bila masih SCHEDULED", example: '[{"type":"PESERTA"}]' },
+                    scheduled_at: { type: "string", format: "date-time", description: "Hanya bila masih SCHEDULED" },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            200: { description: "Pengumuman diperbarui" },
+            400: { description: "Validasi gagal / sudah terbit lalu target diubah / tidak ada perubahan" },
+            401: { description: "Unauthorized" },
+            403: { description: "Forbidden — bukan ADMIN_LPPM" },
+            404: { description: "Pengumuman tidak ditemukan" },
+          },
+        },
+        delete: {
+          tags: ["KKM Pengumuman"],
+          summary: "Hapus pengumuman (ikut bersihkan lampiran, recipient & notifikasi terkait)",
+          security: [{ bearerAuth: [] }],
+          parameters: [{ name: "id", in: "path", required: true, schema: { type: "integer", example: 1 } }],
+          responses: {
+            200: { description: "Pengumuman dihapus", content: { "application/json": { example: { message: "Pengumuman berhasil dihapus.", data: { id: 1 } } } } },
+            401: { description: "Unauthorized" },
+            403: { description: "Forbidden — bukan ADMIN_LPPM" },
+            404: { description: "Pengumuman tidak ditemukan" },
+          },
+        },
+      },
+      "/kkm/pengumuman/{id}/pin": {
+        patch: {
+          tags: ["KKM Pengumuman"],
+          summary: "Sematkan / lepas sematan pengumuman",
+          security: [{ bearerAuth: [] }],
+          parameters: [{ name: "id", in: "path", required: true, schema: { type: "integer", example: 1 } }],
+          responses: {
+            200: { description: "Status sematan berubah", content: { "application/json": { example: { message: "Pengumuman berhasil disematkan.", data: { id: 1, is_pinned: true } } } } },
+            401: { description: "Unauthorized" },
+            403: { description: "Forbidden — bukan ADMIN_LPPM" },
+            404: { description: "Pengumuman tidak ditemukan" },
+          },
+        },
+      },
+      "/kkm/pengumuman/{id}/publish": {
+        patch: {
+          tags: ["KKM Pengumuman"],
+          summary: "Terbitkan pengumuman terjadwal sekarang (fan-out notifikasi)",
+          description: "Menyelesaikan `SCHEDULED → PUBLISHED`: membuat baris `PengumumanRecipient` + notifikasi untuk seluruh hasil resolusi target dalam satu transaksi.",
+          security: [{ bearerAuth: [] }],
+          parameters: [{ name: "id", in: "path", required: true, schema: { type: "integer", example: 1 } }],
+          responses: {
+            200: { description: "Pengumuman diterbitkan" },
+            400: { description: "Sudah diterbitkan / target tanpa penerima" },
+            401: { description: "Unauthorized" },
+            403: { description: "Forbidden — bukan ADMIN_LPPM" },
+            404: { description: "Pengumuman tidak ditemukan" },
+          },
+        },
+      },
+      "/pengumuman": {
+        get: {
+          tags: ["KKM Pengumuman"],
+          summary: "Daftar pengumuman yang menyasar saya (penerima)",
+          description: "Berlaku untuk semua role login. Resolusi target dilakukan di sisi server: PESERTA (status ≠ REJECTED), DPL, KELOMPOK/DESA/PERIODE/FAKULTAS sesuai lingkup user. Mengembalikan maksimum 100 pengumuman terbaru (disematkan di atas) lengkap dengan `read_at` (null = belum dibaca).",
+          security: [{ bearerAuth: [] }],
+          responses: {
+            200: {
+              description: "Berhasil",
+              content: {
+                "application/json": {
+                  example: {
+                    message: "Berhasil mengambil daftar pengumuman.",
+                    data: [
+                      { id: 1, judul: "Pembekalan KKM Reguler 2026", isi: "Hadir pukul 08.00...", kategori: "Pembekalan", prioritas: "PENTING", published_at: "2026-01-20T00:00:00.000Z", is_pinned: true, lampiran: null, created_by: "Admin LPPM", read_at: null },
+                    ],
+                  },
+                },
+              },
+            },
+            401: { description: "Unauthorized" },
+          },
+        },
+      },
+      "/pengumuman/{id}": {
+        get: {
+          tags: ["KKM Pengumuman"],
+          summary: "Detail pengumuman untuk penerima",
+          security: [{ bearerAuth: [] }],
+          parameters: [{ name: "id", in: "path", required: true, schema: { type: "integer", example: 1 } }],
+          responses: {
+            200: { description: "Berhasil" },
+            401: { description: "Unauthorized" },
+            403: { description: "Anda tidak termasuk audiens pengumuman ini" },
+            404: { description: "Tidak ditemukan / belum diterbitkan" },
+          },
+        },
+      },
+      "/pengumuman/{id}/read": {
+        post: {
+          tags: ["KKM Pengumuman"],
+          summary: "Tandai pengumuman sudah dibaca",
+          description: "Mengisi `PengumumanRecipient.read_at` (sumber statistik \"dibaca X/Y\") dan menandai notifikasi terkait sebagai sudah dibaca agar badge lonceng ikut turun.",
+          security: [{ bearerAuth: [] }],
+          parameters: [{ name: "id", in: "path", required: true, schema: { type: "integer", example: 1 } }],
+          responses: {
+            200: { description: "Ditandai sudah dibaca", content: { "application/json": { example: { message: "Pengumuman ditandai sudah dibaca.", data: { read_at: "2026-02-01T09:30:00.000Z" } } } } },
+            401: { description: "Unauthorized" },
+            403: { description: "Anda tidak termasuk audiens pengumuman ini" },
+            404: { description: "Tidak ditemukan / belum diterbitkan" },
+          },
+        },
+      },
     },
   },
   apis: [],
