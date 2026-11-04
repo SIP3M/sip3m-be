@@ -276,6 +276,7 @@ model users {
   kkmKelompokDocsUploaded  KkmKelompokDocument[] @relation("KkmKelompokDocUploader")
   kkmLogbookEntries        KkmLogbookEntry[]
   kkmLogbookReviews        KkmLogbookEntry[] @relation("KkmLogbookReviewer")
+  kkmPenilaianDpl          KkmPenilaian[]    @relation("DplPenilai")
   pengumumanCreated        Pengumuman[]
   pengumumanRecipients     PengumumanRecipient[]
 
@@ -558,6 +559,7 @@ model KkmPeserta {
   periode     KkmPeriod          @relation(fields: [periode_id], references: [id], onDelete: Cascade)
   user        users              @relation(fields: [user_id], references: [id], onDelete: Cascade)
   kelompok    KkmKelompok?       @relation(fields: [kelompok_id], references: [id], onDelete: SetNull)
+  penilaian   KkmPenilaian?
 
   created_at  DateTime           @default(now())
   updated_at  DateTime           @updatedAt
@@ -566,6 +568,37 @@ model KkmPeserta {
   @@index([periode_id, status])
   @@index([kelompok_id])
   @@index([periode_id, kelompok_id])
+}
+
+model KkmPenilaian {
+  id           Int      @id @default(autoincrement())
+  peserta_id   Int      @unique
+  
+  // Komponen penilaian (0 - 100)
+  kehadiran    Float    @default(0)
+  keaktifan    Float    @default(0)
+  logbook      Float    @default(0)
+  program_kerja Float   @default(0)
+  laporan      Float    @default(0)
+  sikap        Float    @default(0)
+
+  // Hasil hitung & evaluasi
+  nilai_akhir  Float    @default(0)
+  grade        String   @db.VarChar(2) @default("E")
+  catatan_dpl  String?  @db.Text
+  is_saved     Boolean  @default(false)
+
+  dinilai_oleh Int?     // id user DPL
+  dinilai_at   DateTime?
+
+  peserta      KkmPeserta @relation(fields: [peserta_id], references: [id], onDelete: Cascade)
+  penilai      users?     @relation("DplPenilai", fields: [dinilai_oleh], references: [id], onDelete: SetNull)
+
+  created_at   DateTime   @default(now())
+  updated_at   DateTime   @updatedAt
+
+  @@index([peserta_id])
+  @@index([dinilai_oleh])
 }
 
 model KkmLogbookEntry {
