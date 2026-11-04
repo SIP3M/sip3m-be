@@ -163,10 +163,23 @@ const instansiField = z
   .max(255, "Instansi maksimal 255 karakter.")
   .optional();
 
+// Batas kolom funding_request_amount di PostgreSQL = INTEGER (INT4), maks
+// 2.147.483.647. Tanpa batas di sini, angka besar lolos Zod lalu Prisma
+// gagal saat INSERT ("Unable to fit integer value ... into an INT4") dan
+// controller membalas 500 generik "Terjadi kesalahan pada server".
+export const FUNDING_MAX = 2147483647;
+export const FUNDING_MAX_MESSAGE =
+  "Nominal pengajuan dana maksimal Rp2.147.483.647.";
+
 const fundingField = z
   .union([z.string(), z.number()])
   .transform((val) => Number(val))
-  .pipe(z.number().min(0, "Jumlah pendanaan tidak boleh negatif."));
+  .pipe(
+    z
+      .number()
+      .min(0, "Jumlah pendanaan tidak boleh negatif.")
+      .max(FUNDING_MAX, FUNDING_MAX_MESSAGE),
+  );
 
 const isDraftField = z
   .union([z.string(), z.boolean()])
