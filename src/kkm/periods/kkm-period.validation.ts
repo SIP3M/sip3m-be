@@ -3,6 +3,23 @@ import { JenisKkm, KkmPeriodStatus } from "../../generated/prisma/enums";
 
 const dateField = z.coerce.date().optional().nullable();
 
+/** Jam "HH:mm" (contoh: 23:59). */
+const jamField = z
+  .string()
+  .trim()
+  .regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Format jam harus HH:mm, contoh: 23:59.")
+  .optional()
+  .nullable();
+
+/** Hari deadline logbook kelompok: 1 = Senin .. 7 = Minggu. */
+const logbookKelompokHariField = z.coerce
+  .number({ message: "Hari deadline logbook kelompok harus berupa angka." })
+  .int("Hari deadline logbook kelompok harus bilangan bulat.")
+  .min(1, "Pilihan hari tidak valid (1 = Senin).")
+  .max(7, "Pilihan hari tidak valid (7 = Minggu).")
+  .optional()
+  .nullable();
+
 const tahunAkademikField = z
   .string()
   .trim()
@@ -52,6 +69,60 @@ const validateDateOrder = (
   }
 };
 
+/**
+ * Konsistensi deadline unggahan terhadap rentang kegiatan:
+ * - Deadline logbook individu  harus antara pelaksanaan .. penarikan.
+ * - Deadline laporan individu  tidak boleh lebih awal dari tgl_penarikan.
+ */
+const validateDeadlineUnggahan = (
+  data: {
+    tgl_pelaksanaan?: Date | null;
+    tgl_penarikan?: Date | null;
+    deadline_logbook_individu?: Date | null;
+    deadline_laporan_individu?: Date | null;
+  },
+  ctx: z.RefinementCtx,
+) => {
+  const { tgl_pelaksanaan, tgl_penarikan, deadline_logbook_individu, deadline_laporan_individu } =
+    data;
+
+  if (
+    deadline_logbook_individu &&
+    tgl_pelaksanaan &&
+    deadline_logbook_individu < tgl_pelaksanaan
+  ) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["deadline_logbook_individu"],
+      message: "Deadline logbook individu tidak boleh lebih awal dari tanggal pelaksanaan.",
+    });
+  }
+
+  if (
+    deadline_logbook_individu &&
+    tgl_penarikan &&
+    deadline_logbook_individu > tgl_penarikan
+  ) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["deadline_logbook_individu"],
+      message: "Deadline logbook individu tidak boleh melewati tanggal penarikan.",
+    });
+  }
+
+  if (
+    deadline_laporan_individu &&
+    tgl_penarikan &&
+    deadline_laporan_individu < tgl_penarikan
+  ) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["deadline_laporan_individu"],
+      message: "Deadline laporan individu tidak boleh lebih awal dari tanggal penarikan.",
+    });
+  }
+};
+
 const baseFields = {
   nama_periode: z
     .string()
@@ -80,6 +151,15 @@ const baseFields = {
   tgl_pelaksanaan: dateField,
   tgl_penarikan: dateField,
   deadline_laporan: dateField,
+
+  // ===== Pengaturan deadline unggahan (diatur admin LPPM) =====
+  deadline_logbook_individu: dateField,
+  jam_logbook_individu: jamField,
+  logbook_kelompok_hari: logbookKelompokHariField,
+  logbook_kelompok_jam: jamField,
+  deadline_laporan_individu: dateField,
+  jam_laporan_individu: jamField,
+  jam_laporan_kelompok: jamField,
 
   target_peserta: z.coerce
     .number({ message: "Target peserta harus berupa angka." })
@@ -120,7 +200,10 @@ const baseFields = {
 
 export const createKkmPeriodSchema = z
   .object(baseFields)
-  .superRefine((data, ctx) => validateDateOrder(data, ctx));
+  .superRefine((data, ctx) => {
+    validateDateOrder(data, ctx);
+    validateDeadlineUnggahan(data, ctx);
+  });
 
 export const updateKkmPeriodSchema = z
   .object({
@@ -135,6 +218,13 @@ export const updateKkmPeriodSchema = z
     tgl_pelaksanaan: dateField,
     tgl_penarikan: dateField,
     deadline_laporan: dateField,
+    deadline_logbook_individu: dateField,
+    jam_logbook_individu: jamField,
+    logbook_kelompok_hari: logbookKelompokHariField,
+    logbook_kelompok_jam: jamField,
+    deadline_laporan_individu: dateField,
+    jam_laporan_individu: jamField,
+    jam_laporan_kelompok: jamField,
     target_peserta: baseFields.target_peserta.optional(),
     minimal_semester: baseFields.minimal_semester,
     maks_anggota_kelompok: baseFields.maks_anggota_kelompok.optional(),
@@ -144,7 +234,10 @@ export const updateKkmPeriodSchema = z
     maks_kelompok_per_dosen: baseFields.maks_kelompok_per_dosen,
     status: baseFields.status.optional(),
   })
-  .superRefine((data, ctx) => validateDateOrder(data as never, ctx));
+  .superRefine((data, ctx) => {
+    validateDateOrder(data as never, ctx);
+    validateDeadlineUnggahan(data as never, ctx);
+  });
 
 export const updateKkmPeriodStatusSchema = z.object({
   status: z.nativeEnum(KkmPeriodStatus, {

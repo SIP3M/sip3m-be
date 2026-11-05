@@ -2,6 +2,7 @@ import { prisma } from "../../prisma";
 import { KkmPeriodStatus } from "../../generated/prisma/enums";
 import { HttpError } from "../../common/errors/http-error";
 import { supabase } from "../../config/storage";
+import { atJam, formatDeadline } from "../common/kkm-deadline";
 import type { KkmPeriodeRef } from "../../dashboard/dashboard.types";
 import type {
   KkmLogbookCreateInput,
@@ -203,9 +204,16 @@ export const deriveMonitoringForKelompok = async (kelompok: {
     else if (entry.created_at >= sinceSebelum) sebelum += 1;
   }
 
+  // "Logbook" kelompok kini membaca tabel riwayat mingguan, bukan dokumen
+  // tipe LOGBOOK_KELOMPOK (enum dipertahankan demi keamanan data lama).
+  const jumlahLogbookMingguan = await prisma.kkmLogbookKelompok.count({
+    where: { kelompok_id: kelompok.id },
+  });
+
   const derived = deriveMonitoring({
     hasProgramKerja: kelompok.document_types.includes("PROPOSAL_PROGRAM_KERJA"),
-    hasLogbookDoc: kelompok.document_types.includes("LOGBOOK_KELOMPOK"),
+    hasLogbookDoc:
+      jumlahLogbookMingguan > 0 || kelompok.document_types.includes("LOGBOOK_KELOMPOK"),
     hasLaporanAkhir: kelompok.document_types.includes("LAPORAN_AKHIR"),
     jumlahEntri: total,
     entriBaru: baru,
@@ -273,6 +281,13 @@ export const getMonitoringList = async (query: KkmMonitoringQuery): Promise<Moni
     select: { kelompok_id: true, created_at: true },
   });
 
+  // Riwayat logbook kelompok mingguan (untuk progress tahap LOGBOOK).
+  const logbookMingguan = await prisma.kkmLogbookKelompok.findMany({
+    where: { periode_id: periode.id },
+    select: { kelompok_id: true },
+  });
+  const kelompokDenganLogbook = new Set(logbookMingguan.map((r) => r.kelompok_id));
+
   const now = Date.now();
   const sinceBaru = new Date(now - AKTIVITAS_JENDELA_HARI * dayMs);
   const sinceSebelum = new Date(now - 2 * AKTIVITAS_JENDELA_HARI * dayMs);
@@ -293,7 +308,8 @@ export const getMonitoringList = async (query: KkmMonitoringQuery): Promise<Moni
 
     const derived = deriveMonitoring({
       hasProgramKerja: docs.includes("PROPOSAL_PROGRAM_KERJA"),
-      hasLogbookDoc: docs.includes("LOGBOOK_KELOMPOK"),
+      hasLogbookDoc:
+        kelompokDenganLogbook.has(k.id) || docs.includes("LOGBOOK_KELOMPOK"),
       hasLaporanAkhir: docs.includes("LAPORAN_AKHIR"),
       jumlahEntri: counts.total,
       entriBaru: counts.baru,
@@ -495,6 +511,42 @@ export const createLogbookEntry = async (
 ) => {
   await assertMembership(kelompokId, userId, role);
 
+  // Deadline logbook individu (diatur admin LPPM): bila sudah lewat, unggahan
+  // entri logbook baru ditolak permanen.
+  if (role === "MAHASISWA") {
+    const periode = await prisma.kkmKelompok.findUnique({
+      where: { id: kelompokId },
+      select: {
+        periode: {
+          select: {
+            status: true,
+            deadline_logbook_individu: true,
+            jam_logbook_individu: true,
+          },
+        },
+      },
+    });
+    const pengaturan = periode?.periode;
+    if (pengaturan) {
+      if (pengaturan.status === KkmPeriodStatus.SELESAI) {
+        throw new HttpError(
+          "Periode sudah SELESAI, logbook tidak dapat ditambah lagi.",
+          400,
+        );
+      }
+
+      const deadline = pengaturan.deadline_logbook_individu
+        ? atJam(pengaturan.deadline_logbook_individu, pengaturan.jam_logbook_individu)
+        : null;
+      if (deadline && Date.now() > deadline.getTime()) {
+        throw new HttpError(
+          `Deadline logbook individu sudah lewat (${formatDeadline(deadline)}). Unggahan dikunci.`,
+          400,
+        );
+      }
+    }
+  }
+
   // File logbook PDF (opsional) — simpan ke Supabase sebelum row dibuat,
   // agar row tidak menunjuk file yang gagal terupload.
   let filePath: string | null = null;
@@ -594,7 +646,7 @@ export const getLogbookSaya = async (userId: number) => {
         ...(aktifOnly ? { periode: { status: KkmPeriodStatus.AKTIF } } : {}),
       },
       orderBy: { updated_at: "desc" },
-      select: { kelompok_id: true },
+      select: { kelompok_id: true, jabatan: true },
     });
 
   const mine = (await findRow(true)) ?? (await findRow(false));
@@ -610,7 +662,15 @@ export const getLogbookSaya = async (userId: number) => {
     select: {
       id: true,
       nama: true,
-      periode: { select: { id: true, nama_periode: true, status: true } },
+      periode: {
+        select: {
+          id: true,
+          nama_periode: true,
+          status: true,
+          deadline_logbook_individu: true,
+          jam_logbook_individu: true,
+        },
+      },
     },
   });
   if (!kelompok) {
@@ -650,12 +710,35 @@ export const getLogbookSaya = async (userId: number) => {
     created_at: r.created_at.toISOString(),
   }));
 
+  const deadline = kelompok.periode.deadline_logbook_individu
+    ? atJam(
+        kelompok.periode.deadline_logbook_individu,
+        kelompok.periode.jam_logbook_individu,
+      )
+    : null;
+  const terkunci = deadline ? Date.now() > deadline.getTime() : false;
+
   return {
     kelompok: {
       id: kelompok.id,
       nama: kelompok.nama,
-      periode: kelompok.periode,
+      periode: {
+        id: kelompok.periode.id,
+        nama_periode: kelompok.periode.nama_periode,
+        status: kelompok.periode.status,
+      },
     },
+    jabatan: mine.jabatan,
+    deadline: {
+      ada: Boolean(deadline),
+      ditutup_pada: deadline ? deadline.toISOString() : null,
+      tampil: deadline ? formatDeadline(deadline) : null,
+      terkunci,
+      alasan: terkunci
+        ? `Deadline logbook individu sudah lewat (${formatDeadline(deadline as Date)}).`
+        : null,
+    },
+    bisa_tambah: !terkunci && kelompok.periode.status !== KkmPeriodStatus.SELESAI,
     entries,
   };
 };

@@ -32,7 +32,18 @@ export const kkmKelompokDocTypeEnum = z.enum([
   "LAPORAN_AKHIR",
 ]);
 
+/** Penetapan jabatan anggota kelompok oleh admin LPPM. */
+export const kkmKelompokJabatanEnum = z.enum(["ANGGOTA", "KETUA", "SEKRETARIS"], {
+  message: "Jabatan tidak valid. Pilihan: ANGGOTA, KETUA, SEKRETARIS.",
+});
+
+export const kkmKelompokSetJabatanSchema = z.object({
+  jabatan: kkmKelompokJabatanEnum,
+});
+
 export type KkmKelompokListQuery = z.infer<typeof kkmKelompokListQuerySchema>;
 export type KkmKelompokUpdateInput = z.infer<typeof kkmKelompokUpdateSchema>;
 export type KkmKelompokAddAnggotaInput = z.infer<typeof kkmKelompokAddAnggotaSchema>;
 export type KkmKelompokDocType = z.infer<typeof kkmKelompokDocTypeEnum>;
+export type KkmKelompokJabatan = z.infer<typeof kkmKelompokJabatanEnum>;
+export type KkmKelompokSetJabatanInput = z.infer<typeof kkmKelompokSetJabatanSchema>;

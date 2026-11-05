@@ -62,6 +62,13 @@ export const createKkmPeriod = async (input: CreateKkmPeriodInput, createdBy?: n
           tgl_pelaksanaan: input.tgl_pelaksanaan ?? null,
           tgl_penarikan: input.tgl_penarikan ?? null,
           deadline_laporan: input.deadline_laporan ?? null,
+          deadline_logbook_individu: input.deadline_logbook_individu ?? null,
+          jam_logbook_individu: input.jam_logbook_individu ?? null,
+          logbook_kelompok_hari: input.logbook_kelompok_hari ?? null,
+          logbook_kelompok_jam: input.logbook_kelompok_jam ?? null,
+          deadline_laporan_individu: input.deadline_laporan_individu ?? null,
+          jam_laporan_individu: input.jam_laporan_individu ?? null,
+          jam_laporan_kelompok: input.jam_laporan_kelompok ?? null,
           target_peserta: input.target_peserta ?? 0,
           minimal_semester: input.minimal_semester ?? null,
           maks_anggota_kelompok: input.maks_anggota_kelompok ?? 10,
@@ -90,6 +97,13 @@ export const createKkmPeriod = async (input: CreateKkmPeriodInput, createdBy?: n
       tgl_pelaksanaan: input.tgl_pelaksanaan ?? null,
       tgl_penarikan: input.tgl_penarikan ?? null,
       deadline_laporan: input.deadline_laporan ?? null,
+      deadline_logbook_individu: input.deadline_logbook_individu ?? null,
+      jam_logbook_individu: input.jam_logbook_individu ?? null,
+      logbook_kelompok_hari: input.logbook_kelompok_hari ?? null,
+      logbook_kelompok_jam: input.logbook_kelompok_jam ?? null,
+      deadline_laporan_individu: input.deadline_laporan_individu ?? null,
+      jam_laporan_individu: input.jam_laporan_individu ?? null,
+      jam_laporan_kelompok: input.jam_laporan_kelompok ?? null,
       target_peserta: input.target_peserta ?? 0,
       minimal_semester: input.minimal_semester ?? null,
       maks_anggota_kelompok: input.maks_anggota_kelompok ?? 10,
@@ -192,6 +206,20 @@ export const updateKkmPeriod = async (
           tgl_pelaksanaan: input.tgl_pelaksanaan !== undefined ? (input.tgl_pelaksanaan ?? null) : undefined,
           tgl_penarikan: input.tgl_penarikan !== undefined ? (input.tgl_penarikan ?? null) : undefined,
           deadline_laporan: input.deadline_laporan !== undefined ? (input.deadline_laporan ?? null) : undefined,
+          deadline_logbook_individu:
+            input.deadline_logbook_individu !== undefined ? (input.deadline_logbook_individu ?? null) : undefined,
+          jam_logbook_individu:
+            input.jam_logbook_individu !== undefined ? (input.jam_logbook_individu ?? null) : undefined,
+          logbook_kelompok_hari:
+            input.logbook_kelompok_hari !== undefined ? (input.logbook_kelompok_hari ?? null) : undefined,
+          logbook_kelompok_jam:
+            input.logbook_kelompok_jam !== undefined ? (input.logbook_kelompok_jam ?? null) : undefined,
+          deadline_laporan_individu:
+            input.deadline_laporan_individu !== undefined ? (input.deadline_laporan_individu ?? null) : undefined,
+          jam_laporan_individu:
+            input.jam_laporan_individu !== undefined ? (input.jam_laporan_individu ?? null) : undefined,
+          jam_laporan_kelompok:
+            input.jam_laporan_kelompok !== undefined ? (input.jam_laporan_kelompok ?? null) : undefined,
           target_peserta: input.target_peserta ?? undefined,
           minimal_semester: input.minimal_semester !== undefined ? (input.minimal_semester ?? null) : undefined,
           maks_anggota_kelompok: input.maks_anggota_kelompok ?? undefined,
@@ -221,6 +249,20 @@ export const updateKkmPeriod = async (
       tgl_pelaksanaan: input.tgl_pelaksanaan !== undefined ? (input.tgl_pelaksanaan ?? null) : undefined,
       tgl_penarikan: input.tgl_penarikan !== undefined ? (input.tgl_penarikan ?? null) : undefined,
       deadline_laporan: input.deadline_laporan !== undefined ? (input.deadline_laporan ?? null) : undefined,
+      deadline_logbook_individu:
+        input.deadline_logbook_individu !== undefined ? (input.deadline_logbook_individu ?? null) : undefined,
+      jam_logbook_individu:
+        input.jam_logbook_individu !== undefined ? (input.jam_logbook_individu ?? null) : undefined,
+      logbook_kelompok_hari:
+        input.logbook_kelompok_hari !== undefined ? (input.logbook_kelompok_hari ?? null) : undefined,
+      logbook_kelompok_jam:
+        input.logbook_kelompok_jam !== undefined ? (input.logbook_kelompok_jam ?? null) : undefined,
+      deadline_laporan_individu:
+        input.deadline_laporan_individu !== undefined ? (input.deadline_laporan_individu ?? null) : undefined,
+      jam_laporan_individu:
+        input.jam_laporan_individu !== undefined ? (input.jam_laporan_individu ?? null) : undefined,
+      jam_laporan_kelompok:
+        input.jam_laporan_kelompok !== undefined ? (input.jam_laporan_kelompok ?? null) : undefined,
       target_peserta: input.target_peserta ?? undefined,
       minimal_semester: input.minimal_semester !== undefined ? (input.minimal_semester ?? null) : undefined,
       maks_anggota_kelompok: input.maks_anggota_kelompok ?? undefined,
