@@ -2,7 +2,7 @@ import { prisma } from "../../prisma";
 import { KkmPeriodStatus } from "../../generated/prisma/enums";
 import { HttpError } from "../../common/errors/http-error";
 import { supabase } from "../../config/storage";
-import { atJam, formatDeadline } from "../common/kkm-deadline";
+import { hitungJadwalMingguan, cariMingguUntukTanggal, formatDeadline } from "../common/kkm-deadline";
 import type { KkmPeriodeRef } from "../../dashboard/dashboard.types";
 import type {
   KkmLogbookCreateInput,
@@ -511,8 +511,9 @@ export const createLogbookEntry = async (
 ) => {
   await assertMembership(kelompokId, userId, role);
 
-  // Deadline logbook individu (diatur admin LPPM): bila sudah lewat, unggahan
-  // entri logbook baru ditolak permanen.
+  // Jadwal logbook individu MINGGUAN (diatur admin LPPM): tiap minggu terkunci
+  // permanen setelah deadline-nya, jadi entri hanya boleh masuk minggu yang
+  // sedang terbuka.
   if (role === "MAHASISWA") {
     const periode = await prisma.kkmKelompok.findUnique({
       where: { id: kelompokId },
@@ -520,8 +521,10 @@ export const createLogbookEntry = async (
         periode: {
           select: {
             status: true,
-            deadline_logbook_individu: true,
-            jam_logbook_individu: true,
+            tgl_pelaksanaan: true,
+            tgl_penarikan: true,
+            logbook_individu_hari: true,
+            logbook_individu_jam: true,
           },
         },
       },
@@ -535,14 +538,38 @@ export const createLogbookEntry = async (
         );
       }
 
-      const deadline = pengaturan.deadline_logbook_individu
-        ? atJam(pengaturan.deadline_logbook_individu, pengaturan.jam_logbook_individu)
-        : null;
-      if (deadline && Date.now() > deadline.getTime()) {
-        throw new HttpError(
-          `Deadline logbook individu sudah lewat (${formatDeadline(deadline)}). Unggahan dikunci.`,
-          400,
-        );
+      const jadwal = hitungJadwalMingguan({
+        tgl_pelaksanaan: pengaturan.tgl_pelaksanaan,
+        tgl_penarikan: pengaturan.tgl_penarikan,
+        hari: pengaturan.logbook_individu_hari,
+        jam: pengaturan.logbook_individu_jam,
+      });
+
+      // Admin belum mengatur hari/jam mingguan → tanpa kunci mingguan
+      // (entri bebas selama periode belum SELESAI, seperti perilaku lama).
+      if (jadwal.minggu.length > 0) {
+        const tanggal = new Date(input.tanggal);
+        const minggu = cariMingguUntukTanggal(jadwal.minggu, tanggal);
+        if (!minggu) {
+          const pertama = jadwal.minggu[0];
+          const terakhir = jadwal.minggu[jadwal.minggu.length - 1];
+          throw new HttpError(
+            `Tanggal logbook di luar jadwal pelaksanaan KKM (${pertama.tanggal_mulai} s/d ${terakhir.tanggal_batas}).`,
+            400,
+          );
+        }
+        if (minggu.status === "BELUM_DIBUKA") {
+          throw new HttpError(
+            `Minggu ke-${minggu.minggu_ke} belum dibuka (mulai ${minggu.tanggal_mulai}).`,
+            400,
+          );
+        }
+        if (minggu.status === "TERKUNCI") {
+          throw new HttpError(
+            `Deadline logbook minggu ke-${minggu.minggu_ke} sudah lewat (${minggu.deadline_tampil}). Minggu ini terkunci permanen.`,
+            400,
+          );
+        }
       }
     }
   }
@@ -667,8 +694,10 @@ export const getLogbookSaya = async (userId: number) => {
           id: true,
           nama_periode: true,
           status: true,
-          deadline_logbook_individu: true,
-          jam_logbook_individu: true,
+          tgl_pelaksanaan: true,
+          tgl_penarikan: true,
+          logbook_individu_hari: true,
+          logbook_individu_jam: true,
         },
       },
     },
@@ -697,26 +726,84 @@ export const getLogbookSaya = async (userId: number) => {
     },
   });
 
-  const entries = rows.map((r) => ({
-    id: r.id,
-    tanggal: r.tanggal.toISOString(),
-    judul: r.judul,
-    deskripsi: r.deskripsi,
-    lokasi_kegiatan: r.lokasi_kegiatan,
-    status: r.status,
-    file_url: fileUrlOf(r.file_path),
-    file_size: r.file_size,
-    catatan_revisi: r.catatan_revisi,
-    created_at: r.created_at.toISOString(),
-  }));
+  // Jadwal mingguan logbook individu (mirip logbook kelompok):
+  // minggu ke-1 mulai tgl_pelaksanaan, minggu terakhir berakhir di tgl_penarikan.
+  const jadwal = hitungJadwalMingguan({
+    tgl_pelaksanaan: kelompok.periode.tgl_pelaksanaan,
+    tgl_penarikan: kelompok.periode.tgl_penarikan,
+    hari: kelompok.periode.logbook_individu_hari,
+    jam: kelompok.periode.logbook_individu_jam,
+  });
+  const jadwalTeratur = jadwal.minggu.length > 0;
+  const selesai = kelompok.periode.status === KkmPeriodStatus.SELESAI;
 
-  const deadline = kelompok.periode.deadline_logbook_individu
-    ? atJam(
-        kelompok.periode.deadline_logbook_individu,
-        kelompok.periode.jam_logbook_individu,
-      )
-    : null;
-  const terkunci = deadline ? Date.now() > deadline.getTime() : false;
+  // Jumlah entri per minggu (untuk menandai minggu yang sudah terisi).
+  const jumlahPerMinggu = new Map<number, number>();
+  if (jadwalTeratur) {
+    for (const m of jadwal.minggu) jumlahPerMinggu.set(m.minggu_ke, 0);
+    for (const r of rows) {
+      const m = cariMingguUntukTanggal(jadwal.minggu, r.tanggal);
+      if (m) {
+        jumlahPerMinggu.set(m.minggu_ke, (jumlahPerMinggu.get(m.minggu_ke) ?? 0) + 1);
+      }
+    }
+  }
+
+  const entries = rows.map((r) => {
+    const m = jadwalTeratur ? cariMingguUntukTanggal(jadwal.minggu, r.tanggal) : null;
+    return {
+      id: r.id,
+      tanggal: r.tanggal.toISOString(),
+      minggu_ke: m?.minggu_ke ?? null,
+      judul: r.judul,
+      deskripsi: r.deskripsi,
+      lokasi_kegiatan: r.lokasi_kegiatan,
+      status: r.status,
+      file_url: fileUrlOf(r.file_path),
+      file_size: r.file_size,
+      catatan_revisi: r.catatan_revisi,
+      created_at: r.created_at.toISOString(),
+    };
+  });
+
+  // Minggu yang sedang terbuka (paling banyak satu — jendela minggu tidak tumpang tindih).
+  const mingguAktif = jadwalTeratur ? (jadwal.minggu.find((m) => m.status === "TERBUKA") ?? null) : null;
+  const bisaTambah = jadwalTeratur ? Boolean(mingguAktif) && !selesai : !selesai;
+
+  const deadline = (() => {
+    if (!jadwalTeratur) {
+      return {
+        ada: false,
+        ditutup_pada: null as string | null,
+        tampil: null as string | null,
+        terkunci: selesai,
+        minggu_ke: null as number | null,
+        alasan: selesai ? "Periode sudah SELESAI, logbook tidak dapat ditambah lagi." : null,
+      };
+    }
+
+    const ref = mingguAktif ?? jadwal.minggu[jadwal.minggu.length - 1];
+    const pertama = jadwal.minggu[0];
+    let alasan: string | null = null;
+
+    if (selesai) {
+      alasan = "Periode sudah SELESAI, logbook tidak dapat ditambah lagi.";
+    } else if (!mingguAktif) {
+      alasan =
+        Date.now() < Date.parse(pertama.tanggal_mulai)
+          ? `Belum dibuka — logbook minggu ke-1 dibuka pada ${pertama.tanggal_mulai}.`
+          : `Semua minggu sudah lewat deadline (minggu terakhir ${ref.deadline_tampil}).`;
+    }
+
+    return {
+      ada: true,
+      ditutup_pada: ref.deadline,
+      tampil: ref.deadline_tampil,
+      terkunci: !bisaTambah,
+      minggu_ke: mingguAktif?.minggu_ke ?? null,
+      alasan,
+    };
+  })();
 
   return {
     kelompok: {
@@ -729,16 +816,15 @@ export const getLogbookSaya = async (userId: number) => {
       },
     },
     jabatan: mine.jabatan,
-    deadline: {
-      ada: Boolean(deadline),
-      ditutup_pada: deadline ? deadline.toISOString() : null,
-      tampil: deadline ? formatDeadline(deadline) : null,
-      terkunci,
-      alasan: terkunci
-        ? `Deadline logbook individu sudah lewat (${formatDeadline(deadline as Date)}).`
-        : null,
-    },
-    bisa_tambah: !terkunci && kelompok.periode.status !== KkmPeriodStatus.SELESAI,
+    deadline,
+    bisa_tambah: bisaTambah,
+    /** Jadwal mingguan (kosong bila admin belum mengatur hari/jam mingguan). */
+    minggu_total: jadwal.minggu_total,
+    minggu_aktif: mingguAktif?.minggu_ke ?? null,
+    jadwal_minggu: jadwal.minggu.map((m) => ({
+      ...m,
+      jumlah_entri: jumlahPerMinggu.get(m.minggu_ke) ?? 0,
+    })),
     entries,
   };
 };

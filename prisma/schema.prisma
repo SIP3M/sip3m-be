@@ -387,9 +387,10 @@ model KkmPeriod {
   deadline_laporan        DateTime?       @db.Date
 
   // ===== Pengaturan upload dinamis (diatur admin LPPM) =====
-  // Logbook individu: batas akhir mahasiswa mengunggah logbook pribadi.
-  deadline_logbook_individu DateTime?     @db.Date
-  jam_logbook_individu      String?       @db.VarChar(5) // "HH:mm", default 23:59
+  // Logbook individu: mingguan (mirip kelompok) selama pelaksanaan KKM.
+  // Minggu ke-1 mulai tgl_pelaksanaan, minggu terakhir berakhir di tgl_penarikan.
+  logbook_individu_hari     Int?          // 1=Senin .. 7=Minggu (ISO-8601)
+  logbook_individu_jam      String?       @db.VarChar(5) // "HH:mm", default 23:59
   // Logbook kelompok: diunggah mingguan oleh ketua/sekretaris.
   logbook_kelompok_hari     Int?          // 1=Senin .. 7=Minggu (ISO-8601)
   logbook_kelompok_jam      String?       @db.VarChar(5) // "HH:mm", default 23:59

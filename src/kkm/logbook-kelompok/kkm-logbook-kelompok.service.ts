@@ -92,8 +92,8 @@ export const getLogbookKelompokSaya = async (userId: number) => {
   const jadwal = hitungJadwalMingguan({
     tgl_pelaksanaan: periode.tgl_pelaksanaan,
     tgl_penarikan: periode.tgl_penarikan,
-    logbook_kelompok_hari: periode.logbook_kelompok_hari,
-    logbook_kelompok_jam: periode.logbook_kelompok_jam,
+    hari: periode.logbook_kelompok_hari,
+    jam: periode.logbook_kelompok_jam,
   });
 
   const riwayat = await prisma.kkmLogbookKelompok.findMany({
@@ -232,8 +232,8 @@ export const uploadLogbookKelompok = async (
   const jadwal = hitungJadwalMingguan({
     tgl_pelaksanaan: kelompok.periode.tgl_pelaksanaan,
     tgl_penarikan: kelompok.periode.tgl_penarikan,
-    logbook_kelompok_hari: kelompok.periode.logbook_kelompok_hari,
-    logbook_kelompok_jam: kelompok.periode.logbook_kelompok_jam,
+    hari: kelompok.periode.logbook_kelompok_hari,
+    jam: kelompok.periode.logbook_kelompok_jam,
   });
 
   if (jadwal.minggu_total === 0) {
