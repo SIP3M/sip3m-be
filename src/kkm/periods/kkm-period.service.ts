@@ -62,8 +62,8 @@ export const createKkmPeriod = async (input: CreateKkmPeriodInput, createdBy?: n
           tgl_pelaksanaan: input.tgl_pelaksanaan ?? null,
           tgl_penarikan: input.tgl_penarikan ?? null,
           deadline_laporan: input.deadline_laporan ?? null,
-          deadline_logbook_individu: input.deadline_logbook_individu ?? null,
-          jam_logbook_individu: input.jam_logbook_individu ?? null,
+          logbook_individu_hari: input.logbook_individu_hari ?? null,
+          logbook_individu_jam: input.logbook_individu_jam ?? null,
           logbook_kelompok_hari: input.logbook_kelompok_hari ?? null,
           logbook_kelompok_jam: input.logbook_kelompok_jam ?? null,
           deadline_laporan_individu: input.deadline_laporan_individu ?? null,
@@ -97,8 +97,8 @@ export const createKkmPeriod = async (input: CreateKkmPeriodInput, createdBy?: n
       tgl_pelaksanaan: input.tgl_pelaksanaan ?? null,
       tgl_penarikan: input.tgl_penarikan ?? null,
       deadline_laporan: input.deadline_laporan ?? null,
-      deadline_logbook_individu: input.deadline_logbook_individu ?? null,
-      jam_logbook_individu: input.jam_logbook_individu ?? null,
+      logbook_individu_hari: input.logbook_individu_hari ?? null,
+      logbook_individu_jam: input.logbook_individu_jam ?? null,
       logbook_kelompok_hari: input.logbook_kelompok_hari ?? null,
       logbook_kelompok_jam: input.logbook_kelompok_jam ?? null,
       deadline_laporan_individu: input.deadline_laporan_individu ?? null,
@@ -206,10 +206,10 @@ export const updateKkmPeriod = async (
           tgl_pelaksanaan: input.tgl_pelaksanaan !== undefined ? (input.tgl_pelaksanaan ?? null) : undefined,
           tgl_penarikan: input.tgl_penarikan !== undefined ? (input.tgl_penarikan ?? null) : undefined,
           deadline_laporan: input.deadline_laporan !== undefined ? (input.deadline_laporan ?? null) : undefined,
-          deadline_logbook_individu:
-            input.deadline_logbook_individu !== undefined ? (input.deadline_logbook_individu ?? null) : undefined,
-          jam_logbook_individu:
-            input.jam_logbook_individu !== undefined ? (input.jam_logbook_individu ?? null) : undefined,
+          logbook_individu_hari:
+            input.logbook_individu_hari !== undefined ? (input.logbook_individu_hari ?? null) : undefined,
+          logbook_individu_jam:
+            input.logbook_individu_jam !== undefined ? (input.logbook_individu_jam ?? null) : undefined,
           logbook_kelompok_hari:
             input.logbook_kelompok_hari !== undefined ? (input.logbook_kelompok_hari ?? null) : undefined,
           logbook_kelompok_jam:
@@ -249,10 +249,10 @@ export const updateKkmPeriod = async (
       tgl_pelaksanaan: input.tgl_pelaksanaan !== undefined ? (input.tgl_pelaksanaan ?? null) : undefined,
       tgl_penarikan: input.tgl_penarikan !== undefined ? (input.tgl_penarikan ?? null) : undefined,
       deadline_laporan: input.deadline_laporan !== undefined ? (input.deadline_laporan ?? null) : undefined,
-      deadline_logbook_individu:
-        input.deadline_logbook_individu !== undefined ? (input.deadline_logbook_individu ?? null) : undefined,
-      jam_logbook_individu:
-        input.jam_logbook_individu !== undefined ? (input.jam_logbook_individu ?? null) : undefined,
+      logbook_individu_hari:
+        input.logbook_individu_hari !== undefined ? (input.logbook_individu_hari ?? null) : undefined,
+      logbook_individu_jam:
+        input.logbook_individu_jam !== undefined ? (input.logbook_individu_jam ?? null) : undefined,
       logbook_kelompok_hari:
         input.logbook_kelompok_hari !== undefined ? (input.logbook_kelompok_hari ?? null) : undefined,
       logbook_kelompok_jam:

@@ -63,12 +63,12 @@ export const NAMA_HARI: Record<number, string> = {
 };
 
 // =============================================
-// Jadwal logbook kelompok mingguan
+// Jadwal logbook mingguan (individu & kelompok)
 // =============================================
 
 export type StatusMinggu = "BELUM_DIBUKA" | "TERBUKA" | "TERKUNCI";
 
-export type MingguLogbookKelompok = {
+export type MingguLogbook = {
   minggu_ke: number;
   tanggal_mulai: string; // YYYY-MM-DD
   tanggal_batas: string; // YYYY-MM-DD (akhir jendela minggu ini)
@@ -78,30 +78,32 @@ export type MingguLogbookKelompok = {
 };
 
 /**
- * Menghitung jendela mingguan logbook kelompok.
+ * Menghitung jendela mingguan logbook (individu maupun kelompok).
  * - Minggu ke-1 dimulai pada `tgl_pelaksanaan`, minggu terakhir berakhir di `tgl_penarikan`.
- * - Deadline minggu-N = hari (`logbook_kelompok_hari`) pertama dalam jendela minggu itu,
- *   pada jam `logbook_kelompok_jam`. Bila hari tersebut di luar jendela (minggu terakhir
- *   yang lebih pendek), jatuh ke hari terakhir jendela.
+ * - Deadline minggu-N = hari (`hari`) pertama dalam jendela minggu itu, pada jam `jam`.
+ *   Bila hari tersebut di luar jendela (minggu terakhir yang lebih pendek), jatuh ke
+ *   hari terakhir jendela.
  * - Setelah deadline terlampaui minggu itu TERKUNCI permanen (kunci total).
  *
  * Mengembalikan daftar kosong bila jadwal belum diatur admin
- * (`tgl_pelaksanaan` / `tgl_penarikan` / `logbook_kelompok_hari` null).
+ * (`tgl_pelaksanaan` / `tgl_penarikan` / `hari` null).
  */
 export const hitungJadwalMingguan = (opts: {
   tgl_pelaksanaan?: Date | null;
   tgl_penarikan?: Date | null;
-  logbook_kelompok_hari?: number | null;
-  logbook_kelompok_jam?: string | null;
+  /** 1 = Senin .. 7 = Minggu (ISO-8601) */
+  hari?: number | null;
+  /** "HH:mm" */
+  jam?: string | null;
   now?: Date;
-}): { minggu_total: number; minggu: MingguLogbookKelompok[] } => {
-  const { tgl_pelaksanaan, tgl_penarikan, logbook_kelompok_hari, logbook_kelompok_jam } = opts;
+}): { minggu_total: number; minggu: MingguLogbook[] } => {
+  const { tgl_pelaksanaan, tgl_penarikan, hari, jam } = opts;
   const now = opts.now ?? new Date();
 
-  if (!tgl_pelaksanaan || !tgl_penarikan || !logbook_kelompok_hari) {
+  if (!tgl_pelaksanaan || !tgl_penarikan || !hari) {
     return { minggu_total: 0, minggu: [] };
   }
-  if (logbook_kelompok_hari < 1 || logbook_kelompok_hari > 7) {
+  if (hari < 1 || hari > 7) {
     return { minggu_total: 0, minggu: [] };
   }
 
@@ -111,17 +113,16 @@ export const hitungJadwalMingguan = (opts: {
 
   const totalHari = Math.round((akhir - mulai) / DAY_MS) + 1;
   const mingguTotal = Math.ceil(totalHari / 7);
-  const jamMs = parseJam(logbook_kelompok_jam) * 60 * 1000;
+  const jamMs = parseJam(jam) * 60 * 1000;
 
-  const daftar: MingguLogbookKelompok[] = [];
+  const daftar: MingguLogbook[] = [];
 
   for (let n = 1; n <= mingguTotal; n += 1) {
     const weekStartMs = mulai + (n - 1) * 7 * DAY_MS;
     const weekEndMs = Math.min(weekStartMs + 6 * DAY_MS, akhir);
 
     // Offset dari awal minggu menuju hari deadline yang dipilih admin.
-    const offsetHari =
-      (logbook_kelompok_hari - isoWeekday(new Date(weekStartMs)) + 7) % 7;
+    const offsetHari = (hari - isoWeekday(new Date(weekStartMs)) + 7) % 7;
     let deadlineMs = weekStartMs + offsetHari * DAY_MS + jamMs;
     // Minggu terakhir bisa lebih pendek — jatuhkan ke hari terakhir jendela.
     if (deadlineMs > weekEndMs + jamMs) deadlineMs = weekEndMs + jamMs;
@@ -148,6 +149,24 @@ export const hitungJadwalMingguan = (opts: {
   }
 
   return { minggu_total: mingguTotal, minggu: daftar };
+};
+
+/**
+ * Cari minggu yang menaungi `tanggal` (dibandingkan berdasarkan tanggal murni).
+ * Mengembalikan `null` bila tanggal di luar seluruh jendela minggu
+ * (di luar rentang pelaksanaan → penarikan).
+ */
+export const cariMingguUntukTanggal = (
+  minggu: MingguLogbook[],
+  tanggal: Date,
+): MingguLogbook | null => {
+  const target = startOfDateUTC(tanggal).getTime();
+  for (const m of minggu) {
+    const mulai = Date.parse(m.tanggal_mulai);
+    const batas = Date.parse(m.tanggal_batas);
+    if (target >= mulai && target <= batas) return m;
+  }
+  return null;
 };
 
 /** Format YYYY-MM-DD dari Date (UTC). */
