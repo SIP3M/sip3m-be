@@ -4,9 +4,11 @@ import { HttpError } from "../../common/errors/http-error";
 import { ROLES } from "../../auth/role";
 import { supabase } from "../../config/storage";
 import { deriveMonitoringForKelompok } from "../monitoring/kkm-monitoring.service";
+import { isJabatanPenunggah } from "../logbook-kelompok/kkm-logbook-kelompok.service";
 import type {
   KkmKelompokAddAnggotaInput,
   KkmKelompokDocType,
+  KkmKelompokJabatan,
   KkmKelompokListQuery,
   KkmKelompokUpdateInput,
 } from "./kkm-kelompok.validation";
@@ -361,7 +363,17 @@ export const getKelompokDetail = async (
       fakultas: p.user.Fakultas?.nama ?? null,
       prodi: p.user.ProgramStudi?.nama ?? null,
       status: p.status,
+      jabatan: p.jabatan,
+      jabatan_label: JABATAN_LABEL[p.jabatan] ?? p.jabatan,
     })),
+    pimpinan: {
+      ketua: pesertaRows
+        .filter((p) => p.jabatan === "KETUA")
+        .map((p) => ({ peserta_id: p.id, nama: p.user.name, nim: p.user.nidn_nip })),
+      sekretaris: pesertaRows
+        .filter((p) => p.jabatan === "SEKRETARIS")
+        .map((p) => ({ peserta_id: p.id, nama: p.user.name, nim: p.user.nidn_nip })),
+    },
     dokumen: kelompok.documents.map((d) => ({
       id: d.id,
       document_type: d.document_type,
@@ -488,8 +500,19 @@ export const getKelompokSaya = async (userId: number) => {
       fakultas: p.user.Fakultas?.nama ?? null,
       prodi: p.user.ProgramStudi?.nama ?? null,
       status: p.status,
+      jabatan: p.jabatan,
+      jabatan_label: JABATAN_LABEL[p.jabatan] ?? p.jabatan,
       is_saya: p.user.id === userId,
     })),
+    // Jabatan mahasiswa yang login — dipakai FE untuk mengunci menu
+    // "Logbook Kelompok" & "Laporan Kelompok" (hanya Ketua/Sekretaris).
+    jabatan_saya: pesertaRows.find((p) => p.user.id === userId)?.jabatan ?? "ANGGOTA",
+    jabatan_saya_label:
+      JABATAN_LABEL[pesertaRows.find((p) => p.user.id === userId)?.jabatan ?? "ANGGOTA"] ??
+      "Anggota",
+    boleh_unggah_kelompok: isJabatanPenunggah(
+      pesertaRows.find((p) => p.user.id === userId)?.jabatan,
+    ),
     stats: {
       logbook_minggu_ini: logbookMingguIni,
       dokumen_kelompok: dokumenKelompok,
@@ -628,6 +651,66 @@ export const removeAnggota = async (kelompok_id: number, peserta_id: number) => 
     data: { kelompok_id: null },
   });
   return { id: peserta_id, kelompok_id: null };
+};
+
+// =============================================
+// Jabatan kelompok (KETUA / SEKRETARIS / ANGGOTA)
+// Ditubuhkan admin LPPM — menentukan siapa yang boleh unggah
+// logbook & laporan kelompok.
+// =============================================
+
+const JABATAN_LABEL: Record<string, string> = {
+  ANGGOTA: "Anggota",
+  KETUA: "Ketua",
+  SEKRETARIS: "Sekretaris",
+};
+
+/**
+ * Tetapkan jabatan satu anggota kelompok.
+ * KETUA & SEKRETARIS bersifat tunggal per kelompok: menetapkan jabatan baru
+ * otomatis menggeser pejabat sebelumnya menjadi ANGGOTA.
+ */
+export const setJabatanAnggota = async (
+  kelompok_id: number,
+  peserta_id: number,
+  jabatan: KkmKelompokJabatan,
+) => {
+  const peserta = await prisma.kkmPeserta.findUnique({
+    where: { id: peserta_id },
+    select: { id: true, kelompok_id: true, jabatan: true, user: { select: { name: true } } },
+  });
+  if (!peserta) throw new HttpError("Peserta tidak ditemukan.", 404);
+  if (peserta.kelompok_id !== kelompok_id) {
+    throw new HttpError("Peserta bukan anggota kelompok ini.", 400);
+  }
+
+  const result = await prisma.$transaction(async (tx) => {
+    // Jabatan KETUA/SEKRETARIS unik per kelompok — kosongkan pejabat lama.
+    if (jabatan !== "ANGGOTA") {
+      await tx.kkmPeserta.updateMany({
+        where: { kelompok_id, jabatan, id: { not: peserta_id } },
+        data: { jabatan: "ANGGOTA" },
+      });
+    }
+    return tx.kkmPeserta.update({
+      where: { id: peserta_id },
+      data: { jabatan },
+      select: {
+        id: true,
+        jabatan: true,
+        user: { select: { id: true, name: true, nidn_nip: true } },
+      },
+    });
+  });
+
+  return {
+    peserta_id: result.id,
+    jabatan: result.jabatan,
+    jabatan_label: JABATAN_LABEL[result.jabatan] ?? result.jabatan,
+    nama: result.user.name,
+    nim: result.user.nidn_nip,
+    sebelumnya: peserta.jabatan,
+  };
 };
 
 // =============================================

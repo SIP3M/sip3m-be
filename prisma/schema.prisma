@@ -277,6 +277,8 @@ model users {
   kkmLogbookEntries        KkmLogbookEntry[]
   kkmLogbookReviews        KkmLogbookEntry[] @relation("KkmLogbookReviewer")
   kkmPenilaianDpl          KkmPenilaian[]    @relation("DplPenilai")
+  kkmLogbookKelompokUploaded KkmLogbookKelompok[] @relation("KkmLogbookKelompokUploader")
+  kkmLaporanIndividuUploaded KkmLaporanIndividu[] @relation("KkmLaporanIndividuUploader")
   pengumumanCreated        Pengumuman[]
   pengumumanRecipients     PengumumanRecipient[]
 
@@ -384,6 +386,19 @@ model KkmPeriod {
   tgl_penarikan           DateTime?       @db.Date
   deadline_laporan        DateTime?       @db.Date
 
+  // ===== Pengaturan upload dinamis (diatur admin LPPM) =====
+  // Logbook individu: batas akhir mahasiswa mengunggah logbook pribadi.
+  deadline_logbook_individu DateTime?     @db.Date
+  jam_logbook_individu      String?       @db.VarChar(5) // "HH:mm", default 23:59
+  // Logbook kelompok: diunggah mingguan oleh ketua/sekretaris.
+  logbook_kelompok_hari     Int?          // 1=Senin .. 7=Minggu (ISO-8601)
+  logbook_kelompok_jam      String?       @db.VarChar(5) // "HH:mm", default 23:59
+  // Laporan individu: buka setelah tgl_penarikan, tutup pada deadline di bawah.
+  deadline_laporan_individu DateTime?     @db.Date
+  jam_laporan_individu      String?       @db.VarChar(5) // "HH:mm", default 23:59
+  // Laporan kelompok: menumpuk pada deadline_laporan + jam di bawah.
+  jam_laporan_kelompok      String?       @db.VarChar(5) // "HH:mm", default 23:59
+
   target_peserta          Int             @default(0)
   minimal_semester        Int?
   maks_anggota_kelompok   Int             @default(10)
@@ -404,6 +419,8 @@ model KkmPeriod {
   kelompokan  KkmKelompok[]
   peserta     KkmPeserta[]
   dplQuotas   KkmDplQuota[]
+  logbookMingguan KkmLogbookKelompok[]
+  laporanIndividu KkmLaporanIndividu[]
 
   @@unique([nama_periode, tahun_akademik])
   @@index([status])
@@ -458,6 +475,14 @@ enum KkmPesertaStatus {
   REJECTED
 }
 
+// Jabatan anggota dalam kelompok KKM (ditetapkan admin LPPM).
+// Hanya KETUA & SEKRETARIS yang boleh unggah logbook/laporan kelompok.
+enum JabatanKelompok {
+  ANGGOTA
+  KETUA
+  SEKRETARIS
+}
+
 enum KkmKelompokDocumentType {
   PROPOSAL_PROGRAM_KERJA
   LOGBOOK_KELOMPOK
@@ -487,6 +512,7 @@ model KkmKelompok {
   peserta    KkmPeserta[]
   documents  KkmKelompokDocument[]
   logbook    KkmLogbookEntry[]
+  logbookMingguan KkmLogbookKelompok[]
 
   created_at DateTime    @default(now())
   updated_at DateTime    @updatedAt
@@ -548,6 +574,10 @@ model KkmPeserta {
 
   status      KkmPesertaStatus   @default(PENDING)
 
+  // Jabatan dalam kelompok (ditetapkan admin LPPM) — menentukan akses
+  // upload logbook & laporan kelompok (hanya KETUA/SEKRETARIS).
+  jabatan     JabatanKelompok    @default(ANGGOTA)
+
   // Form pendaftaran mandiri (mahasiswa): DRAFT -> PENDING -> VERIFIED/REJECTED
   no_wa               String? @db.VarChar(20)
   ukuran_jaket        String? @db.VarChar(10)
@@ -560,6 +590,7 @@ model KkmPeserta {
   user        users              @relation(fields: [user_id], references: [id], onDelete: Cascade)
   kelompok    KkmKelompok?       @relation(fields: [kelompok_id], references: [id], onDelete: SetNull)
   penilaian   KkmPenilaian?
+  laporanIndividu KkmLaporanIndividu?
 
   created_at  DateTime           @default(now())
   updated_at  DateTime           @updatedAt
@@ -629,6 +660,62 @@ model KkmLogbookEntry {
   @@index([kelompok_id, tanggal])
   @@index([user_id])
   @@index([status])
+}
+
+// =============================================
+// Logbook Kelompok — 1 baris = 1 minggu (riwayat upload mingguan)
+// Diunggah ketua/sekretaris kelompok, PDF, deadline mingguan diatur admin LPPM.
+// =============================================
+model KkmLogbookKelompok {
+  id          Int      @id @default(autoincrement())
+  kelompok_id Int
+  periode_id  Int
+  minggu_ke   Int      // 1-based, dihitung dari tgl_pelaksanaan
+
+  file_path   String   @db.VarChar(500)
+  file_size   Int?     // byte
+  mime_type   String?  @db.VarChar(100)
+  uploaded_by Int      // user_id ketua/sekretaris yang mengunggah
+
+  kelompok    KkmKelompok @relation(fields: [kelompok_id], references: [id], onDelete: Cascade)
+  periode     KkmPeriod   @relation(fields: [periode_id], references: [id], onDelete: Cascade)
+  uploader    users       @relation("KkmLogbookKelompokUploader", fields: [uploaded_by], references: [id], onDelete: Cascade)
+
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  // 1 kelompok = 1 file per minggu (upload ulang menimpa minggu yang sama)
+  @@unique([kelompok_id, minggu_ke])
+  @@index([kelompok_id])
+  @@index([periode_id])
+  @@index([uploaded_by])
+}
+
+// =============================================
+// Laporan Individu — 1 baris per mahasiswa (1 PDF)
+// Dibuka setelah tgl_penarikan, ditutup pada deadline_laporan_individu.
+// =============================================
+model KkmLaporanIndividu {
+  id          Int      @id @default(autoincrement())
+  peserta_id  Int      @unique
+  periode_id  Int
+
+  file_path   String   @db.VarChar(500)
+  file_size   Int?     // byte
+  mime_type   String?  @db.VarChar(100)
+  uploaded_by Int      // user_id mahasiswa pemilik laporan
+  uploaded_at DateTime @default(now())
+
+  peserta     KkmPeserta @relation(fields: [peserta_id], references: [id], onDelete: Cascade)
+  periode     KkmPeriod  @relation(fields: [periode_id], references: [id], onDelete: Cascade)
+  uploader    users      @relation("KkmLaporanIndividuUploader", fields: [uploaded_by], references: [id], onDelete: Cascade)
+
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  @@index([peserta_id])
+  @@index([periode_id])
+  @@index([uploaded_by])
 }
 
 // =============================================

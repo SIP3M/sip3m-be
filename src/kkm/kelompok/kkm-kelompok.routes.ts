@@ -11,6 +11,7 @@ import {
   getKelompokSayaController,
   getKelompokStatsController,
   removeAnggotaController,
+  setJabatanAnggotaController,
   updateKelompokController,
   uploadDokumenController,
 } from "./kkm-kelompok.controller";
@@ -81,6 +82,15 @@ router.delete(
   authMiddleware,
   requireRole([ROLES.ADMIN_LPPM]),
   removeAnggotaController,
+);
+
+// Jabatan kelompok (KETUA / SEKRETARIS / ANGGOTA) — admin LPPM.
+// Menentukan siapa yang boleh mengunggah logbook & laporan kelompok.
+router.patch(
+  "/kkm/kelompok/:id/anggota/:pesertaId/jabatan",
+  authMiddleware,
+  requireRole([ROLES.ADMIN_LPPM]),
+  setJabatanAnggotaController,
 );
 
 router.post(

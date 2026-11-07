@@ -5,6 +5,7 @@ import {
   kkmKelompokAddAnggotaSchema,
   kkmKelompokDocTypeEnum,
   kkmKelompokListQuerySchema,
+  kkmKelompokSetJabatanSchema,
   kkmKelompokStatsQuerySchema,
   kkmKelompokUpdateSchema,
 } from "./kkm-kelompok.validation";
@@ -16,6 +17,7 @@ import {
   getKelompokSaya,
   getKelompokStats,
   removeAnggota,
+  setJabatanAnggota,
   updateKelompok,
   uploadDokumen,
 } from "./kkm-kelompok.service";
@@ -126,6 +128,34 @@ export const removeAnggotaController = async (req: AuthenticatedRequest, res: Re
     if (error instanceof HttpError) return res.status(error.statusCode).json({ message: error.message });
     console.error("[REMOVE_ANGGOTA_KELOMPOK_ERROR]", error);
     return res.status(500).json({ message: "Terjadi kesalahan saat menghapus anggota kelompok." });
+  }
+};
+
+/**
+ * PATCH /kkm/kelompok/:id/anggota/:pesertaId/jabatan
+ * Tetapkan jabatan (KETUA / SEKRETARIS / ANGGOTA) — admin LPPM.
+ */
+export const setJabatanAnggotaController = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    if (!req.user?.userId) throw new HttpError("Unauthorized", 401);
+    const id = parseIdParam(req.params.id);
+    const pesertaId = parseIdParam(req.params.pesertaId);
+    const parsed = kkmKelompokSetJabatanSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({
+        message: "Validasi data gagal.",
+        errors: parsed.error.flatten().fieldErrors,
+      });
+    }
+    const data = await setJabatanAnggota(id, pesertaId, parsed.data.jabatan);
+    return res.status(200).json({
+      message: `Jabatan ${data.nama} berhasil ditetapkan sebagai ${data.jabatan_label}.`,
+      data,
+    });
+  } catch (error) {
+    if (error instanceof HttpError) return res.status(error.statusCode).json({ message: error.message });
+    console.error("[SET_JABATAN_ANGGOTA_ERROR]", error);
+    return res.status(500).json({ message: "Terjadi kesalahan saat menetapkan jabatan anggota." });
   }
 };
 
