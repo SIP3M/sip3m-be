@@ -1217,10 +1217,12 @@ Membuat user baru dengan role apapun.
                       description: "Nama role (case-insensitive).",
                       enum: [
                         "ADMIN_LPPM",
+                        "ADMIN_SISTEM",
                         "STAFF_LPPM",
                         "DOSEN",
                         "REVIEWER",
                         "REVIEWER_EKSTERNAL",
+                        "MAHASISWA",
                       ],
                       example: "DOSEN",
                     },
@@ -1265,6 +1267,11 @@ Membuat user baru dengan role apapun.
                       type: "string",
                       example: "081234567890",
                       description: "Opsional.",
+                    },
+                    semester: {
+                      type: "integer",
+                      example: 7,
+                      description: "Opsional. Semester mahasiswa (1-14). Wajib jika role MAHASISWA.",
                     },
                     is_active: {
                       type: "boolean",
@@ -1798,10 +1805,12 @@ Memperbarui data user berdasarkan ID.
                       type: "string",
                       enum: [
                         "ADMIN_LPPM",
+                        "ADMIN_SISTEM",
                         "STAFF_LPPM",
                         "DOSEN",
                         "REVIEWER",
                         "REVIEWER_EKSTERNAL",
+                        "MAHASISWA",
                       ],
                       example: "STAFF_LPPM",
                       description: "Opsional. Ganti role user.",
@@ -1849,6 +1858,11 @@ Memperbarui data user berdasarkan ID.
                       type: "string",
                       example: "081234567890",
                       description: "Opsional.",
+                    },
+                    semester: {
+                      type: "integer",
+                      example: 7,
+                      description: "Opsional. Semester mahasiswa (1-14).",
                     },
                     is_active: {
                       type: "boolean",

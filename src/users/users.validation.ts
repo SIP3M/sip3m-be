@@ -9,6 +9,7 @@ export const updateUserRoleSchema = z.object({
     ROLES.DOSEN,
     ROLES.REVIEWER,
     ROLES.REVIEWER_EKSTERNAL,
+    ROLES.MAHASISWA,
   ]),
 });
 
@@ -28,6 +29,7 @@ export const createUserSchema = z.object({
     ROLES.DOSEN,
     ROLES.REVIEWER,
     ROLES.REVIEWER_EKSTERNAL,
+    ROLES.MAHASISWA,
   ]),
   nidn_nip: z
     .string()
@@ -48,6 +50,7 @@ export const createUserSchema = z.object({
     .min(10)
     .max(15)
     .optional(),
+  semester: z.coerce.number().int().min(1).max(14).optional(),
   is_active: z.boolean().optional(),
 });
 
@@ -59,10 +62,12 @@ export const updateUserSchema = z.object({
   roles: z
     .enum([
       ROLES.ADMIN_LPPM,
+      ROLES.ADMIN_SISTEM,
       ROLES.STAFF_LPPM,
       ROLES.DOSEN,
       ROLES.REVIEWER,
       ROLES.REVIEWER_EKSTERNAL,
+      ROLES.MAHASISWA,
     ])
     .optional(),
   nidn_nip: z
@@ -87,5 +92,6 @@ export const updateUserSchema = z.object({
     .min(10)
     .max(15)
     .optional(),
+  semester: z.coerce.number().int().min(1).max(14).optional(),
   is_active: z.boolean().optional(),
 });

@@ -28,6 +28,7 @@ import kkmPenilaianRoute from "./kkm/penilaian/kkm-penilaian.routes";
 import kkmPengumumanRoute from "./kkm/pengumuman/kkm-pengumuman.routes";
 import kkmLogbookKelompokRoute from "./kkm/logbook-kelompok/kkm-logbook-kelompok.routes";
 import kkmLaporanRoute from "./kkm/laporan/kkm-laporan.routes";
+import kkmJabatanMasterRoute from "./kkm/jabatan-master/jabatan-master.routes";
 import auditRoute from "./audit/audit.routes";
 import { auditMiddleware } from "./audit/audit.middleware";
 import referensiRoute from "./master/referensi/referensi.routes";
@@ -116,6 +117,7 @@ app.use("/api", kkmPenilaianRoute);
 app.use("/api", kkmPengumumanRoute);
 app.use("/api", kkmLogbookKelompokRoute);
 app.use("/api", kkmLaporanRoute);
+app.use("/api", kkmJabatanMasterRoute);
 app.use("/api", auditRoute);
 app.use("/api", referensiRoute);
 app.use("/api", master)
