@@ -29,7 +29,7 @@ router.get(
 router.post(
   "/kkm/jabatan-master",
   authMiddleware,
-  requireRole("ADMIN_SISTEM"),
+  requireRole(["ADMIN_SISTEM"]),
   createJabatanMasterHandler,
 );
 
@@ -37,7 +37,7 @@ router.post(
 router.patch(
   "/kkm/jabatan-master/:id",
   authMiddleware,
-  requireRole("ADMIN_SISTEM"),
+  requireRole(["ADMIN_SISTEM"]),
   updateJabatanMasterHandler,
 );
 
@@ -45,7 +45,7 @@ router.patch(
 router.delete(
   "/kkm/jabatan-master/:id",
   authMiddleware,
-  requireRole("ADMIN_SISTEM"),
+  requireRole(["ADMIN_SISTEM"]),
   deleteJabatanMasterHandler,
 );
 
