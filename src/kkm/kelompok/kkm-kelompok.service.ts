@@ -299,6 +299,7 @@ export const getKelompokDetail = async (
           ProgramStudi: { select: { nama: true } },
         },
       },
+      jabatan: { select: { id: true, nama: true } },
     },
   });
 
@@ -363,15 +364,15 @@ export const getKelompokDetail = async (
       fakultas: p.user.Fakultas?.nama ?? null,
       prodi: p.user.ProgramStudi?.nama ?? null,
       status: p.status,
-      jabatan: p.jabatan,
-      jabatan_label: JABATAN_LABEL[p.jabatan] ?? p.jabatan,
+      jabatan: p.jabatan?.nama ?? "ANGGOTA",
+      jabatan_label: p.jabatan?.nama === "KETUA" ? "Ketua" : p.jabatan?.nama === "SEKRETARIS" ? "Sekretaris" : "Anggota",
     })),
     pimpinan: {
       ketua: pesertaRows
-        .filter((p) => p.jabatan === "KETUA")
+        .filter((p) => p.jabatan?.nama === "KETUA")
         .map((p) => ({ peserta_id: p.id, nama: p.user.name, nim: p.user.nidn_nip })),
       sekretaris: pesertaRows
-        .filter((p) => p.jabatan === "SEKRETARIS")
+        .filter((p) => p.jabatan?.nama === "SEKRETARIS")
         .map((p) => ({ peserta_id: p.id, nama: p.user.name, nim: p.user.nidn_nip })),
     },
     dokumen: kelompok.documents.map((d) => ({
@@ -452,6 +453,7 @@ export const getKelompokSaya = async (userId: number) => {
           ProgramStudi: { select: { nama: true } },
         },
       },
+      jabatan: { select: { id: true, nama: true } },
     },
   });
 
@@ -500,16 +502,19 @@ export const getKelompokSaya = async (userId: number) => {
       fakultas: p.user.Fakultas?.nama ?? null,
       prodi: p.user.ProgramStudi?.nama ?? null,
       status: p.status,
-      jabatan: p.jabatan,
-      jabatan_label: JABATAN_LABEL[p.jabatan] ?? p.jabatan,
+      jabatan: p.jabatan?.nama ?? "ANGGOTA",
+      jabatan_label: p.jabatan?.nama === "KETUA" ? "Ketua" : p.jabatan?.nama === "SEKRETARIS" ? "Sekretaris" : "Anggota",
       is_saya: p.user.id === userId,
     })),
     // Jabatan mahasiswa yang login — dipakai FE untuk mengunci menu
     // "Logbook Kelompok" & "Laporan Kelompok" (hanya Ketua/Sekretaris).
-    jabatan_saya: pesertaRows.find((p) => p.user.id === userId)?.jabatan ?? "ANGGOTA",
+    jabatan_saya: pesertaRows.find((p) => p.user.id === userId)?.jabatan?.nama ?? "ANGGOTA",
     jabatan_saya_label:
-      JABATAN_LABEL[pesertaRows.find((p) => p.user.id === userId)?.jabatan ?? "ANGGOTA"] ??
-      "Anggota",
+      pesertaRows.find((p) => p.user.id === userId)?.jabatan?.nama === "KETUA"
+        ? "Ketua"
+        : pesertaRows.find((p) => p.user.id === userId)?.jabatan?.nama === "SEKRETARIS"
+          ? "Sekretaris"
+          : "Anggota",
     boleh_unggah_kelompok: isJabatanPenunggah(
       pesertaRows.find((p) => p.user.id === userId)?.jabatan,
     ),
@@ -673,31 +678,60 @@ const JABATAN_LABEL: Record<string, string> = {
 export const setJabatanAnggota = async (
   kelompok_id: number,
   peserta_id: number,
-  jabatan: KkmKelompokJabatan,
+  jabatan_nama: string,
 ) => {
   const peserta = await prisma.kkmPeserta.findUnique({
     where: { id: peserta_id },
-    select: { id: true, kelompok_id: true, jabatan: true, user: { select: { name: true } } },
+    select: { id: true, kelompok_id: true, jabatan: { select: { id: true, nama: true } }, user: { select: { name: true } } },
   });
   if (!peserta) throw new HttpError("Peserta tidak ditemukan.", 404);
   if (peserta.kelompok_id !== kelompok_id) {
     throw new HttpError("Peserta bukan anggota kelompok ini.", 400);
   }
 
+  // Cari jabatan master berdasarkan nama
+  const jabatanMaster = await prisma.jabatanKelompokMaster.findUnique({
+    where: { nama: jabatan_nama },
+  });
+  if (!jabatanMaster) throw new HttpError(`Jabatan "${jabatan_nama}" tidak ditemukan di master.`, 400);
+
+  // Validasi max_per_kelompok
+  if (jabatanMaster.max_per_kelompok && jabatanMaster.max_per_kelompok > 0) {
+    const count = await prisma.kkmPeserta.count({
+      where: {
+        kelompok_id,
+        jabatan_id: jabatanMaster.id,
+        id: { not: peserta_id },
+      },
+    });
+    if (count >= jabatanMaster.max_per_kelompok) {
+      throw new HttpError(
+        `Sudah ada ${count} orang dengan jabatan "${jabatan_nama}" di kelompok ini. Maksimal: ${jabatanMaster.max_per_kelompok}.`,
+        400,
+      );
+    }
+  }
+
   const result = await prisma.$transaction(async (tx) => {
-    // Jabatan KETUA/SEKRETARIS unik per kelompok — kosongkan pejabat lama.
-    if (jabatan !== "ANGGOTA") {
-      await tx.kkmPeserta.updateMany({
-        where: { kelompok_id, jabatan, id: { not: peserta_id } },
-        data: { jabatan: "ANGGOTA" },
+    // Jabatan unik per kelompok (jika max_per_kelompok = 1) — kosongkan pejabat lama.
+    if (jabatanMaster.max_per_kelompok === 1 && jabatan_nama !== "ANGGOTA") {
+      // Cari jabatan ANGGOTA untuk demote
+      const anggotaJabatan = await tx.jabatanKelompokMaster.findUnique({
+        where: { nama: "ANGGOTA" },
       });
+      if (anggotaJabatan) {
+        await tx.kkmPeserta.updateMany({
+          where: { kelompok_id, jabatan_id: jabatanMaster.id, id: { not: peserta_id } },
+          data: { jabatan_id: anggotaJabatan.id },
+        });
+      }
     }
     return tx.kkmPeserta.update({
       where: { id: peserta_id },
-      data: { jabatan },
+      data: { jabatan_id: jabatanMaster.id },
       select: {
         id: true,
-        jabatan: true,
+        jabatan: { select: { id: true, nama: true } },
         user: { select: { id: true, name: true, nidn_nip: true } },
       },
     });
@@ -705,11 +739,16 @@ export const setJabatanAnggota = async (
 
   return {
     peserta_id: result.id,
-    jabatan: result.jabatan,
-    jabatan_label: JABATAN_LABEL[result.jabatan] ?? result.jabatan,
+    jabatan: result.jabatan?.nama ?? "ANGGOTA",
+    jabatan_label:
+      result.jabatan?.nama === "KETUA"
+        ? "Ketua"
+        : result.jabatan?.nama === "SEKRETARIS"
+          ? "Sekretaris"
+          : "Anggota",
     nama: result.user.name,
     nim: result.user.nidn_nip,
-    sebelumnya: peserta.jabatan,
+    sebelumnya: peserta.jabatan?.nama ?? "ANGGOTA",
   };
 };
 

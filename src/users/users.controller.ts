@@ -116,6 +116,7 @@ export const getUsers = async (
           bidang_keahlian: true,
           Fakultas: { select: { id: true, nama: true } },
           ProgramStudi: { select: { id: true, nama: true } },
+          semester: true,
           is_active: true,
           created_at: true,
           roles: {
@@ -166,6 +167,7 @@ export const getUsers = async (
         beban_review: bebanMap.get(user.id) ?? null,
         fakultas: toRef(user.Fakultas),
         program_studi: toRef(user.ProgramStudi),
+        semester: user.semester,
         is_active: user.is_active,
         created_at: user.created_at,
         roles: {
@@ -214,6 +216,7 @@ export const getUserById = async (
       jenis_kelamin: true,
       alamat: true,
       nomor_hp: true,
+      semester: true,
       is_active: true,
       created_at: true,
       updated_at: true,
@@ -244,6 +247,7 @@ export const getUserById = async (
       jenis_kelamin: user.jenis_kelamin,
       alamat: user.alamat,
       nomor_hp: user.nomor_hp,
+      semester: user.semester,
       is_active: user.is_active,
       created_at: user.created_at,
       updated_at: user.updated_at,
@@ -410,6 +414,7 @@ export const createUser = async (
       jenis_kelamin?: string;
       alamat?: string;
       nomor_hp?: string;
+      semester?: number;
       is_active?: boolean;
     };
 
@@ -488,6 +493,7 @@ export const createUser = async (
         jenis_kelamin: body.jenis_kelamin ?? null,
         alamat: body.alamat ?? null,
         nomor_hp: body.nomor_hp ?? null,
+        semester: body.semester ?? null,
         is_active: body.is_active ?? true,
       },
       select: {
@@ -501,6 +507,7 @@ export const createUser = async (
         Fakultas: { select: { id: true, nama: true } },
         ProgramStudi: { select: { id: true, nama: true } },
 
+        semester: true,
         is_active: true,
         created_at: true,
         roles: { select: { id: true, roles: true } },
@@ -524,6 +531,7 @@ export const createUser = async (
         nidn: newUser.nidn_nip,
         fakultas: toRef(newUser.Fakultas),
         program_studi: toRef(newUser.ProgramStudi),
+        semester: newUser.semester,
         is_active: newUser.is_active,
         created_at: newUser.created_at,
         roles: { id: newUser.roles.id, roles: newUser.roles.roles },
@@ -582,6 +590,7 @@ export const updateUser = async (
       jenis_kelamin?: string;
       alamat?: string;
       nomor_hp?: string;
+      semester?: number;
       is_active?: boolean;
     };
 
@@ -685,6 +694,7 @@ export const updateUser = async (
       updatedData.jenis_kelamin = body.jenis_kelamin;
     if (body.alamat !== undefined) updatedData.alamat = body.alamat;
     if (body.nomor_hp !== undefined) updatedData.nomor_hp = body.nomor_hp;
+    if (body.semester !== undefined) updatedData.semester = body.semester;
     if (body.is_active !== undefined) updatedData.is_active = body.is_active;
 
     const updatedUser = await prisma.users.update({
@@ -698,6 +708,7 @@ export const updateUser = async (
         nidn_nip: true,
         Fakultas: { select: { id: true, nama: true } },
         ProgramStudi: { select: { id: true, nama: true } },
+        semester: true,
         is_active: true,
         created_at: true,
         updated_at: true,
@@ -722,6 +733,7 @@ export const updateUser = async (
         nidn: updatedUser.nidn_nip,
         fakultas: toRef(updatedUser.Fakultas),
         program_studi: toRef(updatedUser.ProgramStudi),
+        semester: updatedUser.semester,
         is_active: updatedUser.is_active,
         created_at: updatedUser.created_at,
         updated_at: updatedUser.updated_at,

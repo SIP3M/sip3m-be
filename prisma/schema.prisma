@@ -478,6 +478,8 @@ enum KkmPesertaStatus {
 
 // Jabatan anggota dalam kelompok KKM (ditetapkan admin LPPM).
 // Hanya KETUA & SEKRETARIS yang boleh unggah logbook/laporan kelompok.
+// JabatanKelompok enum tetap ada untuk backward compatibility, tapi deprecated
+// Gunakan JabatanKelompokMaster untuk dynamic jabatan
 enum JabatanKelompok {
   ANGGOTA
   KETUA
@@ -567,6 +569,17 @@ model UserSession {
   @@index([expires_at])
 }
 
+model JabatanKelompokMaster {
+  id                Int      @id @default(autoincrement())
+  nama              String   @unique @db.VarChar(100)
+  max_per_kelompok  Int?     // null = unlimited
+  
+  peserta           KkmPeserta[]
+  
+  created_at        DateTime @default(now())
+  updated_at        DateTime @updatedAt
+}
+
 model KkmPeserta {
   id          Int                @id @default(autoincrement())
   periode_id  Int
@@ -575,9 +588,10 @@ model KkmPeserta {
 
   status      KkmPesertaStatus   @default(PENDING)
 
-  // Jabatan dalam kelompok (ditetapkan admin LPPM) — menentukan akses
-  // upload logbook & laporan kelompok (hanya KETUA/SEKRETARIS).
-  jabatan     JabatanKelompok    @default(ANGGOTA)
+  // Jabatan dalam kelompok (FK ke JabatanKelompokMaster)
+  // Default: ANGGOTA (hardcoded di service, bukan di DB)
+  jabatan_id  Int?
+  jabatan     JabatanKelompokMaster? @relation(fields: [jabatan_id], references: [id], onDelete: SetNull)
 
   // Form pendaftaran mandiri (mahasiswa): DRAFT -> PENDING -> VERIFIED/REJECTED
   no_wa               String? @db.VarChar(20)

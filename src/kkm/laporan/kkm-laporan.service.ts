@@ -263,7 +263,7 @@ export const getLaporanKelompokSaya = async (userId: number) => {
       peserta: {
         select: {
           user_id: true,
-          jabatan: true,
+          jabatan: { select: { id: true, nama: true } },
           user: { select: { id: true, name: true, nidn_nip: true } },
         },
       },
@@ -302,7 +302,7 @@ export const getLaporanKelompokSaya = async (userId: number) => {
   });
 
   const dokumen = kelompok.documents[0] ?? null;
-  const jabatan = keanggotaan.jabatan as JabatanKelompokValue;
+  const jabatan = keanggotaan.jabatan;
   const bolehUnggah = isJabatanPenunggah(jabatan);
 
   return {
@@ -313,9 +313,9 @@ export const getLaporanKelompokSaya = async (userId: number) => {
       tahun_akademik: periode.tahun_akademik,
       status: periode.status,
     },
-    jabatan,
+    jabatan: jabatan?.nama ?? "ANGGOTA",
     jabatan_label:
-      jabatan === "KETUA" ? "Ketua" : jabatan === "SEKRETARIS" ? "Sekretaris" : "Anggota",
+      jabatan?.nama === "KETUA" ? "Ketua" : jabatan?.nama === "SEKRETARIS" ? "Sekretaris" : "Anggota",
     boleh_unggah: bolehUnggah,
     alasan_tidak_boleh_unggah: bolehUnggah
       ? null
@@ -328,10 +328,10 @@ export const getLaporanKelompokSaya = async (userId: number) => {
     },
     bisa_unggah: bolehUnggah && jendela.terbuka,
     ketua: kelompok.peserta
-      .filter((p) => p.jabatan === "KETUA")
+      .filter((p) => p.jabatan?.nama === "KETUA")
       .map((p) => ({ nama: p.user.name, nim: p.user.nidn_nip })),
     sekretaris: kelompok.peserta
-      .filter((p) => p.jabatan === "SEKRETARIS")
+      .filter((p) => p.jabatan?.nama === "SEKRETARIS")
       .map((p) => ({ nama: p.user.name, nim: p.user.nidn_nip })),
     laporan: dokumen
       ? {
@@ -369,7 +369,7 @@ export const uploadLaporanKelompok = async (
           jam_laporan_kelompok: true,
         },
       },
-      peserta: { select: { user_id: true, jabatan: true } },
+      peserta: { select: { user_id: true, jabatan: { select: { id: true, nama: true } } } },
     },
   });
   if (!kelompok) throw new HttpError("Kelompok KKM tidak ditemukan.", 404);

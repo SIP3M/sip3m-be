@@ -1,0 +1,1 @@
+SELECT COUNT(*) as total_location FROM "KkmLocation" WHERE periode_id = 30 AND kabupaten = 'Test Kabupaten';

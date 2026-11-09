@@ -20,9 +20,9 @@ export type JabatanKelompokValue = "ANGGOTA" | "KETUA" | "SEKRETARIS";
 
 /** Jabatan yang boleh mengunggah dokumen kelompok (logbook & laporan). */
 export const isJabatanPenunggah = (
-  jabatan?: string | null,
-): jabatan is "KETUA" | "SEKRETARIS" =>
-  jabatan === "KETUA" || jabatan === "SEKRETARIS";
+  jabatan?: { nama: string } | null,
+): jabatan is { nama: "KETUA" | "SEKRETARIS" } =>
+  jabatan?.nama === "KETUA" || jabatan?.nama === "SEKRETARIS";
 
 /**
  * Keanggotaan mahasiswa pada periode aktif (fallback: periode mana pun).
@@ -41,7 +41,7 @@ export const getKeanggotaanSaya = async (userId: number) => {
         id: true,
         kelompok_id: true,
         periode_id: true,
-        jabatan: true,
+        jabatan: { select: { id: true, nama: true } },
         status: true,
       },
     });
@@ -110,7 +110,7 @@ export const getLogbookKelompokSaya = async (userId: number) => {
   });
   const riwayatMap = new Map(riwayat.map((r) => [r.minggu_ke, r]));
 
-  const jabatan = keanggotaan.jabatan as JabatanKelompokValue;
+  const jabatan = keanggotaan.jabatan;
   const bolehUnggah = isJabatanPenunggah(jabatan);
 
   const minggu = jadwal.minggu.map((m) => {
@@ -161,8 +161,8 @@ export const getLogbookKelompokSaya = async (userId: number) => {
       tahun_akademik: periode.tahun_akademik,
       status: periode.status,
     },
-    jabatan,
-    jabatan_label: jabatan === "KETUA" ? "Ketua" : jabatan === "SEKRETARIS" ? "Sekretaris" : "Anggota",
+    jabatan: jabatan?.nama ?? "ANGGOTA",
+    jabatan_label: jabatan?.nama === "KETUA" ? "Ketua" : jabatan?.nama === "SEKRETARIS" ? "Sekretaris" : "Anggota",
     boleh_unggah: bolehUnggah,
     alasan_tidak_boleh_unggah: bolehUnggah
       ? null
