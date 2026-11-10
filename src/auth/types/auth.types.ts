@@ -88,6 +88,11 @@ export interface LoginResult {
     roles: {
       id: number;
       roles: string;
+      deskripsi?: string | null;
+      is_system?: boolean;
+      dashboard_path?: string | null;
     };
+    /** Kode izin user (permission dinamis) — ADMIN_SISTEM = seluruh izin. */
+    permissions: string[];
   };
 }

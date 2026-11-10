@@ -1,8 +1,8 @@
 import { Router, NextFunction, Request, Response } from "express";
 import multer from "multer";
 import { authMiddleware } from "../../auth/middleware/auth.middleware";
-import { requireRole } from "../../auth/middleware/role.middleware";
-import { ROLES } from "../../auth/role";
+import { requirePermission } from "../../auth/middleware/permission.middleware";
+import { PERMISSIONS } from "../../auth/permission";
 import { MulterError } from "multer";
 import {
   createLogbookEntryController,
@@ -22,7 +22,7 @@ const router = Router();
 router.get(
   "/kkm/monitoring",
   authMiddleware,
-  requireRole([ROLES.ADMIN_LPPM, ROLES.STAFF_LPPM, ROLES.DOSEN]),
+  requirePermission(PERMISSIONS.KKM_MONITORING_LIHAT),
   getMonitoringListController,
 );
 
@@ -30,7 +30,7 @@ router.get(
 router.get(
   "/kkm/logbook/me",
   authMiddleware,
-  requireRole([ROLES.MAHASISWA]),
+  requirePermission(PERMISSIONS.KKM_LOGBOOK_SAYA),
   getLogbookSayaController,
 );
 
@@ -38,7 +38,7 @@ router.get(
 router.get(
   "/kkm/logbook/validasi",
   authMiddleware,
-  requireRole([ROLES.DOSEN, ROLES.ADMIN_LPPM, ROLES.STAFF_LPPM]),
+  requirePermission(PERMISSIONS.KKM_LOGBOOK_VALIDASI),
   requireDplAktif,
   getLogbookValidasiController,
 );
@@ -46,7 +46,7 @@ router.get(
 router.get(
   "/kkm/logbook/validasi/:entryId",
   authMiddleware,
-  requireRole([ROLES.DOSEN, ROLES.ADMIN_LPPM, ROLES.STAFF_LPPM]),
+  requirePermission(PERMISSIONS.KKM_LOGBOOK_VALIDASI),
   requireDplAktif,
   getLogbookValidasiDetailController,
 );
@@ -55,7 +55,7 @@ router.get(
 router.get(
   "/kkm/kelompok/:id/logbook",
   authMiddleware,
-  requireRole([ROLES.MAHASISWA, ROLES.DOSEN, ROLES.ADMIN_LPPM, ROLES.STAFF_LPPM]),
+  requirePermission(PERMISSIONS.KKM_LOGBOOK_LIHAT),
   requireDplAktif,
   getLogbookEntriesController,
 );
@@ -97,7 +97,7 @@ const handleLogbookUploadError = (
 router.post(
   "/kkm/kelompok/:id/logbook",
   authMiddleware,
-  requireRole([ROLES.MAHASISWA, ROLES.DOSEN]),
+  requirePermission(PERMISSIONS.KKM_LOGBOOK_KIRIM),
   requireDplAktif,
   uploadLogbookPdf,
   handleLogbookUploadError,
@@ -108,7 +108,7 @@ router.post(
 router.patch(
   "/kkm/kelompok/:id/logbook/:entryId/review",
   authMiddleware,
-  requireRole([ROLES.DOSEN, ROLES.ADMIN_LPPM, ROLES.STAFF_LPPM]),
+  requirePermission(PERMISSIONS.KKM_LOGBOOK_REVIEW),
   requireDplAktif,
   reviewLogbookEntryController,
 );
@@ -117,7 +117,7 @@ router.patch(
 router.post(
   "/kkm/kelompok/:id/monitoring",
   authMiddleware,
-  requireRole([ROLES.DOSEN, ROLES.ADMIN_LPPM, ROLES.STAFF_LPPM]),
+  requirePermission(PERMISSIONS.KKM_LOGBOOK_REVIEW),
   requireDplAktif,
   markMonitoredController,
 );

@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { authMiddleware } from "../../auth/middleware/auth.middleware";
-import { requireRole } from "../../auth/middleware/role.middleware";
-import { ROLES } from "../../auth/role";
+import { requirePermission } from "../../auth/middleware/permission.middleware";
+import { PERMISSIONS } from "../../auth/permission";
 import {
   activateKkmPeriodController,
   createKkmPeriodController,
@@ -19,7 +19,7 @@ const router = Router();
 router.get(
   "/kkm/periods",
   authMiddleware,
-  requireRole([ROLES.ADMIN_LPPM, ROLES.STAFF_LPPM]),
+  requirePermission(PERMISSIONS.KKM_PERIODE_LIHAT),
   getAllKkmPeriodsController,
 );
 
@@ -33,7 +33,7 @@ router.get(
 router.post(
   "/kkm/periods",
   authMiddleware,
-  requireRole([ROLES.ADMIN_LPPM]),
+  requirePermission(PERMISSIONS.KKM_PERIODE_KELOLA),
   createKkmPeriodController,
 );
 
@@ -41,7 +41,7 @@ router.post(
 router.post(
   "/kkm/periods/run-auto-complete",
   authMiddleware,
-  requireRole([ROLES.ADMIN_LPPM]),
+  requirePermission(PERMISSIONS.KKM_PERIODE_KELOLA),
   runAutoCompleteController,
 );
 
@@ -50,28 +50,28 @@ router.post(
 router.get(
   "/kkm/periods/:id",
   authMiddleware,
-  requireRole([ROLES.MAHASISWA, ROLES.ADMIN_LPPM, ROLES.STAFF_LPPM]),
+  requirePermission(PERMISSIONS.KKM_PERIODE_DETAIL),
   getKkmPeriodByIdController,
 );
 
 router.put(
   "/kkm/periods/:id",
   authMiddleware,
-  requireRole([ROLES.ADMIN_LPPM]),
+  requirePermission(PERMISSIONS.KKM_PERIODE_KELOLA),
   updateKkmPeriodController,
 );
 
 router.patch(
   "/kkm/periods/:id/activate",
   authMiddleware,
-  requireRole([ROLES.ADMIN_LPPM]),
+  requirePermission(PERMISSIONS.KKM_PERIODE_KELOLA),
   activateKkmPeriodController,
 );
 
 router.patch(
   "/kkm/periods/:id/status",
   authMiddleware,
-  requireRole([ROLES.ADMIN_LPPM]),
+  requirePermission(PERMISSIONS.KKM_PERIODE_KELOLA),
   updateKkmPeriodStatusController,
 );
 

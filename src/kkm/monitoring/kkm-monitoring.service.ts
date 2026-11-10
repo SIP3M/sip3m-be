@@ -2,7 +2,7 @@ import { prisma } from "../../prisma";
 import { KkmPeriodStatus } from "../../generated/prisma/enums";
 import { HttpError } from "../../common/errors/http-error";
 import { supabase } from "../../config/storage";
-import { hitungJadwalMingguan, cariMingguUntukTanggal, formatDeadline } from "../common/kkm-deadline";
+import { hitungJadwalMingguan, cariMingguUntukTanggal } from "../common/kkm-deadline";
 import type { KkmPeriodeRef } from "../../dashboard/dashboard.types";
 import type {
   KkmLogbookCreateInput,

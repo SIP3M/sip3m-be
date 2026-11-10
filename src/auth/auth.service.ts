@@ -177,6 +177,9 @@ export const loginUser = async (
         select: {
           id: true,
           roles: true,
+          deskripsi: true,
+          is_system: true,
+          dashboard_path: true,
         },
       },
     },
@@ -215,6 +218,22 @@ export const loginUser = async (
   const deviceId = meta?.deviceId?.trim() ? meta.deviceId.trim().slice(0, 100) : `ua-${(meta?.userAgent ?? "unknown").slice(0, 80)}`;
   const expiresAt = new Date(Date.now() + (data.remember_me ? 7 * 24 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000));
 
+  // Izin user (kode permission) — ADMIN_SISTEM = superuser (semua izin).
+  let permissions: string[];
+  if (user.roles.roles === "ADMIN_SISTEM") {
+    const all = await prisma.permission.findMany({
+      select: { kode: true },
+      orderBy: { kode: "asc" },
+    });
+    permissions = all.map((p) => p.kode);
+  } else {
+    const links = await prisma.rolePermission.findMany({
+      where: { role_id: user.roles.id },
+      include: { permission: { select: { kode: true } } },
+    });
+    permissions = links.map((l) => l.permission.kode).sort();
+  }
+
   const token = jwt.sign(
     {
       sub: String(user.id),
@@ -246,7 +265,11 @@ export const loginUser = async (
       roles: {
         id: user.roles.id,
         roles: user.roles.roles,
+        deskripsi: user.roles.deskripsi,
+        is_system: user.roles.is_system,
+        dashboard_path: user.roles.dashboard_path,
       },
+      permissions,
       nidn: user.nidn_nip,
       fakultas_id: user.fakultas_id,
     },

@@ -6,14 +6,6 @@ import type { KkmDplListQuery, KkmDplAssignInput, KkmDplCabutInput } from "./kkm
 
 const PER_PAGE = 10;
 
-const getMaksForDosen = async (periode_id: number, dosen_id: number, fallback?: number | null) => {
-  const quota = await prisma.kkmDplQuota.findUnique({
-    where: { periode_id_dosen_id: { periode_id, dosen_id } },
-    select: { maksimal_kelompok: true },
-  });
-  return quota?.maksimal_kelompok ?? fallback ?? null;
-};
-
 export const getDplList = async (query: KkmDplListQuery) => {
   const page = query.page ?? 1;
   const skip = (page - 1) * PER_PAGE;

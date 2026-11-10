@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { authMiddleware } from "../../auth/middleware/auth.middleware";
-import { requireRole } from "../../auth/middleware/role.middleware";
-import { ROLES } from "../../auth/role";
+import { requirePermission } from "../../auth/middleware/permission.middleware";
+import { PERMISSIONS } from "../../auth/permission";
 import {
   createReferensiController,
   deleteReferensiController,
@@ -18,7 +18,10 @@ router.get("/referensi/:jenis", getReferensiAktifController);
 // =============================================
 // Kelola master referensi — HANYA ADMIN_SISTEM
 // =============================================
-const adminSistemOnly = [authMiddleware, requireRole([ROLES.ADMIN_SISTEM])];
+const adminSistemOnly = [
+  authMiddleware,
+  requirePermission(PERMISSIONS.MASTER_REFERENSI_KELOLA),
+];
 
 router.get("/master/referensi/:jenis", ...adminSistemOnly, getAllReferensiController);
 router.post("/master/referensi/:jenis", ...adminSistemOnly, createReferensiController);

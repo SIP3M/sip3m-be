@@ -2,8 +2,8 @@ import { Router, NextFunction, Request, Response } from "express";
 import multer from "multer";
 import { MulterError } from "multer";
 import { authMiddleware } from "../../auth/middleware/auth.middleware";
-import { requireRole } from "../../auth/middleware/role.middleware";
-import { ROLES } from "../../auth/role";
+import { requirePermission } from "../../auth/middleware/permission.middleware";
+import { PERMISSIONS } from "../../auth/permission";
 import {
   getLogbookKelompokSayaController,
   uploadLogbookKelompokController,
@@ -53,14 +53,14 @@ const handleUploadError = (
 router.get(
   "/kkm/logbook-kelompok/me",
   authMiddleware,
-  requireRole([ROLES.MAHASISWA]),
+  requirePermission(PERMISSIONS.KKM_LOGBOOK_KELOMPOK_KIRIM),
   getLogbookKelompokSayaController,
 );
 
 router.post(
   "/kkm/kelompok/:id/logbook-kelompok",
   authMiddleware,
-  requireRole([ROLES.MAHASISWA]),
+  requirePermission(PERMISSIONS.KKM_LOGBOOK_KELOMPOK_KIRIM),
   uploadPdf,
   handleUploadError,
   uploadLogbookKelompokController,

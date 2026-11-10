@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { authMiddleware } from "../../auth/middleware/auth.middleware";
-import { requireRole } from "../../auth/middleware/role.middleware";
-import { ROLES } from "../../auth/role";
+import { requirePermission } from "../../auth/middleware/permission.middleware";
+import { PERMISSIONS } from "../../auth/permission";
 import {
   createKkmLocationController,
   deleteKkmLocationController,
@@ -16,42 +16,42 @@ const router = Router();
 router.get(
   "/kkm/locations",
   authMiddleware,
-  requireRole([ROLES.ADMIN_LPPM, ROLES.STAFF_LPPM, ROLES.ADMIN_SISTEM]),
+  requirePermission(PERMISSIONS.KKM_LOKASI_LIHAT),
   getAllKkmLocationsController,
 );
 
 router.get(
   "/kkm/locations/stats",
   authMiddleware,
-  requireRole([ROLES.ADMIN_LPPM, ROLES.STAFF_LPPM, ROLES.ADMIN_SISTEM]),
+  requirePermission(PERMISSIONS.KKM_LOKASI_LIHAT),
   getKkmLocationStatsController,
 );
 
 router.post(
   "/kkm/locations",
   authMiddleware,
-  requireRole([ROLES.ADMIN_LPPM, ROLES.ADMIN_SISTEM]),
+  requirePermission(PERMISSIONS.KKM_LOKASI_KELOLA),
   createKkmLocationController,
 );
 
 router.get(
   "/kkm/locations/:id",
   authMiddleware,
-  requireRole([ROLES.ADMIN_LPPM, ROLES.STAFF_LPPM, ROLES.ADMIN_SISTEM]),
+  requirePermission(PERMISSIONS.KKM_LOKASI_LIHAT),
   getKkmLocationByIdController,
 );
 
 router.put(
   "/kkm/locations/:id",
   authMiddleware,
-  requireRole([ROLES.ADMIN_LPPM, ROLES.ADMIN_SISTEM]),
+  requirePermission(PERMISSIONS.KKM_LOKASI_KELOLA),
   updateKkmLocationController,
 );
 
 router.delete(
   "/kkm/locations/:id",
   authMiddleware,
-  requireRole([ROLES.ADMIN_LPPM, ROLES.ADMIN_SISTEM]),
+  requirePermission(PERMISSIONS.KKM_LOKASI_KELOLA),
   deleteKkmLocationController,
 );
 

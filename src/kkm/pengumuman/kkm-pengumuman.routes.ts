@@ -1,8 +1,8 @@
 import { Router, Request, Response, NextFunction } from "express";
 import multer from "multer";
 import { authMiddleware } from "../../auth/middleware/auth.middleware";
-import { requireRole } from "../../auth/middleware/role.middleware";
-import { ROLES } from "../../auth/role";
+import { requirePermission } from "../../auth/middleware/permission.middleware";
+import { PERMISSIONS } from "../../auth/permission";
 import {
   LAMPIRAN_ALLOWED_MIME,
   LAMPIRAN_MAX_BYTES,
@@ -57,14 +57,14 @@ const uploadLampiran = (req: Request, res: Response, next: NextFunction) => {
 router.get(
   "/kkm/pengumuman",
   authMiddleware,
-  requireRole([ROLES.ADMIN_LPPM, ROLES.STAFF_LPPM, ROLES.ADMIN_SISTEM]),
+  requirePermission(PERMISSIONS.KKM_PENGUMUMAN_LIHAT),
   listPengumumanController,
 );
 
 router.post(
   "/kkm/pengumuman",
   authMiddleware,
-  requireRole([ROLES.ADMIN_LPPM]),
+  requirePermission(PERMISSIONS.KKM_PENGUMUMAN_KELOLA),
   uploadLampiran,
   createPengumumanController,
 );
@@ -72,35 +72,35 @@ router.post(
 router.get(
   "/kkm/pengumuman/:id",
   authMiddleware,
-  requireRole([ROLES.ADMIN_LPPM, ROLES.STAFF_LPPM, ROLES.ADMIN_SISTEM]),
+  requirePermission(PERMISSIONS.KKM_PENGUMUMAN_LIHAT),
   getPengumumanDetailController,
 );
 
 router.patch(
   "/kkm/pengumuman/:id",
   authMiddleware,
-  requireRole([ROLES.ADMIN_LPPM]),
+  requirePermission(PERMISSIONS.KKM_PENGUMUMAN_KELOLA),
   updatePengumumanController,
 );
 
 router.patch(
   "/kkm/pengumuman/:id/pin",
   authMiddleware,
-  requireRole([ROLES.ADMIN_LPPM]),
+  requirePermission(PERMISSIONS.KKM_PENGUMUMAN_KELOLA),
   togglePinController,
 );
 
 router.patch(
   "/kkm/pengumuman/:id/publish",
   authMiddleware,
-  requireRole([ROLES.ADMIN_LPPM]),
+  requirePermission(PERMISSIONS.KKM_PENGUMUMAN_KELOLA),
   publishPengumumanController,
 );
 
 router.delete(
   "/kkm/pengumuman/:id",
   authMiddleware,
-  requireRole([ROLES.ADMIN_LPPM]),
+  requirePermission(PERMISSIONS.KKM_PENGUMUMAN_KELOLA),
   deletePengumumanController,
 );
 

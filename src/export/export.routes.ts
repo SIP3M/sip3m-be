@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { authMiddleware } from "../auth/middleware/auth.middleware";
-import { requireRole } from "../auth/middleware/role.middleware";
-import { ROLES } from "../auth/role";
+import { requirePermission } from "../auth/middleware/permission.middleware";
+import { PERMISSIONS } from "../auth/permission";
 import {
   exportExcelController,
   exportPdfController,
@@ -13,21 +13,21 @@ const router = Router();
 router.get(
   "/pengabdian/export/excel",
   authMiddleware,
-  requireRole([ROLES.ADMIN_LPPM]),
+  requirePermission(PERMISSIONS.PENGABDIAN_EXPORT),
   exportExcelController,
 );
 
 router.get(
   "/proposals/export/excel",
   authMiddleware,
-  requireRole([ROLES.ADMIN_LPPM]),
+  requirePermission(PERMISSIONS.PROPOSAL_EXPORT),
   exportProposalsExcelController,
 );
 
 router.get(
   "/pengabdian/export/pdf",
   authMiddleware,
-  requireRole([ROLES.ADMIN_LPPM]),
+  requirePermission(PERMISSIONS.PENGABDIAN_EXPORT),
   exportPdfController,
 );
 

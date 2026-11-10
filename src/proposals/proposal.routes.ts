@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { authMiddleware } from "../auth/middleware/auth.middleware";
-import { requireRole } from "../auth/middleware/role.middleware";
+import { requirePermission } from "../auth/middleware/permission.middleware";
+import { PERMISSIONS } from "../auth/permission";
 import { handleProposalUploadError, uploadMiddleware } from "../config/storage";
 import {
   assignReviewersController,
@@ -16,7 +17,6 @@ import {
   submitProposalController,
   updateProposalStatusController,
 } from "./proposal.controller";
-import { ROLES } from "../auth/role";
 
 const router = Router();
 
@@ -26,7 +26,7 @@ const router = Router();
 router.post(
   "/proposals",
   authMiddleware,
-  requireRole([ROLES.DOSEN]),
+  requirePermission(PERMISSIONS.PROPOSAL_SAYA),
   uploadMiddleware.fields([
     { name: "proposal_file", maxCount: 1 },
     { name: "rab_file", maxCount: 1 },
@@ -38,12 +38,7 @@ router.post(
 router.get(
   "/proposals",
   authMiddleware,
-  requireRole([
-    ROLES.ADMIN_LPPM,
-    ROLES.STAFF_LPPM,
-    ROLES.REVIEWER,
-    ROLES.REVIEWER_EKSTERNAL,
-  ]),
+  requirePermission(PERMISSIONS.PROPOSAL_LIHAT),
   getAllProposalsController,
 );
 
@@ -51,46 +46,35 @@ router.get(
 router.get(
   "/getAllProposals",
   authMiddleware,
-  requireRole([
-    ROLES.ADMIN_LPPM,
-    ROLES.STAFF_LPPM,
-    ROLES.REVIEWER,
-    ROLES.REVIEWER_EKSTERNAL,
-  ]),
+  requirePermission(PERMISSIONS.PROPOSAL_LIHAT),
   getAllProposalsController,
 );
 
 router.get(
   "/proposals/me",
   authMiddleware,
-  requireRole([ROLES.DOSEN]),
+  requirePermission(PERMISSIONS.PROPOSAL_SAYA),
   getMyProposalsController,
 );
 
 router.get(
   "/proposals/assigned",
   authMiddleware,
-  requireRole([ROLES.REVIEWER, ROLES.REVIEWER_EKSTERNAL]),
+  requirePermission(PERMISSIONS.PROPOSAL_REVIEW),
   getAssignedProposalsController,
 );
 
 router.get(
   "/proposals/:id",
   authMiddleware,
-  requireRole([
-    ROLES.ADMIN_LPPM,
-    ROLES.STAFF_LPPM,
-    ROLES.DOSEN,
-    ROLES.REVIEWER,
-    ROLES.REVIEWER_EKSTERNAL,
-  ]),
+  requirePermission(PERMISSIONS.PROPOSAL_LIHAT_DETAIL),
   getProposalByIdController,
 );
 
 router.put(
   "/proposals/:id",
   authMiddleware,
-  requireRole([ROLES.DOSEN]),
+  requirePermission(PERMISSIONS.PROPOSAL_SAYA),
   uploadMiddleware.fields([
     { name: "proposal_file", maxCount: 1 },
     { name: "rab_file", maxCount: 1 },
@@ -102,7 +86,7 @@ router.put(
 router.delete(
   "/proposals/:id",
   authMiddleware,
-  requireRole([ROLES.DOSEN]),
+  requirePermission(PERMISSIONS.PROPOSAL_SAYA),
   deleteProposalController,
 );
 
@@ -114,7 +98,7 @@ router.delete(
 router.patch(
   "/proposals/:id/submit",
   authMiddleware,
-  requireRole([ROLES.DOSEN]),
+  requirePermission(PERMISSIONS.PROPOSAL_SAYA),
   submitProposalController,
 );
 
@@ -122,12 +106,7 @@ router.patch(
 router.patch(
   "/proposals/:id/status",
   authMiddleware,
-  requireRole([
-    ROLES.ADMIN_LPPM,
-    ROLES.STAFF_LPPM,
-    ROLES.REVIEWER,
-    ROLES.REVIEWER_EKSTERNAL,
-  ]),
+  requirePermission(PERMISSIONS.PROPOSAL_STATUS),
   updateProposalStatusController,
 );
 
@@ -135,26 +114,20 @@ router.patch(
 router.post(
   "/proposals/bulk-assign-reviewers",
   authMiddleware,
-  requireRole([ROLES.ADMIN_LPPM, ROLES.STAFF_LPPM]),
+  requirePermission(PERMISSIONS.PROPOSAL_PLOTTING),
   assignReviewersController,
 );
 router.put(
   "/proposals/:id/evaluate",
   authMiddleware,
-  requireRole([ROLES.REVIEWER, ROLES.REVIEWER_EKSTERNAL]),
+  requirePermission(PERMISSIONS.PROPOSAL_REVIEW),
   evaluateProposalController,
 );
 
 router.get(
   "/proposals/:id/reviews",
   authMiddleware,
-  requireRole([
-    ROLES.DOSEN,
-    ROLES.ADMIN_LPPM,
-    ROLES.STAFF_LPPM,
-    ROLES.REVIEWER,
-    ROLES.REVIEWER_EKSTERNAL,
-  ]),
+  requirePermission(PERMISSIONS.PROPOSAL_LIHAT_REVIEW),
   getProposalReviewsController,
 );
 

@@ -32,6 +32,7 @@ import kkmJabatanMasterRoute from "./kkm/jabatan-master/jabatan-master.routes";
 import auditRoute from "./audit/audit.routes";
 import { auditMiddleware } from "./audit/audit.middleware";
 import referensiRoute from "./master/referensi/referensi.routes";
+import rolesRoute from "./roles/roles.routes";
 import swaggerUiDist from "swagger-ui-dist";
 import { swaggerSpec } from "./docs/swagger";
 
@@ -120,6 +121,7 @@ app.use("/api", kkmLaporanRoute);
 app.use("/api", kkmJabatanMasterRoute);
 app.use("/api", auditRoute);
 app.use("/api", referensiRoute);
+app.use("/api", rolesRoute);
 app.use("/api", master)
 
 // health check (penting buat test)
