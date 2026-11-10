@@ -156,57 +156,36 @@ export const registerReviewer = async (
   };
 };
 
-export const loginUser = async (
-  data: LoginInput,
+/**
+ * Bentuk user minimal untuk menerbitkan sesi login (dipakai login biasa
+ * maupun login OAuth Google — keduanya harus menghasilkan response identik:
+ * JWT + session + permissions + metadata roles).
+ */
+export type SessionUser = {
+  id: number;
+  name: string;
+  email: string;
+  nidn_nip: string | null;
+  fakultas_id: number | null;
+  roles: {
+    id: number;
+    roles: string;
+    deskripsi: string | null;
+    is_system: boolean;
+    dashboard_path: string | null;
+  };
+};
+
+/**
+ * Terbitkan JWT + rotasi session + muat permissions untuk user yang sudah
+ * lolos verifikasi kredensial (password maupun Google).
+ */
+export const issueSessionForUser = async (
+  user: SessionUser,
   meta?: { deviceId?: string; userAgent?: string; ip?: string },
+  rememberMe = true,
 ): Promise<LoginResult> => {
-  const identifier = data.identifier.trim();
-  const isEmailIdentifier = identifier.includes("@");
-
-  const user = await prisma.users.findUnique({
-    where: isEmailIdentifier ? { email: identifier } : { nidn_nip: identifier },
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      nidn_nip: true,
-      fakultas_id: true,
-      password_hash: true,
-      is_active: true,
-      roles: {
-        select: {
-          id: true,
-          roles: true,
-          deskripsi: true,
-          is_system: true,
-          dashboard_path: true,
-        },
-      },
-    },
-  });
-
-  if (!user) {
-    throw new HttpError(
-      "User tidak ditemukan. Silahkan daftar terlebih dahulu.",
-      404,
-    );
-  }
-
-  if (!user.password_hash) {
-    throw new HttpError("Password tidak ditemukan.", 500);
-  }
-
-  if (!user.is_active) {
-    throw new HttpError("Akun Anda belum diverifikasi oleh Admin LPPM.", 403);
-  }
-
-  const passwordMatch = await bcrypt.compare(data.password, user.password_hash);
-
-  if (!passwordMatch) {
-    throw new HttpError("Invalid Credentials.", 401);
-  }
-
-  const expiresIn = data.remember_me ? "7d" : "1d";
+  const expiresIn = rememberMe ? "7d" : "1d";
   const jwtSecret = process.env.JWT_SECRET;
 
   if (!jwtSecret) {
@@ -215,8 +194,12 @@ export const loginUser = async (
 
   const { createOrRotateSession, generateJti } = await import("./session.service");
   const jti = generateJti();
-  const deviceId = meta?.deviceId?.trim() ? meta.deviceId.trim().slice(0, 100) : `ua-${(meta?.userAgent ?? "unknown").slice(0, 80)}`;
-  const expiresAt = new Date(Date.now() + (data.remember_me ? 7 * 24 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000));
+  const deviceId = meta?.deviceId?.trim()
+    ? meta.deviceId.trim().slice(0, 100)
+    : `ua-${(meta?.userAgent ?? "unknown").slice(0, 80)}`;
+  const expiresAt = new Date(
+    Date.now() + (rememberMe ? 7 * 24 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000),
+  );
 
   // Izin user (kode permission) — ADMIN_SISTEM = superuser (semua izin).
   let permissions: string[];
@@ -274,5 +257,58 @@ export const loginUser = async (
       fakultas_id: user.fakultas_id,
     },
   };
+};
+
+export const loginUser = async (
+  data: LoginInput,
+  meta?: { deviceId?: string; userAgent?: string; ip?: string },
+): Promise<LoginResult> => {
+  const identifier = data.identifier.trim();
+  const isEmailIdentifier = identifier.includes("@");
+
+  const user = await prisma.users.findUnique({
+    where: isEmailIdentifier ? { email: identifier } : { nidn_nip: identifier },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      nidn_nip: true,
+      fakultas_id: true,
+      password_hash: true,
+      is_active: true,
+      roles: {
+        select: {
+          id: true,
+          roles: true,
+          deskripsi: true,
+          is_system: true,
+          dashboard_path: true,
+        },
+      },
+    },
+  });
+
+  if (!user) {
+    throw new HttpError(
+      "User tidak ditemukan. Silahkan daftar terlebih dahulu.",
+      404,
+    );
+  }
+
+  if (!user.password_hash) {
+    throw new HttpError("Password tidak ditemukan.", 500);
+  }
+
+  if (!user.is_active) {
+    throw new HttpError("Akun Anda belum diverifikasi oleh Admin LPPM.", 403);
+  }
+
+  const passwordMatch = await bcrypt.compare(data.password, user.password_hash);
+
+  if (!passwordMatch) {
+    throw new HttpError("Invalid Credentials.", 401);
+  }
+
+  return issueSessionForUser(user, meta, data.remember_me ?? false);
 };
   
