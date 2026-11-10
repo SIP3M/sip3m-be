@@ -9,6 +9,7 @@ import {
   sessionsController,
 } from "./auth.controller";
 import { authMiddleware } from "./middleware/auth.middleware";
+import { googleAuthCallback, googleAuthStart } from "./oauth.controller";
 import multer from "multer";
 import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 
@@ -39,6 +40,19 @@ const loginLimiter = rateLimit({
   keyGenerator: (req) => {
     return (req.body?.identifier as string) || ipKeyGenerator(req.ip ?? "");
   },
+});
+
+// Rate limit ringan untuk alur OAuth (inisiasi & callback) — mencegah
+// pemanfaatan endpoint redirect untuk scanning/abuse.
+const oauthLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 60,
+  message: {
+    message: "Terlalu banyak permintaan login Google. Silakan coba lagi nanti.",
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => ipKeyGenerator(req.ip ?? ""),
 });
 
 const allowedCvMimeTypes = new Set([
@@ -131,9 +145,7 @@ router.get("/auth/sessions", authMiddleware, sessionsController);
 router.delete("/auth/sessions/:deviceId", authMiddleware, revokeSessionController);
 router.post("/auth/sessions/revoke", authMiddleware, revokeSessionController);
 
-// Oauth route
-router.get("/auth/oauth/google", (req, res) => {
-  const oauthUrl = "https://google-oauth-teal.vercel.app/api/auth/google";
-  return res.redirect(oauthUrl);
-});
+// OAuth Google — authorization code flow (kredensial dari system_config)
+router.get("/auth/oauth/google", oauthLimiter, googleAuthStart);
+router.get("/auth/google/callback", oauthLimiter, googleAuthCallback);
 export default router;

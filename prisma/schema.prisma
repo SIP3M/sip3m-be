@@ -237,6 +237,19 @@ model schema_migrations {
   dirty   Boolean
 }
 
+// =============================================
+// System Config — key/value konfigurasi sistem
+// (kredensial OAuth Google dikelola ADMIN_SISTEM
+// lewat halaman Sistem & Konfigurasi, tanpa deploy)
+// =============================================
+model SystemConfig {
+  key        String   @id @db.VarChar(100)
+  value      String   @db.Text
+  updated_at DateTime @default(now()) @updatedAt
+
+  @@map("system_config")
+}
+
 model Fakultas {
   id            Int            @id @default(autoincrement())
   nama          String         @unique @db.VarChar(100)

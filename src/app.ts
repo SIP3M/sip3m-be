@@ -1,5 +1,6 @@
 import express from "express";
 import cors from "cors";
+import cookieParser from "cookie-parser";
 import dotenv from "dotenv";
 
 import authRoute from "./auth/auth.routes";
@@ -33,6 +34,7 @@ import auditRoute from "./audit/audit.routes";
 import { auditMiddleware } from "./audit/audit.middleware";
 import referensiRoute from "./master/referensi/referensi.routes";
 import rolesRoute from "./roles/roles.routes";
+import systemConfigRoute from "./system-config/system-config.routes";
 import swaggerUiDist from "swagger-ui-dist";
 import { swaggerSpec } from "./docs/swagger";
 
@@ -43,6 +45,8 @@ const app = express();
 // middleware global
 app.use(cors());
 app.use(express.json());
+// cookie-parser dipakai alur OAuth Google (state anti-CSRF via cookie httpOnly)
+app.use(cookieParser());
 
 app.use((req, _res, next) => {
   console.log("[INCOMING]", req.method, req.url);
@@ -122,6 +126,7 @@ app.use("/api", kkmJabatanMasterRoute);
 app.use("/api", auditRoute);
 app.use("/api", referensiRoute);
 app.use("/api", rolesRoute);
+app.use("/api", systemConfigRoute);
 app.use("/api", master)
 
 // health check (penting buat test)

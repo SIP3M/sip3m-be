@@ -1138,30 +1138,158 @@ Mengambil data user yang sedang login berdasarkan JWT token.
           tags: ["Auth"],
           summary: "Login dengan Google (OAuth)",
           description: `
-Endpoint untuk autentikasi via Google OAuth.
+Endpoint awal alur **Google OAuth (authorization code flow)**.
 
 **Role akses:**
 - Public (tanpa login)
 
+Cara kerja:
+1. Browser di-redirect ke halaman login Google.
+2. Setelah berhasil, Google mengarahkan ke \`GET /api/auth/google/callback\`.
+3. Backend menukar code → mengambil email → **mencocokkan dengan user yang
+   sudah terdaftar** (email harus sudah ada di sistem; akun TIDAK dibuat
+   otomatis) → menerbitkan JWT + session (sama persis login biasa) →
+   redirect ke frontend \`/oauth-callback?token=...\`.
+
 Catatan:
-- Endpoint ini akan me-redirect browser ke halaman login Google.
-- Setelah autentikasi berhasil, user akan diarahkan kembali dengan JWT access token.
-- Gunakan link ini langsung di browser atau sebagai redirect URL pada frontend.
+- Kredensial (Client ID/Secret) dibaca dari tabel \`system_config\` dan bisa
+  diganti ADMIN_SISTEM lewat halaman Sistem & Konfigurasi (tanpa deploy).
+- Query opsional: \`device_id\` (jaga semantik single-session per browser)
+  & \`fe\` (origin frontend — divalidasi terhadap allowlist \`FRONTEND_URL\`).
+    `,
+          security: [],
+          parameters: [
+            {
+              name: "device_id",
+              in: "query",
+              required: false,
+              description: "Device id browser (dari localStorage FE).",
+              schema: { type: "string" },
+            },
+            {
+              name: "fe",
+              in: "query",
+              required: false,
+              description:
+                "Origin frontend penerima redirect (harus cocok dengan allowlist FRONTEND_URL).",
+              schema: { type: "string" },
+            },
+          ],
+          responses: {
+            302: {
+              description: "Redirect ke halaman login Google",
+              headers: {
+                Location: {
+                  description: "URL login Google (accounts.google.com)",
+                  schema: {
+                    type: "string",
+                    example:
+                      "https://accounts.google.com/o/oauth2/v2/auth?client_id=...&response_type=code&scope=openid%20email%20profile",
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+
+      "/auth/google/callback": {
+        get: {
+          tags: ["Auth"],
+          summary: "Callback OAuth Google",
+          description: `
+Dipanggil Google setelah user selesai login. Menukar \`code\` dengan token,
+mengambil email profil Google, lalu mencocokkannya ke user terdaftar.
+
+**Role akses:**
+- Public (divalidasi lewat cookie state anti-CSRF)
+
+Respons SELALU berupa redirect ke frontend:
+- Sukses → \`/oauth-callback?token=...&user=...\`
+- Gagal → \`/login?oauth_error=<kode>\`, kodenya:
+  \`not_configured\`, \`invalid_state\`, \`access_denied\`,
+  \`email_not_verified\`, \`email_not_registered\`, \`inactive\`,
+  \`exchange_failed\`, \`server_error\`
     `,
           security: [],
           responses: {
             302: {
-              description: "Redirect ke halaman Google OAuth",
-              headers: {
-                Location: {
-                  description: "URL Google OAuth untuk autentikasi",
-                  schema: {
-                    type: "string",
-                    example:
-                      "https://google-oauth-teal.vercel.app/api/auth/google",
+              description: "Redirect ke frontend (sukses atau gagal)",
+            },
+          },
+        },
+      },
+
+      "/system-config/google": {
+        get: {
+          tags: ["Sistem & Konfigurasi"],
+          summary: "Ambil konfigurasi OAuth Google",
+          description: `
+Mengembalikan status & kredensial OAuth Google (Client Secret ter-mask).
+
+**Role akses:**
+- Pemegang izin \`sistem.konfigurasi\` (ADMIN_SISTEM = superuser)
+    `,
+          security: [{ bearerAuth: [] }],
+          responses: {
+            200: {
+              description: "Konfigurasi berhasil diambil",
+              content: {
+                "application/json": {
+                  example: {
+                    message: "Konfigurasi login Google berhasil diambil.",
+                    data: {
+                      client_id:
+                        "702127521930-xxxx.apps.googleusercontent.com",
+                      client_secret_masked: "GOCSPX…vlLI6",
+                      is_configured: true,
+                      updated_at: "2026-11-10T08:00:00.000Z",
+                    },
                   },
                 },
               },
+            },
+            403: {
+              description: "Forbidden — tidak punya izin sistem.konfigurasi",
+            },
+          },
+        },
+        put: {
+          tags: ["Sistem & Konfigurasi"],
+          summary: "Simpan/ganti kredensial OAuth Google",
+          description: `
+Menyimpan Client ID & Client Secret Google ke \`system_config\`.
+Bisa dilakukan kapan pun oleh ADMIN_SISTEM **tanpa deploy ulang**.
+
+**Role akses:**
+- Pemegang izin \`sistem.konfigurasi\` (ADMIN_SISTEM = superuser)
+
+Catatan:
+- \`client_secret\` dikirim kosong → nilai lama dipertahankan.
+- Perubahan dicatat ke audit log.
+    `,
+          security: [{ bearerAuth: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                example: {
+                  client_id:
+                    "702127521930-xxxx.apps.googleusercontent.com",
+                  client_secret: "GOCSPX-xxxx",
+                },
+              },
+            },
+          },
+          responses: {
+            200: {
+              description: "Konfigurasi berhasil disimpan",
+            },
+            400: {
+              description: "Validasi gagal",
+            },
+            403: {
+              description: "Forbidden — tidak punya izin sistem.konfigurasi",
             },
           },
         },
