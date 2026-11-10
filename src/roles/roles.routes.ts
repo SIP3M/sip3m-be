@@ -1,6 +1,9 @@
 import { Router } from "express";
 import { authMiddleware } from "../auth/middleware/auth.middleware";
-import { requirePermission } from "../auth/middleware/permission.middleware";
+import {
+  requireAnyPermission,
+  requirePermission,
+} from "../auth/middleware/permission.middleware";
 import { PERMISSIONS } from "../auth/permission";
 import { validate } from "../common/middleware/validate";
 import {
@@ -31,8 +34,15 @@ const adminSistem = [
 // Katalog izin (untuk matriks)
 router.get("/permissions", ...adminSistem, listPermissionsController);
 
-// Role CRUD
-router.get("/roles", ...adminSistem, listRolesController);
+// Role CRUD — daftar role juga dipakai dropdown Manajemen Pengguna
+// (ADMIN_LPPM punya pengguna.lihat), jadi GET list memakai any-of.
+// Sisanya (create/update/delete/matriks) tetap khusus role.kelola.
+router.get(
+  "/roles",
+  authMiddleware,
+  requireAnyPermission([PERMISSIONS.ROLE_KELOLA, PERMISSIONS.PENGGUNA_LIHAT]),
+  listRolesController,
+);
 router.post("/roles", ...adminSistem, validate(createRoleSchema), createRoleController);
 router.get("/roles/:id", ...adminSistem, getRoleByIdController);
 router.patch("/roles/:id", ...adminSistem, validate(updateRoleSchema), updateRoleController);
