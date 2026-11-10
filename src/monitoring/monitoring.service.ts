@@ -174,6 +174,7 @@ export const getProjectsDashboard = async (
         title: true,
         status: true,
         created_at: true,
+        realized_amount: true,
         proposal: {
           select: {
             user: {
@@ -212,6 +213,7 @@ export const getProjectsDashboard = async (
       title: project.title,
       status: project.status,
       created_at: project.created_at,
+      realized_amount: project.realized_amount,
       user: {
         name: project.proposal.user.name,
       },
@@ -251,6 +253,7 @@ export const getProjectDetail = async (projectId: number) => {
     include: {
       proposal: {
         select: {
+          funding_request_amount: true,
           user: {
             select: {
               name: true,
@@ -282,6 +285,7 @@ export const getProjectDetail = async (projectId: number) => {
 
   return {
     ...projectData,
+    funding_request_amount: proposal.funding_request_amount,
     user: {
       name: proposal.user.name,
       nidn_nip: proposal.user.nidn_nip,
