@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { authMiddleware } from "../../auth/middleware/auth.middleware";
-import { requireRole } from "../../auth/middleware/role.middleware";
-import { ROLES } from "../../auth/role";
+import { requirePermission } from "../../auth/middleware/permission.middleware";
+import { PERMISSIONS } from "../../auth/permission";
 import {
   assignKelompokController,
   bulkUpdateStatusController,
@@ -17,21 +17,21 @@ const router = Router();
 router.get(
   "/kkm/peserta/stats",
   authMiddleware,
-  requireRole([ROLES.ADMIN_LPPM, ROLES.STAFF_LPPM]),
+  requirePermission(PERMISSIONS.KKM_PESERTA_LIHAT),
   getPesertaStatsController,
 );
 
 router.get(
   "/kkm/peserta/export",
   authMiddleware,
-  requireRole([ROLES.ADMIN_LPPM, ROLES.STAFF_LPPM]),
+  requirePermission(PERMISSIONS.KKM_PESERTA_EXPORT),
   exportPesertaController,
 );
 
 router.get(
   "/kkm/peserta",
   authMiddleware,
-  requireRole([ROLES.ADMIN_LPPM, ROLES.STAFF_LPPM]),
+  requirePermission(PERMISSIONS.KKM_PESERTA_LIHAT),
   getAllPesertaController,
 );
 
@@ -39,28 +39,28 @@ router.get(
 router.patch(
   "/kkm/peserta/bulk-status",
   authMiddleware,
-  requireRole([ROLES.ADMIN_LPPM]),
+  requirePermission(PERMISSIONS.KKM_PESERTA_KELOLA),
   bulkUpdateStatusController,
 );
 
 router.post(
   "/kkm/peserta/assign-kelompok",
   authMiddleware,
-  requireRole([ROLES.ADMIN_LPPM]),
+  requirePermission(PERMISSIONS.KKM_PESERTA_KELOLA),
   assignKelompokController,
 );
 
 router.get(
   "/kkm/peserta/:id",
   authMiddleware,
-  requireRole([ROLES.ADMIN_LPPM, ROLES.STAFF_LPPM]),
+  requirePermission(PERMISSIONS.KKM_PESERTA_LIHAT),
   getPesertaByIdController,
 );
 
 router.patch(
   "/kkm/peserta/:id/status",
   authMiddleware,
-  requireRole([ROLES.ADMIN_LPPM]),
+  requirePermission(PERMISSIONS.KKM_PESERTA_KELOLA),
   updatePesertaStatusController,
 );
 

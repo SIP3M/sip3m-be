@@ -1,8 +1,8 @@
 import { Router } from "express";
 import { authMiddleware } from "../auth/middleware/auth.middleware";
-import { requireRole } from "../auth/middleware/role.middleware";
+import { requirePermission } from "../auth/middleware/permission.middleware";
 import { validate } from "../common/middleware/validate";
-import { ROLES } from "../auth/role";
+import { PERMISSIONS } from "../auth/permission";
 import {
   uploadDocumentMiddleware,
   handleUploadError,
@@ -51,7 +51,7 @@ router.get(
 router.patch(
   "/pengabdian-documents/:documentId/verify",
   authMiddleware,
-  requireRole([ROLES.ADMIN_LPPM, ROLES.STAFF_LPPM]),
+  requirePermission(PERMISSIONS.PENGABDIAN_DOKUMEN),
   validate(verifyDocumentSchema),
   verifyDocumentController,
 );
@@ -63,7 +63,7 @@ router.patch(
 router.delete(
   "/pengabdian-documents/:documentId",
   authMiddleware,
-  requireRole([ROLES.ADMIN_LPPM, ROLES.STAFF_LPPM]),
+  requirePermission(PERMISSIONS.PENGABDIAN_DOKUMEN),
   deleteDocumentController,
 );
 

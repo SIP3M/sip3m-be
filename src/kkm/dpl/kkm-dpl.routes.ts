@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { authMiddleware } from "../../auth/middleware/auth.middleware";
-import { requireRole } from "../../auth/middleware/role.middleware";
-import { ROLES } from "../../auth/role";
+import { requirePermission } from "../../auth/middleware/permission.middleware";
+import { PERMISSIONS } from "../../auth/permission";
 import {
   assignDplController,
   cabutDplController,
@@ -19,28 +19,28 @@ const router = Router();
 router.get(
   "/kkm/dpl",
   authMiddleware,
-  requireRole([ROLES.ADMIN_LPPM, ROLES.STAFF_LPPM, ROLES.ADMIN_SISTEM]),
+  requirePermission(PERMISSIONS.KKM_DPL_LIHAT),
   getDplListController,
 );
 
 router.get(
   "/kkm/dpl/stats",
   authMiddleware,
-  requireRole([ROLES.ADMIN_LPPM, ROLES.STAFF_LPPM, ROLES.ADMIN_SISTEM]),
+  requirePermission(PERMISSIONS.KKM_DPL_LIHAT),
   getDplStatsController,
 );
 
 router.get(
   "/kkm/dpl/dosen",
   authMiddleware,
-  requireRole([ROLES.ADMIN_LPPM, ROLES.ADMIN_SISTEM]),
+  requirePermission(PERMISSIONS.KKM_DPL_KELOLA),
   searchDosenController,
 );
 
 router.get(
   "/kkm/dpl/kelompok",
   authMiddleware,
-  requireRole([ROLES.ADMIN_LPPM, ROLES.ADMIN_SISTEM]),
+  requirePermission(PERMISSIONS.KKM_DPL_KELOLA),
   getKelompokForAssignController,
 );
 
@@ -54,21 +54,21 @@ router.get(
 router.post(
   "/kkm/dpl/assign",
   authMiddleware,
-  requireRole([ROLES.ADMIN_LPPM, ROLES.ADMIN_SISTEM]),
+  requirePermission(PERMISSIONS.KKM_DPL_KELOLA),
   assignDplController,
 );
 
 router.post(
   "/kkm/dpl/cabut",
   authMiddleware,
-  requireRole([ROLES.ADMIN_LPPM, ROLES.ADMIN_SISTEM]),
+  requirePermission(PERMISSIONS.KKM_DPL_KELOLA),
   cabutDplController,
 );
 
 router.post(
   "/kkm/kelompok/generate",
   authMiddleware,
-  requireRole([ROLES.ADMIN_LPPM]),
+  requirePermission(PERMISSIONS.KKM_GENERATE_JALANKAN),
   generateKelompokController,
 );
 

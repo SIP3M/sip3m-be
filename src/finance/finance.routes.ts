@@ -1,8 +1,8 @@
 import { Router } from "express";
 import { authMiddleware } from "../auth/middleware/auth.middleware";
-import { requireRole } from "../auth/middleware/role.middleware";
+import { requirePermission } from "../auth/middleware/permission.middleware";
 import { validate } from "../common/middleware/validate";
-import { ROLES } from "../auth/role";
+import { PERMISSIONS } from "../auth/permission";
 import {
   disburseProjectController,
   getFinanceProjectsController,
@@ -15,21 +15,21 @@ const router = Router();
 router.get(
   "/finances/summary",
   authMiddleware,
-  requireRole([ROLES.ADMIN_LPPM, ROLES.STAFF_LPPM]),
+  requirePermission(PERMISSIONS.KEUANGAN_LIHAT),
   getFinanceSummaryController,
 );
 
 router.get(
   "/finances/projects",
   authMiddleware,
-  requireRole([ROLES.ADMIN_LPPM, ROLES.STAFF_LPPM]),
+  requirePermission(PERMISSIONS.KEUANGAN_LIHAT),
   getFinanceProjectsController,
 );
 
 router.patch(
   "/finances/projects/:id/disburse",
   authMiddleware,
-  requireRole([ROLES.ADMIN_LPPM]),
+  requirePermission(PERMISSIONS.KEUANGAN_CAIKAN),
   validate(disburseProjectSchema),
   disburseProjectController,
 );

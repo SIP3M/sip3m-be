@@ -10,8 +10,8 @@ import {
   deleteUser,
 } from "./users.controller";
 import { authMiddleware } from "../auth/middleware/auth.middleware";
-import { requireRole } from "../auth/middleware/role.middleware";
-import { ROLES } from "../auth/role";
+import { requirePermission } from "../auth/middleware/permission.middleware";
+import { PERMISSIONS } from "../auth/permission";
 import {
   updateUserRoleSchema,
   updateUserStatusSchema,
@@ -22,26 +22,26 @@ import { validate } from "../common/middleware/validate";
 
 const router = Router();
 
-router.get("/users", authMiddleware, requireRole([ROLES.ADMIN_LPPM, ROLES.ADMIN_SISTEM]), getUsers);
+router.get("/users", authMiddleware, requirePermission(PERMISSIONS.PENGGUNA_LIHAT), getUsers);
 
 router.get(
   "/users/reviewers",
   authMiddleware,
-  requireRole([ROLES.ADMIN_LPPM, ROLES.STAFF_LPPM, ROLES.ADMIN_SISTEM]),
+  requirePermission(PERMISSIONS.PENGGUNA_LIHAT_REVIEWER),
   getReviewers,
 );
 
 router.get(
   "/users/:id",
   authMiddleware,
-  requireRole([ROLES.ADMIN_LPPM, ROLES.ADMIN_SISTEM]),
+  requirePermission(PERMISSIONS.PENGGUNA_LIHAT),
   getUserById,
 );
 
 router.post(
   "/users",
   authMiddleware,
-  requireRole([ROLES.ADMIN_LPPM, ROLES.ADMIN_SISTEM]),
+  requirePermission(PERMISSIONS.PENGGUNA_TAMBAH),
   validate(createUserSchema),
   createUser,
 );
@@ -49,7 +49,7 @@ router.post(
 router.put(
   "/users/:id",
   authMiddleware,
-  requireRole([ROLES.ADMIN_LPPM, ROLES.ADMIN_SISTEM]),
+  requirePermission(PERMISSIONS.PENGGUNA_EDIT),
   validate(updateUserSchema),
   updateUser,
 );
@@ -57,7 +57,7 @@ router.put(
 router.patch(
   "/users/:id/role",
   authMiddleware,
-  requireRole([ROLES.ADMIN_LPPM, ROLES.ADMIN_SISTEM]),
+  requirePermission(PERMISSIONS.PENGGUNA_UBAH_ROLE),
   validate(updateUserRoleSchema),
   updateUserRole,
 );
@@ -65,7 +65,7 @@ router.patch(
 router.patch(
   "/users/:id/status",
   authMiddleware,
-  requireRole([ROLES.ADMIN_LPPM, ROLES.ADMIN_SISTEM]),
+  requirePermission(PERMISSIONS.PENGGUNA_UBAH_STATUS),
   validate(updateUserStatusSchema),
   updateUserStatus,
 );
@@ -73,7 +73,7 @@ router.patch(
 router.delete(
   "/users/:id",
   authMiddleware,
-  requireRole([ROLES.ADMIN_LPPM, ROLES.ADMIN_SISTEM]),
+  requirePermission(PERMISSIONS.PENGGUNA_HAPUS),
   deleteUser,
 );
 

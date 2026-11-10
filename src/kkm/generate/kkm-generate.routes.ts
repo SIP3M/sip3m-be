@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { authMiddleware } from "../../auth/middleware/auth.middleware";
-import { requireRole } from "../../auth/middleware/role.middleware";
-import { ROLES } from "../../auth/role";
+import { requirePermission } from "../../auth/middleware/permission.middleware";
+import { PERMISSIONS } from "../../auth/permission";
 import {
   executeGenerateController,
   getGenerateStatsController,
@@ -15,7 +15,7 @@ const router = Router();
 router.get(
   "/kkm/generate/stats",
   authMiddleware,
-  requireRole([ROLES.ADMIN_LPPM, ROLES.STAFF_LPPM]),
+  requirePermission(PERMISSIONS.KKM_GENERATE_LIHAT),
   getGenerateStatsController,
 );
 
@@ -23,7 +23,7 @@ router.get(
 router.get(
   "/kkm/generate/validasi",
   authMiddleware,
-  requireRole([ROLES.ADMIN_LPPM, ROLES.STAFF_LPPM]),
+  requirePermission(PERMISSIONS.KKM_GENERATE_LIHAT),
   getValidasiController,
 );
 
@@ -31,13 +31,13 @@ router.get(
 router.post(
   "/kkm/generate/preview",
   authMiddleware,
-  requireRole([ROLES.ADMIN_LPPM, ROLES.STAFF_LPPM]),
+  requirePermission(PERMISSIONS.KKM_GENERATE_LIHAT),
   previewGenerateController,
 );
 router.get(
   "/kkm/generate/preview",
   authMiddleware,
-  requireRole([ROLES.ADMIN_LPPM, ROLES.STAFF_LPPM]),
+  requirePermission(PERMISSIONS.KKM_GENERATE_LIHAT),
   previewGenerateController,
 );
 
@@ -45,7 +45,7 @@ router.get(
 router.post(
   "/kkm/generate/execute",
   authMiddleware,
-  requireRole([ROLES.ADMIN_LPPM]),
+  requirePermission(PERMISSIONS.KKM_GENERATE_JALANKAN),
   executeGenerateController,
 );
 

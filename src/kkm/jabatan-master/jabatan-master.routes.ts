@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { authMiddleware } from "../../auth/middleware/auth.middleware";
-import { requireRole } from "../../auth/middleware/role.middleware";
-import { ROLES } from "../../auth/role";
+import { requirePermission } from "../../auth/middleware/permission.middleware";
+import { PERMISSIONS } from "../../auth/permission";
 import {
   getAllJabatanMasterHandler,
   getJabatanMasterByIdHandler,
@@ -30,7 +30,7 @@ router.get(
 router.post(
   "/kkm/jabatan-master",
   authMiddleware,
-  requireRole([ROLES.ADMIN_SISTEM]),
+  requirePermission(PERMISSIONS.KKM_JABATAN_KELOLA),
   createJabatanMasterHandler,
 );
 
@@ -38,7 +38,7 @@ router.post(
 router.patch(
   "/kkm/jabatan-master/:id",
   authMiddleware,
-  requireRole([ROLES.ADMIN_SISTEM]),
+  requirePermission(PERMISSIONS.KKM_JABATAN_KELOLA),
   updateJabatanMasterHandler,
 );
 
@@ -46,7 +46,7 @@ router.patch(
 router.delete(
   "/kkm/jabatan-master/:id",
   authMiddleware,
-  requireRole([ROLES.ADMIN_SISTEM]),
+  requirePermission(PERMISSIONS.KKM_JABATAN_KELOLA),
   deleteJabatanMasterHandler,
 );
 

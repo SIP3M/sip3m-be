@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { authMiddleware } from "../../auth/middleware/auth.middleware";
-import { requireRole } from "../../auth/middleware/role.middleware";
-import { ROLES } from "../../auth/role";
+import { requirePermission } from "../../auth/middleware/permission.middleware";
+import { PERMISSIONS } from "../../auth/permission";
 import {
   bulkUpsertPenilaianController,
   getPenilaianBimbinganController,
@@ -17,21 +17,21 @@ const router = Router();
 router.get(
   "/kkm/dpl/penilaian",
   authMiddleware,
-  requireRole([ROLES.DOSEN]),
+  requirePermission(PERMISSIONS.KKM_PENILAIAN_ISI),
   getPenilaianBimbinganController,
 );
 
 router.post(
   "/kkm/dpl/penilaian",
   authMiddleware,
-  requireRole([ROLES.DOSEN]),
+  requirePermission(PERMISSIONS.KKM_PENILAIAN_ISI),
   upsertPenilaianController,
 );
 
 router.post(
   "/kkm/dpl/penilaian/bulk",
   authMiddleware,
-  requireRole([ROLES.DOSEN]),
+  requirePermission(PERMISSIONS.KKM_PENILAIAN_ISI),
   bulkUpsertPenilaianController,
 );
 
@@ -41,7 +41,7 @@ router.post(
 router.get(
   "/kkm/mahasiswa/penilaian",
   authMiddleware,
-  requireRole([ROLES.MAHASISWA]),
+  requirePermission(PERMISSIONS.KKM_PENILAIAN_LIHAT),
   getPenilaianMahasiswaController,
 );
 

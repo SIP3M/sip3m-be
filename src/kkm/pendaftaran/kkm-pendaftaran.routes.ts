@@ -1,8 +1,8 @@
 import { Router } from "express";
 import multer from "multer";
 import { authMiddleware } from "../../auth/middleware/auth.middleware";
-import { requireRole } from "../../auth/middleware/role.middleware";
-import { ROLES } from "../../auth/role";
+import { requirePermission } from "../../auth/middleware/permission.middleware";
+import { PERMISSIONS } from "../../auth/permission";
 import { handleProposalUploadError } from "../../config/storage";
 import { ALLOWED_UKT_MIMES } from "./kkm-pendaftaran.types";
 import {
@@ -28,7 +28,7 @@ const uploadBuktiUkt = multer({
 }).single("bukti_ukt");
 
 // Semua endpoint khusus mahasiswa (pendaftar KKM mandiri)
-const mahasiswaOnly = [authMiddleware, requireRole([ROLES.MAHASISWA])];
+const mahasiswaOnly = [authMiddleware, requirePermission(PERMISSIONS.KKM_PENDAFTARAN)];
 
 // /me harus dideklarasikan sebelum pola umum bila nanti ditambah path lain
 router.get("/kkm/pendaftaran/me", ...mahasiswaOnly, getPendaftaranSayaController);

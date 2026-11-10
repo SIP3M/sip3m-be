@@ -1,22 +1,22 @@
 import { Router } from "express";
 import { getProfile, updateProfile, searchDosenController, searchMahasiswaController } from "./dosen.controller";
 import { authMiddleware } from "../auth/middleware/auth.middleware";
-import { requireRole } from "../auth/middleware/role.middleware";
-import { ROLES } from "../auth/role";
+import { requirePermission } from "../auth/middleware/permission.middleware";
+import { PERMISSIONS } from "../auth/permission";
 
 const router = Router();
 
 router.get(
   "/dosen/profile",
   authMiddleware,
-  requireRole([ROLES.DOSEN]),
+  requirePermission(PERMISSIONS.DOSEN_PROFIL),
   getProfile,
 );
 
 router.patch(
   "/dosen/profile",
   authMiddleware,
-  requireRole([ROLES.DOSEN]),
+  requirePermission(PERMISSIONS.DOSEN_PROFIL),
   updateProfile,
 );
 

@@ -2,8 +2,8 @@ import { Router, NextFunction, Request, Response } from "express";
 import multer from "multer";
 import { MulterError } from "multer";
 import { authMiddleware } from "../../auth/middleware/auth.middleware";
-import { requireRole } from "../../auth/middleware/role.middleware";
-import { ROLES } from "../../auth/role";
+import { requirePermission } from "../../auth/middleware/permission.middleware";
+import { PERMISSIONS } from "../../auth/permission";
 import {
   getLaporanIndividuController,
   getLaporanKelompokController,
@@ -51,14 +51,14 @@ const handleUploadError = (
 router.get(
   "/kkm/laporan/individu/me",
   authMiddleware,
-  requireRole([ROLES.MAHASISWA]),
+  requirePermission(PERMISSIONS.KKM_LAPORAN_INDIVIDU),
   getLaporanIndividuController,
 );
 
 router.post(
   "/kkm/laporan/individu",
   authMiddleware,
-  requireRole([ROLES.MAHASISWA]),
+  requirePermission(PERMISSIONS.KKM_LAPORAN_INDIVIDU),
   uploadPdf,
   handleUploadError,
   uploadLaporanIndividuController,
@@ -68,14 +68,14 @@ router.post(
 router.get(
   "/kkm/laporan/kelompok/me",
   authMiddleware,
-  requireRole([ROLES.MAHASISWA]),
+  requirePermission(PERMISSIONS.KKM_LAPORAN_KELOMPOK),
   getLaporanKelompokController,
 );
 
 router.post(
   "/kkm/kelompok/:id/laporan",
   authMiddleware,
-  requireRole([ROLES.MAHASISWA]),
+  requirePermission(PERMISSIONS.KKM_LAPORAN_KELOMPOK),
   uploadPdf,
   handleUploadError,
   uploadLaporanKelompokController,

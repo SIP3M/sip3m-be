@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { authMiddleware } from "../auth/middleware/auth.middleware";
-import { requireRole } from "../auth/middleware/role.middleware";
-import { ROLES } from "../auth/role";
+import { requirePermission } from "../auth/middleware/permission.middleware";
+import { PERMISSIONS } from "../auth/permission";
 import {
   archiveProjectController,
   createPengabdianProjectController,
@@ -25,40 +25,28 @@ const router = Router();
 router.post(
   "/pengabdian/proposals/:proposalId/project",
   authMiddleware,
-  requireRole([ROLES.ADMIN_LPPM, ROLES.STAFF_LPPM]),
+  requirePermission(PERMISSIONS.PENGABDIAN_KELOLA),
   createPengabdianProjectController,
 );
 
 router.get(
   "/pengabdian/proposals/:proposalId/project",
   authMiddleware,
-  requireRole([
-    ROLES.ADMIN_LPPM,
-    ROLES.STAFF_LPPM,
-    ROLES.DOSEN,
-    ROLES.REVIEWER,
-    ROLES.REVIEWER_EKSTERNAL,
-  ]),
+  requirePermission(PERMISSIONS.PENGABDIAN_LIHAT),
   getPengabdianProjectByProposalIdController,
 );
 
 router.patch(
   "/pengabdian/projects/:projectId/status",
   authMiddleware,
-  requireRole([ROLES.ADMIN_LPPM, ROLES.STAFF_LPPM]),
+  requirePermission(PERMISSIONS.PENGABDIAN_KELOLA),
   updatePengabdianStatusController,
 );
 
 router.get(
   "/pengabdian",
   authMiddleware,
-  requireRole([
-    ROLES.ADMIN_LPPM,
-    ROLES.STAFF_LPPM,
-    ROLES.DOSEN,
-    ROLES.REVIEWER,
-    ROLES.REVIEWER_EKSTERNAL,
-  ]),
+  requirePermission(PERMISSIONS.PENGABDIAN_LIHAT),
   getAllPengabdianProjectsController,
 );
 
@@ -66,27 +54,21 @@ router.get(
 router.get(
   "/pengabdian/projects",
   authMiddleware,
-  requireRole([
-    ROLES.ADMIN_LPPM,
-    ROLES.STAFF_LPPM,
-    ROLES.DOSEN,
-    ROLES.REVIEWER,
-    ROLES.REVIEWER_EKSTERNAL,
-  ]),
+  requirePermission(PERMISSIONS.PENGABDIAN_LIHAT),
   getAllPengabdianProjectsController,
 );
 
 router.patch(
   "/pengabdian/projects/:projectId/details",
   authMiddleware,
-  requireRole([ROLES.ADMIN_LPPM, ROLES.STAFF_LPPM]),
+  requirePermission(PERMISSIONS.PENGABDIAN_KELOLA),
   updateProjectDetailsController,
 );
 
 router.post(
   "/pengabdian/projects/:projectId/milestones/:milestoneId/documents",
   authMiddleware,
-  requireRole([ROLES.DOSEN]),
+  requirePermission(PERMISSIONS.PENGABDIAN_MILESTONE),
   uploadDocumentMiddleware.fields(milestoneDocumentUploadFields),
   handleUploadError,
   uploadMilestoneDocumentsController,
@@ -95,7 +77,7 @@ router.post(
 router.patch(
   "/pengabdian/:id/archive",
   authMiddleware,
-  requireRole([ROLES.ADMIN_LPPM, ROLES.STAFF_LPPM]),
+  requirePermission(PERMISSIONS.PENGABDIAN_KELOLA),
   archiveProjectController,
 );
 

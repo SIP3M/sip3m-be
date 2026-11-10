@@ -1,23 +1,23 @@
 import { Router } from "express";
 import { authMiddleware } from "../auth/middleware/auth.middleware";
-import { requireRole } from "../auth/middleware/role.middleware";
-import { ROLES } from "../auth/role";
+import { requirePermission } from "../auth/middleware/permission.middleware";
+import { PERMISSIONS } from "../auth/permission";
 import { getAuditLogs, exportAuditLogs } from "./audit.controller";
 
 const router = Router();
 
-// Audit log hanya untuk ADMIN_SISTEM
+// Audit log hanya untuk ADMIN_SISTEM (atau role yang diberi izin audit.*)
 router.get(
   "/audit-logs",
   authMiddleware,
-  requireRole([ROLES.ADMIN_SISTEM]),
+  requirePermission(PERMISSIONS.AUDIT_LIHAT),
   getAuditLogs,
 );
 
 router.get(
   "/audit-logs/export",
   authMiddleware,
-  requireRole([ROLES.ADMIN_SISTEM]),
+  requirePermission(PERMISSIONS.AUDIT_EXPORT),
   exportAuditLogs,
 );
 

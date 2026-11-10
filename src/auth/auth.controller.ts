@@ -241,6 +241,9 @@ export const me = async (
         select: {
           id: true,
           roles: true,
+          deskripsi: true,
+          is_system: true,
+          dashboard_path: true,
         },
       },
     },
@@ -250,6 +253,22 @@ export const me = async (
     return res.status(404).json({
       message: "User not found.",
     });
+  }
+
+  // Daftar permission user (kode izin) — ADMIN_SISTEM = superuser ( semua izin ).
+  let permissions: string[] = [];
+  if (user.roles.roles === "ADMIN_SISTEM") {
+    const all = await prisma.permission.findMany({
+      select: { kode: true },
+      orderBy: { kode: "asc" },
+    });
+    permissions = all.map((p) => p.kode);
+  } else {
+    const links = await prisma.rolePermission.findMany({
+      where: { role_id: user.roles.id },
+      include: { permission: { select: { kode: true } } },
+    });
+    permissions = links.map((l) => l.permission.kode).sort();
   }
 
   return res.status(200).json({
@@ -263,7 +282,11 @@ export const me = async (
       roles: {
         id: user.roles.id,
         roles: user.roles.roles,
+        deskripsi: user.roles.deskripsi,
+        is_system: user.roles.is_system,
+        dashboard_path: user.roles.dashboard_path,
       },
+      permissions,
       nidn: user.nidn_nip,
       // NIM mahasiswa (kolom yang sama dengan NIDN dosen) + semester —
       // dipakai prefill & syarat pendaftaran KKM mandiri.

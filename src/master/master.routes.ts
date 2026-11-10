@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { authMiddleware } from "../auth/middleware/auth.middleware";
-import { requireRole } from "../auth/middleware/role.middleware";
-import { ROLES } from "../auth/role";
+import { requirePermission } from "../auth/middleware/permission.middleware";
+import { PERMISSIONS } from "../auth/permission";
 import {
   createFakultasController,
   createProgramStudiController,
@@ -25,7 +25,10 @@ router.get("/program-studi", getAllProgramStudiController);
 // =============================================
 // Kelola master data — HANYA ADMIN_SISTEM
 // =============================================
-const adminSistemOnly = [authMiddleware, requireRole([ROLES.ADMIN_SISTEM])];
+const adminSistemOnly = [
+  authMiddleware,
+  requirePermission(PERMISSIONS.MASTER_AKADEMIK_KELOLA),
+];
 
 router.post("/fakultas", ...adminSistemOnly, createFakultasController);
 router.patch("/fakultas/:fakultasId", ...adminSistemOnly, updateFakultasController);
