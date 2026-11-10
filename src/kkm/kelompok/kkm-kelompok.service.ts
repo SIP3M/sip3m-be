@@ -8,7 +8,6 @@ import { isJabatanPenunggah } from "../logbook-kelompok/kkm-logbook-kelompok.ser
 import type {
   KkmKelompokAddAnggotaInput,
   KkmKelompokDocType,
-  KkmKelompokJabatan,
   KkmKelompokListQuery,
   KkmKelompokUpdateInput,
 } from "./kkm-kelompok.validation";
@@ -663,12 +662,6 @@ export const removeAnggota = async (kelompok_id: number, peserta_id: number) => 
 // Ditubuhkan admin LPPM — menentukan siapa yang boleh unggah
 // logbook & laporan kelompok.
 // =============================================
-
-const JABATAN_LABEL: Record<string, string> = {
-  ANGGOTA: "Anggota",
-  KETUA: "Ketua",
-  SEKRETARIS: "Sekretaris",
-};
 
 /**
  * Tetapkan jabatan satu anggota kelompok.

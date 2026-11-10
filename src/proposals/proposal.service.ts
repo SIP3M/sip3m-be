@@ -1185,7 +1185,7 @@ export const autoAssignReviewerService = async (proposalIds: number[]) => {
       const selectedReviewer = safeReviewers[0];
 
       // 5. Eksekusi Database dalam Transaksi
-      const result = await prisma.$transaction(async (tx) => {
+      await prisma.$transaction(async (tx) => {
         await tx.proposalReviewers.create({
           data: {
             proposal_id: proposalId,
@@ -1222,11 +1222,11 @@ export const autoAssignReviewerService = async (proposalIds: number[]) => {
         title: proposal.title,
         reviewerName: selectedReviewer.name,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Jika terjadi error pada SATU proposal tertentu, masukkan ke daftar gagal, namun proses (loop) untuk proposal lainnya tetap lanjut.
       errorResults.push({
         proposalId,
-        reason: error.message,
+        reason: error instanceof Error ? error.message : String(error),
       });
     }
   }

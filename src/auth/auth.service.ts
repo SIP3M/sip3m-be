@@ -219,7 +219,7 @@ export const loginUser = async (
   const expiresAt = new Date(Date.now() + (data.remember_me ? 7 * 24 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000));
 
   // Izin user (kode permission) — ADMIN_SISTEM = superuser (semua izin).
-  let permissions: string[] = [];
+  let permissions: string[];
   if (user.roles.roles === "ADMIN_SISTEM") {
     const all = await prisma.permission.findMany({
       select: { kode: true },

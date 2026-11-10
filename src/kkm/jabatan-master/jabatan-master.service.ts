@@ -67,7 +67,8 @@ export const updateJabatanMaster = async (
 };
 
 export const deleteJabatanMaster = async (id: number): Promise<void> => {
-  const jabatan = await getJabatanMasterById(id);
+  // Guard: pastikan jabatan ada (melempar 404 bila tidak).
+  await getJabatanMasterById(id);
 
   // Cari peserta yang pakai jabatan ini
   const pesertaCount = await prisma.kkmPeserta.count({
