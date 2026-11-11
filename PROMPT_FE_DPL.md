@@ -14,9 +14,9 @@ Kamu adalah Frontend Engineer untuk SIP3M (Sistem Informasi LPPM).
 - Prinsip data: **1 Desa (KkmLocation) = 1 Kelompok (KkmKelompok)**. Setiap `POST /kkm/locations` sukses, BE auto-create `KkmKelompok` dengan nama `Kelompok 01..N` dan `lokasi_id @unique`. Lokasi lama yang belum punya kelompok bisa backfill via `POST /kkm/kelompok/generate`.
 - Relasi DPL: **1 DPL (users DOSEN) bisa pegang N Kelompok, 1 Kelompok cuma 1 DPL** (`KkmKelompok.dpl_id`). Status & stats semua **derived**, tidak ada flag kolom.
 - Base URL: `http://localhost:3000/api` (prod: `https://sip3m-be.vercel.app/api`)
-- Auth: `Authorization: Bearer <JWT>` (login sebagai ADMIN_LPPM untuk assign/cabut)
+- Auth: `Authorization: Bearer <JWT>` (login sebagai KETUA_LPPM untuk assign/cabut)
 - Swagger lengkap ada di `GET /docs` tag **KKM DPL** & **KKM Kelompok**, schema `KkmKelompok` & `KkmDplQuota`.
-- RBAC: `POST /kkm/dpl/assign`, `POST /kkm/dpl/cabut`, `POST /kkm/kelompok/generate` = `ADMIN_LPPM` only. `GET /kkm/dpl`, `GET /kkm/dpl/stats`, `GET /kkm/dpl/dosen`, `GET /kkm/dpl/kelompok`, `GET /kkm/dpl/me` = `ADMIN_LPPM + STAFF_LPPM` (assign/dosen/kelompok hanya ADMIN, `me` semua login).
+- RBAC: `POST /kkm/dpl/assign`, `POST /kkm/dpl/cabut`, `POST /kkm/kelompok/generate` = `KETUA_LPPM` only. `GET /kkm/dpl`, `GET /kkm/dpl/stats`, `GET /kkm/dpl/dosen`, `GET /kkm/dpl/kelompok`, `GET /kkm/dpl/me` = `KETUA_LPPM + STAFF_LPPM` (assign/dosen/kelompok hanya ADMIN, `me` semua login).
 
 ### UI Target (2 screenshot)
 

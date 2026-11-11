@@ -300,7 +300,7 @@ export const loginUser = async (
   }
 
   if (!user.is_active) {
-    throw new HttpError("Akun Anda belum diverifikasi oleh Admin LPPM.", 403);
+    throw new HttpError("Akun Anda belum diverifikasi oleh Ketua LPPM.", 403);
   }
 
   const passwordMatch = await bcrypt.compare(data.password, user.password_hash);

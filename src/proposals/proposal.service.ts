@@ -927,12 +927,12 @@ const ROLE_STATUS_TRANSITIONS: Record<
   string,
   Partial<Record<ProposalStatus, ProposalStatus[]>>
 > = {
-  ADMIN_LPPM: {
+  KETUA_LPPM: {
     [ProposalStatus.SUBMITTED]: [
       ProposalStatus.ADMIN_VERIFIED,
       ProposalStatus.REJECTED,
     ],
-    // Keputusan akhir: hanya Admin LPPM yang menentukan Diterima/Tolak
+    // Keputusan akhir: hanya Ketua LPPM yang menentukan Diterima/Tolak
     // setelah reviewer memberi rekomendasi (status REVIEW_DONE).
     [ProposalStatus.REVIEW_DONE]: [
       ProposalStatus.ACCEPTED,
@@ -948,7 +948,7 @@ const ROLE_STATUS_TRANSITIONS: Record<
   REVIEWER: {
     [ProposalStatus.ADMIN_VERIFIED]: [ProposalStatus.UNDER_REVIEW],
     // Reviewer TIDAK punya hak menetapkan ACCEPTED/REJECTED —
-    // keputusan final ada di tangan Admin LPPM (REVIEW_DONE → ACCEPTED/REJECTED).
+    // keputusan final ada di tangan Ketua LPPM (REVIEW_DONE → ACCEPTED/REJECTED).
     [ProposalStatus.UNDER_REVIEW]: [ProposalStatus.REVISION],
   },
   REVIEWER_EKSTERNAL: {
@@ -998,7 +998,7 @@ export const updateProposalStatus = async (
   switch (newStatus) {
     case ProposalStatus.ADMIN_VERIFIED:
       notifTitle = "Proposal Terverifikasi";
-      notifMessage = `Proposal "${proposal.title}" telah diverifikasi oleh Admin LPPM dan siap untuk ditinjau oleh Reviewer.`;
+      notifMessage = `Proposal "${proposal.title}" telah diverifikasi oleh Ketua LPPM dan siap untuk ditinjau oleh Reviewer.`;
       break;
     case ProposalStatus.UNDER_REVIEW:
       notifTitle = "Proposal Sedang Ditinjau";
@@ -1280,7 +1280,7 @@ export const evaluateProposal = async (
   // Review hanya boleh dilakukan saat proposal masih dalam proses review.
   // REVIEW_DONE = sudah direview menunggu keputusan admin; ACCEPTED/REJECTED =
   // keputusan final. Tanpa guard ini reviewer bisa meninjau ulang dan
-  // mengubah keputusan final tanpa melalui Admin LPPM.
+  // mengubah keputusan final tanpa melalui Ketua LPPM.
   if (
     proposal.status === ProposalStatus.REVIEW_DONE ||
     proposal.status === ProposalStatus.ACCEPTED ||
@@ -1288,7 +1288,7 @@ export const evaluateProposal = async (
   ) {
     throw new HttpError(
       proposal.status === ProposalStatus.REVIEW_DONE
-        ? "Proposal sudah direview dan menunggu keputusan akhir Admin LPPM."
+        ? "Proposal sudah direview dan menunggu keputusan akhir Ketua LPPM."
         : "Proposal sudah mendapatkan keputusan final dan tidak dapat direview ulang.",
       400,
     );
@@ -1394,7 +1394,7 @@ export const evaluateProposal = async (
 
   // Determine proposal status based on decision
   // Revisi tetap langsung ke REVISION (loop revisi dosen).
-  // APPROVED = rekomendasi "Layak Didanai" → menunggu keputusan akhir Admin LPPM.
+  // APPROVED = rekomendasi "Layak Didanai" → menunggu keputusan akhir Ketua LPPM.
   // REJECTED = "Tidak Layak Didanai" → keputusan final reviewer (langsung ditolak).
   const getProposalStatusFromDecision = (decision: string | null | undefined): ProposalStatus => {
     if (!decision) return ProposalStatus.UNDER_REVIEW;
@@ -1458,7 +1458,7 @@ export const evaluateProposal = async (
 
     if (newProposalStatus === ProposalStatus.REVIEW_DONE) {
       notifTitle = "Review Selesai — Menunggu Keputusan";
-      notifMessage = `Proposal "${proposal.title}" telah direview dan direkomendasikan LAYAK DIDANAI. Keputusan akhir (diterima/tidak) menunggu persetujuan Admin LPPM.`;
+      notifMessage = `Proposal "${proposal.title}" telah direview dan direkomendasikan LAYAK DIDANAI. Keputusan akhir (diterima/tidak) menunggu persetujuan Ketua LPPM.`;
     } else if (input.decision === "REJECTED" || newProposalStatus === ProposalStatus.REJECTED) {
       notifTitle = "Proposal Ditolak";
       notifMessage = `Maaf, Proposal "${proposal.title}" telah ditolak oleh reviewer karena tidak layak didanai.`;
@@ -1477,7 +1477,7 @@ export const evaluateProposal = async (
     });
 
     // Catatan: pembuatan otomatis PengabdianProject + Milestones TIDAK dilakukan
-    // di sini. Proyek hanya dibuat saat Admin LPPM mengambil keputusan akhir
+    // di sini. Proyek hanya dibuat saat Ketua LPPM mengambil keputusan akhir
     // ACCEPTED melalui updateProposalStatus.
 
     return {

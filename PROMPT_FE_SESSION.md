@@ -111,8 +111,8 @@ X-Device-Id: 550e8400-e29b-41d4-a716-446655440000
 Content-Type: application/json
 
 { "identifier": "admin@umc.ac.id", "password": "P@ssw0rd123", "remember_me": false }
-→ 200 { "message": "Login berhasil.", "data": { "token": "eyJhbG...jti...deviceId...", "user": { "id": 1, "roles": { "roles": "ADMIN_LPPM" } } } }
-JWT payload: { sub: "1", userId: 1, role: "ADMIN_LPPM", jti: "uuid", deviceId: "550e..." , exp: 1d/7d }
+→ 200 { "message": "Login berhasil.", "data": { "token": "eyJhbG...jti...deviceId...", "user": { "id": 1, "roles": { "roles": "KETUA_LPPM" } } } }
+JWT payload: { sub: "1", userId: 1, role: "KETUA_LPPM", jti: "uuid", deviceId: "550e..." , exp: 1d/7d }
 ```
 
 **Example GET /auth/sessions:**

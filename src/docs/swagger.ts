@@ -172,7 +172,7 @@ export const swaggerSpec = swaggerJSDoc({
             message: {
               type: "string",
               example:
-                'Proposal "Penelitian AI" telah diverifikasi oleh Admin LPPM.',
+                'Proposal "Penelitian AI" telah diverifikasi oleh Ketua LPPM.',
             },
             is_read: { type: "boolean", example: false },
             created_at: {
@@ -635,7 +635,7 @@ Endpoint untuk registrasi user dengan role **DOSEN**.
 - Public (tanpa login)
 
 **Catatan:**
-- Setelah registrasi, akun berstatus \`is_active: false\` dan harus diverifikasi oleh Admin LPPM terlebih dahulu sebelum bisa login.
+- Setelah registrasi, akun berstatus \`is_active: false\` dan harus diverifikasi oleh Ketua LPPM terlebih dahulu sebelum bisa login.
 - Field \`nidn\`, \`username\`, dan \`email\` harus unik.
     `,
           requestBody: {
@@ -792,7 +792,7 @@ Endpoint untuk registrasi user dengan role **REVIEWER_EKSTERNAL**.
 - File CV maksimal **5 MB**.
 - Format file CV yang diperbolehkan: **PDF, DOC, DOCX**.
 - File CV disimpan di bucket **lppm_documents** pada folder **cv/**.
-- Setelah registrasi, akun berstatus \`is_active: false\` dan harus diverifikasi oleh Admin LPPM.
+- Setelah registrasi, akun berstatus \`is_active: false\` dan harus diverifikasi oleh Ketua LPPM.
 - \`username\` dan \`email\` harus unik.
     `,
           requestBody: {
@@ -874,7 +874,7 @@ Endpoint untuk registrasi user dengan role **REVIEWER_EKSTERNAL**.
                 "application/json": {
                   example: {
                     message:
-                      "Registrasi Reviewer Eksternal berhasil. Akun Anda sedang menunggu verifikasi oleh Admin LPPM.",
+                      "Registrasi Reviewer Eksternal berhasil. Akun Anda sedang menunggu verifikasi oleh Ketua LPPM.",
                     data: {
                       id: 6,
                       name: "Dr. Rina Wijaya",
@@ -954,7 +954,7 @@ Endpoint untuk autentikasi user.
 - \`identifier\` bisa berupa **email** atau **NIDN/NIP**.
 - Menghasilkan JWT token untuk akses API lain.
 - Jika \`remember_me: true\`, token berlaku selama **7 hari**. Jika tidak, token berlaku **1 hari**.
-- Akun yang belum diverifikasi Admin LPPM tidak dapat login (\`is_active: false\`).
+- Akun yang belum diverifikasi Ketua LPPM tidak dapat login (\`is_active: false\`).
     `,
           requestBody: {
             required: true,
@@ -1023,7 +1023,7 @@ Endpoint untuk autentikasi user.
               content: {
                 "application/json": {
                   example: {
-                    message: "Akun Anda belum diverifikasi oleh Admin LPPM.",
+                    message: "Akun Anda belum diverifikasi oleh Ketua LPPM.",
                   },
                 },
               },
@@ -1303,7 +1303,7 @@ Catatan:
 Membuat user baru dengan role apapun.
 
 **Role akses:**
-- ADMIN_LPPM
+- KETUA_LPPM
 - ADMIN_SISTEM
 
 **Catatan:**
@@ -1344,7 +1344,7 @@ Membuat user baru dengan role apapun.
                       type: "string",
                       description: "Nama role (case-insensitive).",
                       enum: [
-                        "ADMIN_LPPM",
+                        "KETUA_LPPM",
                         "ADMIN_SISTEM",
                         "STAFF_LPPM",
                         "DOSEN",
@@ -1495,7 +1495,7 @@ Membuat user baru dengan role apapun.
               },
             },
             403: {
-              description: "Forbidden — bukan ADMIN_LPPM",
+              description: "Forbidden — bukan KETUA_LPPM",
               content: {
                 "application/json": { example: { message: "Forbidden." } },
               },
@@ -1509,7 +1509,7 @@ Membuat user baru dengan role apapun.
       Mengambil daftar seluruh user dalam sistem dengan dukungan filter, pencarian, dan pagination.
 
 **Role akses:**
-- ADMIN_LPPM
+- KETUA_LPPM
 
 **Catatan:**
 - Parameter \`status\` memfilter berdasarkan status verifikasi akun.
@@ -1579,13 +1579,13 @@ Membuat user baru dengan role apapun.
                         data: [
                           {
                             id: 1,
-                            name: "Admin LPPM",
+                            name: "Ketua LPPM",
                             email: "admin@kampus.ac.id",
                             nidn: null,
                             fakultas: null,
                             is_active: true,
                             created_at: "2025-01-01T00:00:00.000Z",
-                            roles: { id: 1, roles: "ADMIN_LPPM" },
+                            roles: { id: 1, roles: "KETUA_LPPM" },
                           },
                           {
                             id: 5,
@@ -1722,7 +1722,7 @@ Membuat user baru dengan role apapun.
 Mengambil daftar user yang memiliki role **REVIEWER** atau **REVIEWER_EKSTERNAL** dan berstatus aktif.
 
 **Role akses:**
-- ADMIN_LPPM
+- KETUA_LPPM
 - STAFF_LPPM
 
 **Catatan:**
@@ -1763,7 +1763,7 @@ Mengambil daftar user yang memiliki role **REVIEWER** atau **REVIEWER_EKSTERNAL*
               },
             },
             403: {
-              description: "Forbidden — bukan ADMIN_LPPM atau STAFF_LPPM",
+              description: "Forbidden — bukan KETUA_LPPM atau STAFF_LPPM",
               content: {
                 "application/json": {
                   example: {
@@ -1796,7 +1796,7 @@ Mengambil daftar user yang memiliki role **REVIEWER** atau **REVIEWER_EKSTERNAL*
 Mengambil detail user berdasarkan ID.
 
 **Role akses:**
-- ADMIN_LPPM
+- KETUA_LPPM
 
 **Catatan:**
 - \`id\` harus berupa angka valid, jika bukan akan mengembalikan 400.
@@ -1881,7 +1881,7 @@ Mengambil detail user berdasarkan ID.
 Memperbarui data user berdasarkan ID.
 
 **Role akses:**
-- ADMIN_LPPM
+- KETUA_LPPM
 - ADMIN_SISTEM
 
 **Catatan:**
@@ -1932,7 +1932,7 @@ Memperbarui data user berdasarkan ID.
                     roles: {
                       type: "string",
                       enum: [
-                        "ADMIN_LPPM",
+                        "KETUA_LPPM",
                         "ADMIN_SISTEM",
                         "STAFF_LPPM",
                         "DOSEN",
@@ -2091,7 +2091,7 @@ Memperbarui data user berdasarkan ID.
               },
             },
             403: {
-              description: "Forbidden — bukan ADMIN_LPPM",
+              description: "Forbidden — bukan KETUA_LPPM",
               content: {
                 "application/json": { example: { message: "Forbidden." } },
               },
@@ -2113,7 +2113,7 @@ Memperbarui data user berdasarkan ID.
 Menghapus user secara permanen berdasarkan ID.
 
 **Role akses:**
-- ADMIN_LPPM
+- KETUA_LPPM
 
 **Catatan:**
 - Penghapusan bersifat **permanent** (hard delete).
@@ -2154,7 +2154,7 @@ Menghapus user secara permanen berdasarkan ID.
               },
             },
             403: {
-              description: "Forbidden — bukan ADMIN_LPPM",
+              description: "Forbidden — bukan KETUA_LPPM",
               content: {
                 "application/json": { example: { message: "Forbidden." } },
               },
@@ -2179,7 +2179,7 @@ Menghapus user secara permanen berdasarkan ID.
 Mengubah role user berdasarkan ID.
 
 **Role akses:**
-- ADMIN_LPPM
+- KETUA_LPPM
 
 **Catatan:**
 - \`id\` harus berupa angka valid.
@@ -2207,7 +2207,7 @@ Mengubah role user berdasarkan ID.
                       type: "string",
                       description: "Nama role yang ingin di-assign ke user.",
                       enum: [
-                        "ADMIN_LPPM",
+                        "KETUA_LPPM",
                         "STAFF_LPPM",
                         "DOSEN",
                         "REVIEWER_INTERNAL",
@@ -2266,7 +2266,7 @@ Mengubah role user berdasarkan ID.
               },
             },
             403: {
-              description: "Forbidden — bukan ADMIN_LPPM",
+              description: "Forbidden — bukan KETUA_LPPM",
               content: {
                 "application/json": {
                   example: { message: "Forbidden." },
@@ -2293,7 +2293,7 @@ Mengubah role user berdasarkan ID.
 Mengaktifkan atau menonaktifkan akun user berdasarkan ID.
 
 **Role akses:**
-- ADMIN_LPPM
+- KETUA_LPPM
 
 **Catatan:**
 - Menggunakan soft-delete via field \`is_active\`.
@@ -2387,7 +2387,7 @@ Mengaktifkan atau menonaktifkan akun user berdasarkan ID.
               },
             },
             403: {
-              description: "Forbidden — bukan ADMIN_LPPM",
+              description: "Forbidden — bukan KETUA_LPPM",
               content: {
                 "application/json": {
                   example: { message: "Forbidden." },
@@ -2635,7 +2635,7 @@ Endpoint untuk membuat proposal penelitian baru.
 Endpoint untuk mengambil daftar proposal dengan pagination.
 
 **Role akses:**
-- ADMIN_LPPM
+- KETUA_LPPM
 - STAFF_LPPM
 - REVIEWER
 - REVIEWER_EKSTERNAL
@@ -2787,7 +2787,7 @@ Endpoint untuk mengambil daftar proposal dengan pagination.
 Endpoint untuk mengambil daftar proposal dengan pagination.
 
 **Role akses:**
-- ADMIN_LPPM
+- KETUA_LPPM
 - STAFF_LPPM
 - REVIEWER
 - REVIEWER_EKSTERNAL
@@ -3244,7 +3244,7 @@ Endpoint untuk mengambil daftar proposal yang **ditugaskan** ke reviewer yang se
 Endpoint untuk mengambil detail satu proposal berdasarkan ID.
 
 **Role akses:**
-- ADMIN_LPPM
+- KETUA_LPPM
 - STAFF_LPPM
 - DOSEN (hanya pemilik proposal)
 - REVIEWER
@@ -3884,7 +3884,7 @@ Endpoint untuk mengirim (submit) proposal ke pihak Admin/Reviewer.
 Endpoint untuk mengubah status proposal oleh Admin atau Reviewer.
 
 **Role akses:**
-- ADMIN_LPPM
+- KETUA_LPPM
 - STAFF_LPPM
 - REVIEWER
 - REVIEWER_EKSTERNAL
@@ -3893,18 +3893,18 @@ Endpoint untuk mengubah status proposal oleh Admin atau Reviewer.
 
 | Role | Dari Status | Ke Status |
 |------|-------------|------------|
-| ADMIN_LPPM | SUBMITTED | ADMIN_VERIFIED, REJECTED |
-| ADMIN_LPPM | REVIEW_DONE | ACCEPTED, REJECTED |
+| KETUA_LPPM | SUBMITTED | ADMIN_VERIFIED, REJECTED |
+| KETUA_LPPM | REVIEW_DONE | ACCEPTED, REJECTED |
 | STAFF_LPPM | SUBMITTED | ADMIN_VERIFIED, REJECTED |
 | REVIEWER / REVIEWER_EKSTERNAL | ADMIN_VERIFIED | UNDER_REVIEW |
 | REVIEWER / REVIEWER_EKSTERNAL | UNDER_REVIEW | REVISION |
 
 **Alur keputusan:**
 - Reviewer hanya memberikan **rekomendasi** melalui endpoint evaluate: \`APPROVED\` → status \`REVIEW_DONE\` (menunggu keputusan akhir), \`REJECTED\` → \`REJECTED\` (final), revisi → \`REVISION\`.
-- **Keputusan akhir (ACCEPTED/REJECTED) hanya oleh ADMIN_LPPM** dari status \`REVIEW_DONE\`.
+- **Keputusan akhir (ACCEPTED/REJECTED) hanya oleh KETUA_LPPM** dari status \`REVIEW_DONE\`.
 
 **Catatan:**
-- Keputusan admin (ADMIN_LPPM/STAFF_LPPM) **tidak** mencatat riwayat review di tabel \`ProposalReviews\` — riwayat review hanya berisi catatan reviewer asli.
+- Keputusan admin (KETUA_LPPM/STAFF_LPPM) **tidak** mencatat riwayat review di tabel \`ProposalReviews\` — riwayat review hanya berisi catatan reviewer asli.
 - Notifikasi otomatis akan dikirim ke lead researcher.
 - **Otomatisasi ACCEPTED:** Jika status diubah menjadi \`ACCEPTED\`, sistem akan otomatis membuat record di tabel \`PengabdianProjects\` (status: \`PENDING\`, disbursement: \`MENUNGGU_PERSETUJUAN\`) dan membuat 4 tahapan milestone default (\`Penandatanganan Kontrak\`, \`Laporan Kemajuan 1 & 2\`, \`Laporan Akhir\`).
 - Field \`notes\` bersifat opsional, maks 500 karakter.
@@ -4124,7 +4124,7 @@ Endpoint untuk reviewer melakukan penilaian proposal.
 - 'is_draft: false' → submit final (semua field penilaian wajib, status proposal berubah sesuai keputusan reviewer).
 
 **Keputusan submit yang diperbolehkan (status hasil review):**
-- REVIEW_DONE → rekomendasi "Layak Didanai" (\`decision: APPROVED\`). Status proposal menjadi \`REVIEW_DONE\` (menunggu keputusan akhir Admin LPPM — proyek pengabdian belum dibuat).
+- REVIEW_DONE → rekomendasi "Layak Didanai" (\`decision: APPROVED\`). Status proposal menjadi \`REVIEW_DONE\` (menunggu keputusan akhir Ketua LPPM — proyek pengabdian belum dibuat).
 - REJECTED → "Tidak Layak Didanai" (\`decision: REJECTED\`). Keputusan final reviewer, proposal langsung \`REJECTED\`.
 - REVISION → proposal dikembalikan ke dosen untuk revisi.
           `,
@@ -4462,7 +4462,7 @@ Endpoint untuk mengambil riwayat review sebuah proposal.
 
 **Role akses:**
 - DOSEN
-- ADMIN_LPPM
+- KETUA_LPPM
 - STAFF_LPPM
 - REVIEWER
 - REVIEWER_EKSTERNAL
@@ -4509,7 +4509,7 @@ Endpoint untuk mengambil riwayat review sebuah proposal.
                         created_at: "2026-03-08T11:00:00.000Z",
                         reviewer: {
                           id: 2,
-                          name: "Admin LPPM",
+                          name: "Ketua LPPM",
                           email: "admin@kampus.ac.id",
                         },
                       },
@@ -4623,7 +4623,7 @@ Endpoint untuk mengambil riwayat review sebuah proposal.
 Endpoint untuk menugaskan 1 atau 2 reviewer ke sebuah proposal.
 
 **Role akses:**
-- ADMIN_LPPM
+- KETUA_LPPM
 - STAFF_LPPM
 
 **Catatan:**
@@ -4750,7 +4750,7 @@ Endpoint untuk menugaskan 1 atau 2 reviewer ke sebuah proposal.
               },
             },
             403: {
-              description: "Forbidden — bukan ADMIN_LPPM atau STAFF_LPPM",
+              description: "Forbidden — bukan KETUA_LPPM atau STAFF_LPPM",
               content: {
                 "application/json": {
                   example: {
@@ -4943,7 +4943,7 @@ Memperbarui profil dosen yang sedang login.
 Membuat entitas proyek pengabdian dari proposal yang sudah disetujui.
 
 **Role akses:**
-- ADMIN_LPPM
+- KETUA_LPPM
 - STAFF_LPPM
 
 **Catatan:**
@@ -5036,7 +5036,7 @@ Membuat entitas proyek pengabdian dari proposal yang sudah disetujui.
 Mengambil detail proyek pengabdian dari ID proposal tertentu.
 
 **Role akses:**
-- ADMIN_LPPM
+- KETUA_LPPM
 - STAFF_LPPM
 - DOSEN
 - REVIEWER
@@ -5092,7 +5092,7 @@ Mengambil detail proyek pengabdian dari ID proposal tertentu.
 Mengambil daftar proyek pengabdian untuk dashboard monitoring admin dengan dukungan pagination dan filter.
 
 **Role akses:**
-- ADMIN_LPPM
+- KETUA_LPPM
 - STAFF_LPPM
 - DOSEN
 - REVIEWER
@@ -5209,7 +5209,7 @@ Mengambil daftar proyek pengabdian untuk dashboard monitoring admin dengan dukun
               },
             },
             403: {
-              description: "Forbidden — hanya ADMIN_LPPM",
+              description: "Forbidden — hanya KETUA_LPPM",
               content: {
                 "application/json": {
                   example: {
@@ -5242,7 +5242,7 @@ Mengambil daftar proyek pengabdian untuk dashboard monitoring admin dengan dukun
 Memperbarui status proyek pengabdian sesuai aturan transisi workflow.
 
 **Role akses:**
-- ADMIN_LPPM
+- KETUA_LPPM
 - STAFF_LPPM
 
 **Aturan transisi:**
@@ -5310,7 +5310,7 @@ Memperbarui status proyek pengabdian sesuai aturan transisi workflow.
 Memperbarui detail proyek pengabdian (ringkasan dan periode pelaksanaan).
 
 **Role akses:**
-- ADMIN_LPPM
+- KETUA_LPPM
 - STAFF_LPPM
           `,
           security: [{ bearerAuth: [] }],
@@ -5383,7 +5383,7 @@ Memperbarui detail proyek pengabdian (ringkasan dan periode pelaksanaan).
 Mengarsipkan proyek pengabdian dengan mengubah flag \`is_archived\` menjadi \`true\`.
 
 **Role akses:**
-- ADMIN_LPPM
+- KETUA_LPPM
 - STAFF_LPPM
           `,
           security: [{ bearerAuth: [] }],
@@ -5441,7 +5441,7 @@ Mengunduh file **Excel (.xlsx)** berisi rekapitulasi data pengabdian.
 - relasi \`proposal.user\` (nama ketua peneliti)
 
 **Role akses:**
-- ADMIN_LPPM
+- KETUA_LPPM
           `,
           security: [{ bearerAuth: [] }],
           responses: {
@@ -5468,7 +5468,7 @@ Mengunduh file **Excel (.xlsx)** berisi rekapitulasi data pengabdian.
             },
             401: { description: "Unauthorized" },
             403: {
-              description: "Forbidden — hanya ADMIN_LPPM",
+              description: "Forbidden — hanya KETUA_LPPM",
             },
             500: {
               description: "Internal server error",
@@ -5500,7 +5500,7 @@ Format isi PDF berupa daftar per proyek, mencakup:
 - Progress
 
 **Role akses:**
-- ADMIN_LPPM
+- KETUA_LPPM
           `,
           security: [{ bearerAuth: [] }],
           responses: {
@@ -5526,7 +5526,7 @@ Format isi PDF berupa daftar per proyek, mencakup:
             },
             401: { description: "Unauthorized" },
             403: {
-              description: "Forbidden — hanya ADMIN_LPPM",
+              description: "Forbidden — hanya KETUA_LPPM",
             },
             500: {
               description: "Internal server error",
@@ -5568,7 +5568,7 @@ Upload dokumen pengabdian berbasis **milestone** menggunakan **multipart/form-da
 **Persetujuan otomatis:**
 - Semua dokumen **kecuali \`LAPORAN_AKHIR\`** langsung berstatus \`APPROVED\` saat diunggah (catatan: "Disetujui otomatis — bukan laporan akhir").
 - Dokumen yang di-approve otomatis pada milestone non-akhir langsung menyelesaikan milestone-nya (COMPLETED), menaikkan \`overall_progress\` ke target milestone, membuka milestone berikutnya, dan mengirim notifikasi ke ketua peneliti.
-- \`LAPORAN_AKHIR\` tetap \`PENDING\` dan **menunggu persetujuan Admin LPPM** (endpoint \`PATCH /pengabdian-documents/{documentId}/verify\`).
+- \`LAPORAN_AKHIR\` tetap \`PENDING\` dan **menunggu persetujuan Ketua LPPM** (endpoint \`PATCH /pengabdian-documents/{documentId}/verify\`).
 - \`isDraft: true\` tetap menyimpan status \`DRAFT\` (belum dianggap submit).
 
 **Ketentuan file:**
@@ -5609,7 +5609,7 @@ Upload dokumen pengabdian berbasis **milestone** menggunakan **multipart/form-da
                       type: "boolean",
                       example: true,
                       description:
-                        "Jika true, dokumen disimpan dengan status DRAFT. Jika false/omit, dokumen non-akhir langsung APPROVED otomatis, sedangkan LAPORAN_AKHIR status awalnya PENDING (menunggu Admin LPPM).",
+                        "Jika true, dokumen disimpan dengan status DRAFT. Jika false/omit, dokumen non-akhir langsung APPROVED otomatis, sedangkan LAPORAN_AKHIR status awalnya PENDING (menunggu Ketua LPPM).",
                     },
                     laporan: {
                       type: "string",
@@ -5813,7 +5813,7 @@ Mengambil daftar dokumen laporan pengabdian berdasarkan \`projectId\`.
 Memperbarui status verifikasi dokumen dan catatan verifikator.
 
 **Role akses:**
-- ADMIN_LPPM
+- KETUA_LPPM
 - STAFF_LPPM
 
 **Catatan:**
@@ -5889,7 +5889,7 @@ Memperbarui status verifikasi dokumen dan catatan verifikator.
             },
             401: { description: "Unauthorized" },
             403: {
-              description: "Forbidden — hanya ADMIN_LPPM atau STAFF_LPPM",
+              description: "Forbidden — hanya KETUA_LPPM atau STAFF_LPPM",
             },
             404: {
               description: "Dokumen tidak ditemukan",
@@ -5914,7 +5914,7 @@ Memperbarui status verifikasi dokumen dan catatan verifikator.
 Menghapus dokumen dari Supabase Storage dan metadata di database.
 
 **Role akses:**
-- ADMIN_LPPM
+- KETUA_LPPM
 - STAFF_LPPM
 
 **Aturan bisnis:**
@@ -5956,7 +5956,7 @@ Menghapus dokumen dari Supabase Storage dan metadata di database.
             },
             401: { description: "Unauthorized" },
             403: {
-              description: "Forbidden — hanya ADMIN_LPPM atau STAFF_LPPM",
+              description: "Forbidden — hanya KETUA_LPPM atau STAFF_LPPM",
             },
             404: {
               description: "Dokumen tidak ditemukan",
@@ -5987,7 +5987,7 @@ Mengambil ringkasan keuangan global dari sistem pengabdian.
 - \`sisa_anggaran\` = \`total_anggaran_hibah - dana_terserap\`.
 
 **Role akses:**
-- ADMIN_LPPM
+- KETUA_LPPM
 - STAFF_LPPM
           `,
           security: [{ bearerAuth: [] }],
@@ -6009,7 +6009,7 @@ Mengambil ringkasan keuangan global dari sistem pengabdian.
             },
             401: { description: "Unauthorized" },
             403: {
-              description: "Forbidden — hanya ADMIN_LPPM atau STAFF_LPPM",
+              description: "Forbidden — hanya KETUA_LPPM atau STAFF_LPPM",
             },
             500: { description: "Internal server error" },
           },
@@ -6024,7 +6024,7 @@ Mengambil ringkasan keuangan global dari sistem pengabdian.
 Mengambil daftar proyek pengabdian beserta data keuangan dan relasi proposal/peneliti.
 
 **Role akses:**
-- ADMIN_LPPM
+- KETUA_LPPM
 - STAFF_LPPM
           `,
           security: [{ bearerAuth: [] }],
@@ -6065,7 +6065,7 @@ Mengambil daftar proyek pengabdian beserta data keuangan dan relasi proposal/pen
             },
             401: { description: "Unauthorized" },
             403: {
-              description: "Forbidden — hanya ADMIN_LPPM atau STAFF_LPPM",
+              description: "Forbidden — hanya KETUA_LPPM atau STAFF_LPPM",
             },
             500: { description: "Internal server error" },
           },
@@ -6080,7 +6080,7 @@ Mengambil daftar proyek pengabdian beserta data keuangan dan relasi proposal/pen
 Mencairkan dana proyek pengabdian.
 
 **Role akses:**
-- ADMIN_LPPM
+- KETUA_LPPM
 
 **Aksi yang dilakukan:**
 - set \`disbursement_status\` menjadi \`TERCAIRKAN\`
@@ -6173,7 +6173,7 @@ Mencairkan dana proyek pengabdian.
             },
             401: { description: "Unauthorized" },
             403: {
-              description: "Forbidden — hanya ADMIN_LPPM",
+              description: "Forbidden — hanya KETUA_LPPM",
             },
             404: {
               description: "Proyek tidak ditemukan",
@@ -6192,9 +6192,9 @@ Mencairkan dana proyek pengabdian.
       "/dashboard/admin": {
         get: {
           tags: ["Dashboard"],
-          summary: "Ambil data dashboard Admin LPPM",
+          summary: "Ambil data dashboard Ketua LPPM",
           description: `
-Mengambil data dashboard khusus **ADMIN_LPPM** untuk kebutuhan tampilan ringkasan statistik.
+Mengambil data dashboard khusus **KETUA_LPPM** untuk kebutuhan tampilan ringkasan statistik.
 
 Struktur data mencakup:
 - **summaryCards**: total proposal, dosen aktif, proposal disetujui, menunggu review.
@@ -6253,7 +6253,7 @@ Struktur data mencakup:
               },
             },
             403: {
-              description: "Forbidden — hanya ADMIN_LPPM",
+              description: "Forbidden — hanya KETUA_LPPM",
               content: {
                 "application/json": {
                   example: {
@@ -6284,7 +6284,7 @@ Struktur data mencakup:
           summary: "Ambil data Dashboard KKM",
           description: `
 Mengambil data agregat **Dashboard KKM** untuk memantau pelaksanaan Kuliah Kerja Mahasiswa.
-Dapat diakses oleh **ADMIN_LPPM** dan **STAFF_LPPM**.
+Dapat diakses oleh **KETUA_LPPM** dan **STAFF_LPPM**.
 
 **Scoping periode:** tanpa parameter, dashboard menampilkan periode berstatus **AKTIF**.
 Bisa di-override dengan query \`?periode_id=\`. Jika tidak ada periode aktif, field \`periode\` bernilai \`null\` dan semua angka 0.
@@ -6373,7 +6373,7 @@ Struktur data:
               },
             },
             403: {
-              description: "Forbidden — hanya ADMIN_LPPM atau STAFF_LPPM",
+              description: "Forbidden — hanya KETUA_LPPM atau STAFF_LPPM",
               content: {
                 "application/json": {
                   example: {
@@ -6419,7 +6419,7 @@ Mengambil data monitoring proyek untuk dashboard admin, meliputi:
 - Daftar proyek terpaginated dengan progress dan status kalkulasi.
 
 **Role akses:**
-- ADMIN_LPPM
+- KETUA_LPPM
 
 **Catatan:**
 - Jumlah data per halaman tetap **5**.
@@ -6542,7 +6542,7 @@ Mengambil data monitoring proyek untuk dashboard admin, meliputi:
               },
             },
             403: {
-              description: "Forbidden — hanya ADMIN_LPPM",
+              description: "Forbidden — hanya KETUA_LPPM",
               content: {
                 "application/json": {
                   example: {
@@ -6575,7 +6575,7 @@ Mengambil data monitoring proyek untuk dashboard admin, meliputi:
 Mengambil detail monitoring satu proyek berdasarkan ID.
 
 **Role akses:**
-- ADMIN_LPPM
+- KETUA_LPPM
 
 **Catatan:**
 - Menyertakan data peneliti, milestones, dan dokumen.
@@ -6693,7 +6693,7 @@ Mengambil detail monitoring satu proyek berdasarkan ID.
               },
             },
             403: {
-              description: "Forbidden — hanya ADMIN_LPPM",
+              description: "Forbidden — hanya KETUA_LPPM",
               content: {
                 "application/json": {
                   example: {
@@ -6734,7 +6734,7 @@ Mengambil detail monitoring satu proyek berdasarkan ID.
           description: `
 Buat periode KKM baru (Gambar 2 — Tambah Periode KKM).
 
-**Role akses:** ADMIN_LPPM
+**Role akses:** KETUA_LPPM
 **Catatan:**
 - \`tahun_akademik\` format **YYYY/YYYY** mis. \`2025/2026\` (harus berurutan).
 - \`nama_periode + tahun_akademik\` harus unik (409 jika duplikat).
@@ -6780,7 +6780,7 @@ Buat periode KKM baru (Gambar 2 — Tambah Periode KKM).
             },
             400: { description: "Validasi gagal / urutan tanggal salah" },
             401: { description: "Unauthorized" },
-            403: { description: "Forbidden — hanya ADMIN_LPPM" },
+            403: { description: "Forbidden — hanya KETUA_LPPM" },
             409: { description: "Nama periode duplikat untuk tahun akademik yang sama" },
           },
         },
@@ -6790,7 +6790,7 @@ Buat periode KKM baru (Gambar 2 — Tambah Periode KKM).
           description: `
 Ambil daftar periode KKM untuk tabel Gambar 1.
 
-**Role akses:** ADMIN_LPPM, STAFF_LPPM
+**Role akses:** KETUA_LPPM, STAFF_LPPM
 **Query:** \`page\` (default 1, 10/halaman), \`search\` (nama_periode/tahun_akademik/deskripsi), \`status\` (DRAFT/AKTIF/DIJADWALKAN/SELESAI), \`jenis\` (REGULER/TEMATIK), \`tahun\`, \`tahun_akademik\`.
 Kolom FE: TAHUN, NAMA PERIODE, JENIS, PELAKSANAAN, PENARIKAN, STATUS, AKSI.
           `,
@@ -6841,7 +6841,7 @@ Kolom FE: TAHUN, NAMA PERIODE, JENIS, PELAKSANAAN, PENARIKAN, STATUS, AKSI.
         post: {
           tags: ["KKM Periode"],
           summary: "Trigger cron AKTIF -> SELESAI (manual)",
-          description: "Jalankan auto-complete manual (ADMIN_LPPM). Cron otomatis juga jalan tiap 24 jam via server — ini untuk override/test. Ubah `AKTIF` dengan `tgl_penarikan < hari ini` menjadi `SELESAI`.",
+          description: "Jalankan auto-complete manual (KETUA_LPPM). Cron otomatis juga jalan tiap 24 jam via server — ini untuk override/test. Ubah `AKTIF` dengan `tgl_penarikan < hari ini` menjadi `SELESAI`.",
           security: [{ bearerAuth: [] }],
           responses: {
             200: { description: "Cron dijalankan", content: { "application/json": { example: { message: "Cron selesai. 1 periode diubah menjadi SELESAI.", data: { count: 1 } } } } },
@@ -6854,7 +6854,7 @@ Kolom FE: TAHUN, NAMA PERIODE, JENIS, PELAKSANAAN, PENARIKAN, STATUS, AKSI.
         get: {
           tags: ["KKM Periode"],
           summary: "Detail periode KKM (Lihat Detail / pre-fill Edit)",
-          description: "Ambil 1 periode by ID. Untuk icon mata & pensil di kolom AKSI Gambar 1, dan oleh **formulir pendaftaran mahasiswa** (baca periode). Role: MAHASISWA, ADMIN_LPPM, STAFF_LPPM.",
+          description: "Ambil 1 periode by ID. Untuk icon mata & pensil di kolom AKSI Gambar 1, dan oleh **formulir pendaftaran mahasiswa** (baca periode). Role: MAHASISWA, KETUA_LPPM, STAFF_LPPM.",
           security: [{ bearerAuth: [] }],
           parameters: [{ name: "id", in: "path", required: true, schema: { type: "integer", example: 1 } }],
           responses: {
@@ -6868,7 +6868,7 @@ Kolom FE: TAHUN, NAMA PERIODE, JENIS, PELAKSANAAN, PENARIKAN, STATUS, AKSI.
         put: {
           tags: ["KKM Periode"],
           summary: "Edit periode KKM",
-          description: "Update periode (PUT full/partial). Validasi unik & urutan tanggal tetap jalan. Jika ubah `status=AKTIF` maka single-active transaction jalan. Role: ADMIN_LPPM.",
+          description: "Update periode (PUT full/partial). Validasi unik & urutan tanggal tetap jalan. Jika ubah `status=AKTIF` maka single-active transaction jalan. Role: KETUA_LPPM.",
           security: [{ bearerAuth: [] }],
           parameters: [{ name: "id", in: "path", required: true, schema: { type: "integer", example: 1 } }],
           requestBody: { required: true, content: { "application/json": { schema: { $ref: "#/components/schemas/KkmPeriod" } } } },
@@ -6886,7 +6886,7 @@ Kolom FE: TAHUN, NAMA PERIODE, JENIS, PELAKSANAAN, PENARIKAN, STATUS, AKSI.
         patch: {
           tags: ["KKM Periode"],
           summary: "Aktifkan periode (tombol Aktifkan di row Draft)",
-          description: "Ubah status periode menjadi AKTIF. Transaksi single-active: periode AKTIF lain otomatis jadi DIJADWALKAN. SELESAI tidak bisa diaktifkan kembali. Role: ADMIN_LPPM.",
+          description: "Ubah status periode menjadi AKTIF. Transaksi single-active: periode AKTIF lain otomatis jadi DIJADWALKAN. SELESAI tidak bisa diaktifkan kembali. Role: KETUA_LPPM.",
           security: [{ bearerAuth: [] }],
           parameters: [{ name: "id", in: "path", required: true, schema: { type: "integer", example: 2 } }],
           responses: {
@@ -6902,7 +6902,7 @@ Kolom FE: TAHUN, NAMA PERIODE, JENIS, PELAKSANAAN, PENARIKAN, STATUS, AKSI.
         post: {
           tags: ["KKM Lokasi"],
           summary: "Tambah lokasi KKM (per Desa = 1 Kelompok)",
-          description: "Admin LPPM / Admin Sistem input langsung Desa-nya. 1 row = 1 Desa = 1 Kelompok. Contoh: Kec. Plumbon 4 kelompok = tambah 4x dengan desa beda. Tanpa tema, tanpa maks kelompok.",
+          description: "Ketua LPPM / Admin Sistem input langsung Desa-nya. 1 row = 1 Desa = 1 Kelompok. Contoh: Kec. Plumbon 4 kelompok = tambah 4x dengan desa beda. Tanpa tema, tanpa maks kelompok.",
           security: [{ bearerAuth: [] }],
           requestBody: {
             required: true,
@@ -6989,7 +6989,7 @@ Kolom FE: TAHUN, NAMA PERIODE, JENIS, PELAKSANAAN, PENARIKAN, STATUS, AKSI.
         get: {
           tags: ["KKM DPL"],
           summary: "List DPL KKM (tabel Manajemen DPL KKM)",
-          description: "Paginated list Dosen. Kolom: NAMA DOSEN, FAKULTAS/PRODI, STATUS DPL (Aktif/Belum Ditugaskan), KELOMPOK (4/5 bar), DESA BIMBINGAN, PERIODE. Filter: search (nama/NIDN/desa), fakultas, status, periode_id. Role: ADMIN_LPPM, STAFF_LPPM, ADMIN_SISTEM.",
+          description: "Paginated list Dosen. Kolom: NAMA DOSEN, FAKULTAS/PRODI, STATUS DPL (Aktif/Belum Ditugaskan), KELOMPOK (4/5 bar), DESA BIMBINGAN, PERIODE. Filter: search (nama/NIDN/desa), fakultas, status, periode_id. Role: KETUA_LPPM, STAFF_LPPM, ADMIN_SISTEM.",
           security: [{ bearerAuth: [] }],
           parameters: [
             { name: "periode_id", in: "query", required: false, schema: { type: "integer", example: 1 } },
@@ -7478,7 +7478,7 @@ Kolom FE: TAHUN, NAMA PERIODE, JENIS, PELAKSANAAN, PENARIKAN, STATUS, AKSI.
         get: {
           tags: ["KKM Kelompok"],
           summary: "Detail kelompok KKM (halaman Detail)",
-          description: "Info kelompok + kartu verifikasi (verified/pending/rejected) + Progress KKM 5 tahap (Pembentukan, Pembekalan, Pelaksanaan, Logbook, Laporan Akhir — derived dari tanggal KkmPeriod) + pie prodi + distribusi gender + daftar anggota (dengan search di FE) + dokumen kelompok + blok `monitoring` (progress 0-100, tahapan, indikator, status, jumlah logbook — turunan dokumen & aktivitas). **Role:** ADMIN_LPPM, STAFF_LPPM, dan DOSEN (DPL) — untuk DOSEN hanya boleh kelompok yang ia bimbing (`dpl_id` miliknya), selain itu **403** \"Anda bukan DPL kelompok ini.\". Program Kerja & Riwayat Aktivitas TIDAK dibikin.",
+          description: "Info kelompok + kartu verifikasi (verified/pending/rejected) + Progress KKM 5 tahap (Pembentukan, Pembekalan, Pelaksanaan, Logbook, Laporan Akhir — derived dari tanggal KkmPeriod) + pie prodi + distribusi gender + daftar anggota (dengan search di FE) + dokumen kelompok + blok `monitoring` (progress 0-100, tahapan, indikator, status, jumlah logbook — turunan dokumen & aktivitas). **Role:** KETUA_LPPM, STAFF_LPPM, dan DOSEN (DPL) — untuk DOSEN hanya boleh kelompok yang ia bimbing (`dpl_id` miliknya), selain itu **403** \"Anda bukan DPL kelompok ini.\". Program Kerja & Riwayat Aktivitas TIDAK dibikin.",
           security: [{ bearerAuth: [] }],
           parameters: [{ name: "id", in: "path", required: true, schema: { type: "integer", example: 1 } }],
           responses: {
@@ -7526,7 +7526,7 @@ Kolom FE: TAHUN, NAMA PERIODE, JENIS, PELAKSANAAN, PENARIKAN, STATUS, AKSI.
                         { peserta_id: 1, user_id: 51, nim: "210411001", nama: "Andi Pratama", email: "210411001@student.umc.ac.id", semester: 7, nomor_hp: "081234567890", jenis_kelamin: "Laki-laki", fakultas: "FT", prodi: "Teknik Informatika", status: "VERIFIED" },
                       ],
                       dokumen: [
-                        { id: 1, document_type: "PROPOSAL_PROGRAM_KERJA", title: "proposal.pdf", file_size: 102400, mime_type: "application/pdf", uploaded_at: "2040-01-20T00:00:00.000Z", uploaded_by: "Admin LPPM", url: "https://...supabase.co/.../proposal.pdf" },
+                        { id: 1, document_type: "PROPOSAL_PROGRAM_KERJA", title: "proposal.pdf", file_size: 102400, mime_type: "application/pdf", uploaded_at: "2040-01-20T00:00:00.000Z", uploaded_by: "Ketua LPPM", url: "https://...supabase.co/.../proposal.pdf" },
                       ],
                     },
                   },
@@ -7640,7 +7640,7 @@ Kolom FE: TAHUN, NAMA PERIODE, JENIS, PELAKSANAAN, PENARIKAN, STATUS, AKSI.
         get: {
           tags: ["KKM Monitoring"],
           summary: "Monitoring KKM (tabel per-kelompok: progres, tahapan, indikator, status)",
-          description: "Memantau progres tiap kelompok secara real-time. **Role:** ADMIN_LPPM, STAFF_LPPM, dan DOSEN (DPL). **Untuk DOSEN:** `dpl_id` dipaksa ke user yang login di server (query param diabaikan), sehingga hanya kelompok bimbingannya sendiri yang tampil. Query `periode_id` opsional (default: periode AKTIF). Tiap baris memuat: jumlah anggota, DPL (+ \"terakhir\" 3 hari lalu), logbook (jumlah entri + delta mingguan), tahapan (derived dokumen), progres 0-100, indikator, dan status monitoring. `stats` (5 kartu + rata-rata progres) dihitung dari seluruh kelompok periode (sebelum filter status/search). `filters` = opsi dropdown desa & DPL.",
+          description: "Memantau progres tiap kelompok secara real-time. **Role:** KETUA_LPPM, STAFF_LPPM, dan DOSEN (DPL). **Untuk DOSEN:** `dpl_id` dipaksa ke user yang login di server (query param diabaikan), sehingga hanya kelompok bimbingannya sendiri yang tampil. Query `periode_id` opsional (default: periode AKTIF). Tiap baris memuat: jumlah anggota, DPL (+ \"terakhir\" 3 hari lalu), logbook (jumlah entri + delta mingguan), tahapan (derived dokumen), progres 0-100, indikator, dan status monitoring. `stats` (5 kartu + rata-rata progres) dihitung dari seluruh kelompok periode (sebelum filter status/search). `filters` = opsi dropdown desa & DPL.",
           security: [{ bearerAuth: [] }],
           parameters: [
             { name: "periode_id", in: "query", required: false, schema: { type: "integer", example: 3 }, description: "Kosongkan untuk periode AKTIF." },
@@ -7756,7 +7756,7 @@ Kolom FE: TAHUN, NAMA PERIODE, JENIS, PELAKSANAAN, PENARIKAN, STATUS, AKSI.
           tags: ["KKM Monitoring"],
           summary: "Daftar entri logbook untuk validasi (DPL/admin)",
           description:
-            "Daftar entri logbook lintas kelompok untuk halaman \"Validasi Logbook\": DOSEN melihat entri dari kelompok bimbingannya saja (`dpl_id` = dia); ADMIN_LPPM/STAFF_LPPM melihat semua. Query opsional: `status` (PENDING/APPROVED/REVISI, filter tab), `page` (default 1, 15/halaman), `search` (nama mahasiswa/judul/nama kelompok/desa). Respons menyertakan `stats {menunggu, approved, revisi}` yang dihitung dari seluruh cakupan (tanpa filter search/status) untuk kartu statistik, plus `meta` paginasi.",
+            "Daftar entri logbook lintas kelompok untuk halaman \"Validasi Logbook\": DOSEN melihat entri dari kelompok bimbingannya saja (`dpl_id` = dia); KETUA_LPPM/STAFF_LPPM melihat semua. Query opsional: `status` (PENDING/APPROVED/REVISI, filter tab), `page` (default 1, 15/halaman), `search` (nama mahasiswa/judul/nama kelompok/desa). Respons menyertakan `stats {menunggu, approved, revisi}` yang dihitung dari seluruh cakupan (tanpa filter search/status) untuk kartu statistik, plus `meta` paginasi.",
           security: [{ bearerAuth: [] }],
           parameters: [
             {
@@ -8189,7 +8189,7 @@ Kolom FE: TAHUN, NAMA PERIODE, JENIS, PELAKSANAAN, PENARIKAN, STATUS, AKSI.
         patch: {
           tags: ["KKM Periode"],
           summary: "Override status manual (Kombinasi Otomatis + Manual)",
-          description: "Override manual status periode — untuk kombinasi cron+manual. Bisa `DRAFT|AKTIF|DIJADWALKAN|SELESAI`. Jika `AKTIF` => lewat jalur activate (single-active). Role: ADMIN_LPPM.",
+          description: "Override manual status periode — untuk kombinasi cron+manual. Bisa `DRAFT|AKTIF|DIJADWALKAN|SELESAI`. Jika `AKTIF` => lewat jalur activate (single-active). Role: KETUA_LPPM.",
           security: [{ bearerAuth: [] }],
           parameters: [{ name: "id", in: "path", required: true, schema: { type: "integer", example: 1 } }],
           requestBody: { required: true, content: { "application/json": { schema: { type: "object", required: ["status"], properties: { status: { type: "string", enum: ["DRAFT", "AKTIF", "DIJADWALKAN", "SELESAI"], example: "SELESAI" } } } } } },
@@ -8443,7 +8443,7 @@ Endpoint untuk mengambil daftar proyek pengabdian.
 
 **Role akses:**
 - **DOSEN**: Hanya menampilkan proyek milik sendiri (filter otomatis via \`lead_researcher_id\`).
-- **ADMIN_LPPM / STAFF_LPPM**: Menampilkan semua proyek.
+- **KETUA_LPPM / STAFF_LPPM**: Menampilkan semua proyek.
 
 **Catatan:**
 - Response menyertakan field \`milestones\` yang diurutkan \`sequence: asc\` agar Frontend dapat me-render **progress bar** dan **timeline milestone** dari kiri ke kanan.
@@ -8754,7 +8754,7 @@ Endpoint untuk mengambil semua notifikasi milik user yang sedang login.
                           user_id: 3,
                           title: "Proposal Terverifikasi",
                           message:
-                            'Proposal "Penelitian AI untuk Pertanian" telah diverifikasi oleh Admin LPPM dan siap untuk ditinjau oleh Reviewer.',
+                            'Proposal "Penelitian AI untuk Pertanian" telah diverifikasi oleh Ketua LPPM dan siap untuk ditinjau oleh Reviewer.',
                           is_read: true,
                           created_at: "2026-03-08T11:00:00.000Z",
                         },
@@ -8824,7 +8824,7 @@ Endpoint untuk menandai satu notifikasi sebagai telah dibaca.
                       user_id: 3,
                       title: "Proposal Terverifikasi",
                       message:
-                        'Proposal "Penelitian AI untuk Pertanian" telah diverifikasi oleh Admin LPPM dan siap untuk ditinjau oleh Reviewer.',
+                        'Proposal "Penelitian AI untuk Pertanian" telah diverifikasi oleh Ketua LPPM dan siap untuk ditinjau oleh Reviewer.',
                       is_read: true,
                       created_at: "2026-03-08T11:00:00.000Z",
                     },
@@ -9223,7 +9223,7 @@ Rekam jejak seluruh aktivitas mutasi (CREATE/UPDATE/DELETE/LOGIN/...) di sistem.
         get: {
           tags: ["KKM Pengumuman"],
           summary: "Daftar pengumuman + statistik (admin/staff)",
-          description: "**Role: ADMIN_LPPM / STAFF_LPPM / ADMIN_SISTEM.** Mengembalikan `data` (dengan hitung `dibaca/total_penerima` per pengumuman), `stats` (total/penting/sedang/informasi/dipinned/terjadwal, tanpa terpengaruh filter), dan `meta` paginasi. Urut: disematkan dulu, lalu terbaru.",
+          description: "**Role: KETUA_LPPM / STAFF_LPPM / ADMIN_SISTEM.** Mengembalikan `data` (dengan hitung `dibaca/total_penerima` per pengumuman), `stats` (total/penting/sedang/informasi/dipinned/terjadwal, tanpa terpengaruh filter), dan `meta` paginasi. Urut: disematkan dulu, lalu terbaru.",
           security: [{ bearerAuth: [] }],
           parameters: [
             { name: "page", in: "query", required: false, schema: { type: "integer", minimum: 1, default: 1 } },
@@ -9246,7 +9246,7 @@ Rekam jejak seluruh aktivitas mutasi (CREATE/UPDATE/DELETE/LOGIN/...) di sistem.
                         kategori: "Pembekalan", prioritas: "PENTING", status: "PUBLISHED",
                         published_at: "2026-01-20T00:00:00.000Z", scheduled_at: null, is_pinned: true,
                         lampiran: { name: "jadwal.pdf", size: 204800, mime: "application/pdf", url: "https://.../pengumuman/1-jadwal.pdf" },
-                        created_by: "Admin LPPM", created_at: "2026-01-19T08:00:00.000Z",
+                        created_by: "Ketua LPPM", created_at: "2026-01-19T08:00:00.000Z",
                         audiens: ["Semua Peserta KKM"], total_penerima: 1295, dibaca: 1195,
                       },
                     ],
@@ -9258,14 +9258,14 @@ Rekam jejak seluruh aktivitas mutasi (CREATE/UPDATE/DELETE/LOGIN/...) di sistem.
             },
             400: { description: "Validasi query gagal" },
             401: { description: "Unauthorized" },
-            403: { description: "Forbidden — bukan ADMIN_LPPM/STAFF/ADMIN_SISTEM" },
+            403: { description: "Forbidden — bukan KETUA_LPPM/STAFF/ADMIN_SISTEM" },
           },
         },
         post: {
           tags: ["KKM Pengumuman"],
           summary: "Buat pengumuman (multipart: + lampiran, publish langsung atau terjadwal)",
           description: [
-            "**Role: ADMIN_LPPM.** Field `targets` dikirim sebagai string JSON, contoh:",
+            "**Role: KETUA_LPPM.** Field `targets` dikirim sebagai string JSON, contoh:",
             '`[{"type":"PESERTA"},{"type":"KELOMPOK","ref_id":3},{"type":"DESA","ref_id":7}]`',
             "",
             "- `publish_mode: \"now\"` → fan-out notifikasi + recipient langsung dalam satu transaksi.",
@@ -9306,7 +9306,7 @@ Rekam jejak seluruh aktivitas mutasi (CREATE/UPDATE/DELETE/LOGIN/...) di sistem.
             },
             400: { description: "Validasi gagal / kategori tak dikenal / target tanpa penerima / lampiran salah tipe atau >10 MB" },
             401: { description: "Unauthorized" },
-            403: { description: "Forbidden — bukan ADMIN_LPPM" },
+            403: { description: "Forbidden — bukan KETUA_LPPM" },
           },
         },
       },
@@ -9349,7 +9349,7 @@ Rekam jejak seluruh aktivitas mutasi (CREATE/UPDATE/DELETE/LOGIN/...) di sistem.
             200: { description: "Pengumuman diperbarui" },
             400: { description: "Validasi gagal / sudah terbit lalu target diubah / tidak ada perubahan" },
             401: { description: "Unauthorized" },
-            403: { description: "Forbidden — bukan ADMIN_LPPM" },
+            403: { description: "Forbidden — bukan KETUA_LPPM" },
             404: { description: "Pengumuman tidak ditemukan" },
           },
         },
@@ -9361,7 +9361,7 @@ Rekam jejak seluruh aktivitas mutasi (CREATE/UPDATE/DELETE/LOGIN/...) di sistem.
           responses: {
             200: { description: "Pengumuman dihapus", content: { "application/json": { example: { message: "Pengumuman berhasil dihapus.", data: { id: 1 } } } } },
             401: { description: "Unauthorized" },
-            403: { description: "Forbidden — bukan ADMIN_LPPM" },
+            403: { description: "Forbidden — bukan KETUA_LPPM" },
             404: { description: "Pengumuman tidak ditemukan" },
           },
         },
@@ -9375,7 +9375,7 @@ Rekam jejak seluruh aktivitas mutasi (CREATE/UPDATE/DELETE/LOGIN/...) di sistem.
           responses: {
             200: { description: "Status sematan berubah", content: { "application/json": { example: { message: "Pengumuman berhasil disematkan.", data: { id: 1, is_pinned: true } } } } },
             401: { description: "Unauthorized" },
-            403: { description: "Forbidden — bukan ADMIN_LPPM" },
+            403: { description: "Forbidden — bukan KETUA_LPPM" },
             404: { description: "Pengumuman tidak ditemukan" },
           },
         },
@@ -9391,7 +9391,7 @@ Rekam jejak seluruh aktivitas mutasi (CREATE/UPDATE/DELETE/LOGIN/...) di sistem.
             200: { description: "Pengumuman diterbitkan" },
             400: { description: "Sudah diterbitkan / target tanpa penerima" },
             401: { description: "Unauthorized" },
-            403: { description: "Forbidden — bukan ADMIN_LPPM" },
+            403: { description: "Forbidden — bukan KETUA_LPPM" },
             404: { description: "Pengumuman tidak ditemukan" },
           },
         },
@@ -9410,7 +9410,7 @@ Rekam jejak seluruh aktivitas mutasi (CREATE/UPDATE/DELETE/LOGIN/...) di sistem.
                   example: {
                     message: "Berhasil mengambil daftar pengumuman.",
                     data: [
-                      { id: 1, judul: "Pembekalan KKM Reguler 2026", isi: "Hadir pukul 08.00...", kategori: "Pembekalan", prioritas: "PENTING", published_at: "2026-01-20T00:00:00.000Z", is_pinned: true, lampiran: null, created_by: "Admin LPPM", read_at: null },
+                      { id: 1, judul: "Pembekalan KKM Reguler 2026", isi: "Hadir pukul 08.00...", kategori: "Pembekalan", prioritas: "PENTING", published_at: "2026-01-20T00:00:00.000Z", is_pinned: true, lampiran: null, created_by: "Ketua LPPM", read_at: null },
                     ],
                   },
                 },

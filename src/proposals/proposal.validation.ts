@@ -263,7 +263,7 @@ const scoreField = z
 
 // Status hasil review: REJECTED/REVISION adalah keputusan final reviewer,
 // REVIEW_DONE berarti rekomendasi "Layak Didanai" — menunggu keputusan akhir
-// Admin LPPM (ACCEPTED/REJECTED) melalui endpoint update status.
+// Ketua LPPM (ACCEPTED/REJECTED) melalui endpoint update status.
 const reviewDecisionStatuses = [
   ProposalStatus.REVIEW_DONE,
   ProposalStatus.REJECTED,

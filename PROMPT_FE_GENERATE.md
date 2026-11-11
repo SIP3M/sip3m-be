@@ -15,9 +15,9 @@ Kamu adalah Frontend Engineer untuk SIP3M (Sistem Informasi LPPM).
 - **200 dummy MAHASISWA** sudah ada: `210411001..200@student.umc.ac.id / Mahasiswa123!`, semester 5-8 (beberapa sem 3 untuk validasi `belum syarat`), sebar Fakultas/Prodi, semua `kkmPeserta.status VERIFIED 180 / PENDING 12 / REJECTED 8`, semua `kelompok_id=null` (Belum Ditempatkan). **30 desa dummy** `Plumbon/Weru/Kedawung/...` + 30 `KkmKelompok` (1 Desa=1 Kelompok) di `periode_id=2` (KKM Periode 2040). Jadi preview: `180 VERIFIED / 30 desa = 6 orang/kelompok rata sempurna`.
 - Algoritma BE: **Stratified Snake Round-Robin + Skor Kapasitas**. Filter `VERIFIED + kelompok_id is null + semester>=minimal_semester`, Stratify `group by prodi -> shuffle -> interleave` (CAMPUR), sort kelompok `KUOTA desc` atau `RANDOM`, distribusi ular `0..K-1, K-1..0...` + skor `(terisi/kapasitas)*0.5 + prodi sama*0.3 + jomplang gender*0.2` untuk `MIN_3_PRODI` / `gender_balance`. Hasil deterministik `O(N log K)`.
 - Base URL: `http://localhost:3000/api` (prod: `https://sip3m-be.vercel.app/api`)
-- Auth: `Authorization: Bearer <JWT>` (login sebagai ADMIN_LPPM untuk preview/execute; `periode_id=2` untuk demo)
+- Auth: `Authorization: Bearer <JWT>` (login sebagai KETUA_LPPM untuk preview/execute; `periode_id=2` untuk demo)
 - Swagger lengkap ada di `GET /docs` tag **KKM Generate**.
-- RBAC: `GET /kkm/generate/stats`, `GET /validasi`, `GET/POST /preview` = `ADMIN_LPPM + STAFF_LPPM`. `POST /kkm/generate/execute` = `ADMIN_LPPM` only.
+- RBAC: `GET /kkm/generate/stats`, `GET /validasi`, `GET/POST /preview` = `KETUA_LPPM + STAFF_LPPM`. `POST /kkm/generate/execute` = `KETUA_LPPM` only.
 
 ### UI Target (4 screenshot Figma)
 
@@ -94,7 +94,7 @@ Success 200: `{ "message": "Berhasil generate: 174 peserta didistribusikan ke 30
 2. **Estimasi Figma 118 tidak dipakai.** Estimasi real = `ceil(siap / total_desa)` orang/kelompok. Jika `siap > kapasitasWithConfig`, BE kasih `rekomendasi` di validasi.
 3. **Ikuti kuota desa.** Jika `ikuti_kuota_desa=true`, `kapasitas = min(kuota, jumlah_anggota)`. Jika `jumlah_anggota > kuota` di desa kecil (kuota 8), BE 400 di execute.
 4. **Hanya VERIFIED + syarat semester yang diproses.** `PENDING/REJECTED` dan `semester < minimal_semester` tidak ikut generate.
-5. **RBAC:** `execute` hanya `ADMIN_LPPM`. Stats/validasi/preview boleh `ADMIN+STAFF`.
+5. **RBAC:** `execute` hanya `KETUA_LPPM`. Stats/validasi/preview boleh `ADMIN+STAFF`.
 
 ### Error handling
 

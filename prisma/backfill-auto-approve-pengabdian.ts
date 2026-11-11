@@ -179,7 +179,7 @@ async function main() {
       notificationsToCreate += 1;
     } else if (isFinalMilestone) {
       console.log(
-        "   → milestone AKHIR: TIDAK di-auto-complete (tetap menunggu persetujuan LAPORAN_AKHIR oleh Admin LPPM)",
+        "   → milestone AKHIR: TIDAK di-auto-complete (tetap menunggu persetujuan LAPORAN_AKHIR oleh Ketua LPPM)",
       );
     } else {
       console.log("   → milestone sudah COMPLETED: efek tidak dijalankan ulang");

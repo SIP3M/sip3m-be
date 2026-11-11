@@ -3,7 +3,7 @@ import { ROLES } from "../auth/role";
 
 export const updateUserRoleSchema = z.object({
   roles: z.enum([
-    ROLES.ADMIN_LPPM,
+    ROLES.KETUA_LPPM,
     ROLES.ADMIN_SISTEM,
     ROLES.STAFF_LPPM,
     ROLES.DOSEN,
@@ -23,7 +23,7 @@ export const createUserSchema = z.object({
   username: z.string().min(3).max(50).optional(),
   password: z.string().min(6).max(100),
   roles: z.enum([
-    ROLES.ADMIN_LPPM,
+    ROLES.KETUA_LPPM,
     ROLES.ADMIN_SISTEM,
     ROLES.STAFF_LPPM,
     ROLES.DOSEN,
@@ -61,7 +61,7 @@ export const updateUserSchema = z.object({
   password: z.string().min(6).max(100).optional(),
   roles: z
     .enum([
-      ROLES.ADMIN_LPPM,
+      ROLES.KETUA_LPPM,
       ROLES.ADMIN_SISTEM,
       ROLES.STAFF_LPPM,
       ROLES.DOSEN,

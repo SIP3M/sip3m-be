@@ -35,7 +35,7 @@ Backend SIP3M mengimplementasikan:
 
 | Role                 | Deskripsi                      |
 | -------------------- | ------------------------------ |
-| `ADMIN_LPPM`         | Admin utama, kelola semua user |
+| `KETUA_LPPM`         | Admin utama, kelola semua user |
 | `STAFF_LPPM`         | Staff LPPM                     |
 | `DOSEN`              | Dosen pengusul proposal        |
 | `REVIEWER`           | Reviewer internal              |
@@ -128,7 +128,7 @@ Akun-akun ini sudah di-seed ke database. Password semua akun sama.
 
 | Role       | Email                   | Password      |
 | ---------- | ----------------------- | ------------- |
-| Admin LPPM | `admin@lppm.ac.id`      | `password123` |
+| Ketua LPPM | `admin@lppm.ac.id`      | `password123` |
 | Staff LPPM | `staff@lppm.ac.id`      | `password123` |
 | Dosen      | `dosen@kampus.ac.id`    | `password123` |
 | Reviewer   | `reviewer@kampus.ac.id` | `password123` |
@@ -221,7 +221,7 @@ Sekarang kamu bisa test semua endpoint. Lihat daftar lengkapnya di bawah.
 | ------ | ---------- | -------------------------- | ---------- |
 | GET    | `/auth/me` | Lihat info user yang login | Semua role |
 
-### 👥 Users (Butuh Login — ADMIN_LPPM only)
+### 👥 Users (Butuh Login — KETUA_LPPM only)
 
 | Method | Endpoint            | Deskripsi                 |
 | ------ | ------------------- | ------------------------- |
@@ -245,8 +245,8 @@ Sekarang kamu bisa test semua endpoint. Lihat daftar lengkapnya di bawah.
 | Method | Endpoint           | Deskripsi               | Role yang boleh akses                                |
 | ------ | ------------------ | ----------------------- | ---------------------------------------------------- |
 | POST   | `/proposals`       | Buat proposal baru      | DOSEN                                                |
-| GET    | `/getAllProposals` | Lihat semua proposal    | ADMIN_LPPM, STAFF_LPPM, REVIEWER, REVIEWER_EKSTERNAL |
-| GET    | `/proposals/:id`   | Lihat detail 1 proposal | ADMIN_LPPM, STAFF_LPPM, REVIEWER                     |
+| GET    | `/getAllProposals` | Lihat semua proposal    | KETUA_LPPM, STAFF_LPPM, REVIEWER, REVIEWER_EKSTERNAL |
+| GET    | `/proposals/:id`   | Lihat detail 1 proposal | KETUA_LPPM, STAFF_LPPM, REVIEWER                     |
 
 ---
 

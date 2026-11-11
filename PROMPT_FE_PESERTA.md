@@ -15,9 +15,9 @@ Kamu adalah Frontend Engineer untuk SIP3M (Sistem Informasi LPPM).
 - **20 dummy MAHASISWA** sudah ada: `210411001..020@student.umc.ac.id` / `Mahasiswa123!` (bcrypt), sebar 4 Fakultas/Prodi, `semester 5-8`. **Tidak ada yang assign kelompok** (semua `kelompok_id=null`) — untuk testing manual Assign Kelompok. 10 di antaranya sudah jadi `KkmPeserta` di periode terbaru (`id 2 KKM Periode 2040`): **5 VERIFIED / 4 PENDING / 1 REJECTED**, semua **Belum Ditempatkan** (angka `10/5/4/1/10` di SEED; screenshot contoh `10/5/4/1/1` — FE pakai `stats` real, jangan hardcode).
 - **Import Mahasiswa (Excel) TIDAK JADI** — abaikan tombol `Import Mahasiswa` di screenshot. FE jangan bikin.
 - Base URL: `http://localhost:3000/api` (prod: `https://sip3m-be.vercel.app/api`)
-- Auth: `Authorization: Bearer <JWT>` (login sebagai ADMIN_LPPM untuk verifikasi/assign; dummy mahasiswa bisa `POST /auth/login`)
+- Auth: `Authorization: Bearer <JWT>` (login sebagai KETUA_LPPM untuk verifikasi/assign; dummy mahasiswa bisa `POST /auth/login`)
 - Swagger lengkap ada di `GET /docs` tag **KKM Peserta**, schema `KkmPeserta`.
-- RBAC: `GET /kkm/peserta`, `GET /kkm/peserta/stats`, `GET /kkm/peserta/export`, `GET /kkm/peserta/:id` = `ADMIN_LPPM + STAFF_LPPM`. `PATCH /kkm/peserta/bulk-status`, `POST /kkm/peserta/assign-kelompok`, `PATCH /kkm/peserta/:id/status` = `ADMIN_LPPM` only.
+- RBAC: `GET /kkm/peserta`, `GET /kkm/peserta/stats`, `GET /kkm/peserta/export`, `GET /kkm/peserta/:id` = `KETUA_LPPM + STAFF_LPPM`. `PATCH /kkm/peserta/bulk-status`, `POST /kkm/peserta/assign-kelompok`, `PATCH /kkm/peserta/:id/status` = `KETUA_LPPM` only.
 
 ### UI Target (screenshot yang kamu lihat)
 
@@ -151,7 +151,7 @@ Success 200: `{ "message": "Berhasil assign 2 peserta ke kelompok.", "data": { "
 - `Search` 1 input cari semua: NIM, nama, prodi, kelompok, desa — BE sudah handle `OR`.
 - Tabs `Semua/Pending/.../Belum Kelompok` — `Semua` tanpa query `status/status_kelompok`, yang lain set query & reload list.
 - Bulk bar hanya muncul jika `selectedIds.length>0`. Setelah `Verified/Rejected/Assign`, clear selection & reload.
-- Login dummy untuk test: `POST /auth/login { "email": "210411001@student.umc.ac.id", "password": "Mahasiswa123!" }` (role MAHASISWA). Untuk admin pakai akun ADMIN_LPPM existing.
+- Login dummy untuk test: `POST /auth/login { "email": "210411001@student.umc.ac.id", "password": "Mahasiswa123!" }` (role MAHASISWA). Untuk admin pakai akun KETUA_LPPM existing.
 - Abaikan `Import Mahasiswa` — jangan bikin upload Excel di FE Peserta.
 - Ikuti pattern FE yang sudah ada (React Query, Tailwind, auth header). Skeleton/loading untuk tabel & 5 kartu.
 

@@ -23,7 +23,7 @@ Kamu adalah Frontend Engineer untuk SIP3M (Sistem Informasi LPPM).
 - **Progress KKM** di `GET /kkm/kelompok/:id` derived dari tanggal `KkmPeriod` (5 tahap: Pembentukan ✓selalu → Pembekalan `tgl_pembekalan` → Pelaksanaan `tgl_pelaksanaan` → Logbook `tgl_penarikan` → Laporan Akhir `deadline_laporan`). FE tinggal render `stages[]` + `tahap_saat_ini`.
 - **TIDAK dibikin:** Program Kerja, Riwayat Aktivitas, endpoint cetak (cetak = `window.print` di FE).
 - Auth: `Authorization: Bearer <JWT>` + `X-Device-Id` (lihat `PROMPT_FE_SESSION.md`).
-- RBAC: GET list/stats/detail = `ADMIN_LPPM` + `STAFF_LPPM`; mutations (PATCH, anggota, dokumen) = `ADMIN_LPPM` saja.
+- RBAC: GET list/stats/detail = `KETUA_LPPM` + `STAFF_LPPM`; mutations (PATCH, anggota, dokumen) = `KETUA_LPPM` saja.
 
 ### Halaman 1 — List Kelompok KKM (card grid + 5 kartu stats)
 
@@ -104,7 +104,7 @@ Panel kanan *Anggota*:
       { "peserta_id": 1, "user_id": 51, "nim": "210411001", "nama": "Andi Pratama", "email": "210411001@student.umc.ac.id", "semester": 7, "nomor_hp": "081234567890", "jenis_kelamin": "Laki-laki", "fakultas": "FT", "prodi": "S1 Teknik Informatika", "status": "VERIFIED" }
     ],
     "dokumen": [
-      { "id": 1, "document_type": "PROPOSAL_PROGRAM_KERJA", "title": "proposal.pdf", "file_size": 102400, "mime_type": "application/pdf", "uploaded_at": "2026-10-14T00:00:00.000Z", "uploaded_by": "Admin LPPM", "url": "https://xxx.supabase.co/storage/v1/object/public/lppm_documents/kkm-kelompok/1/..." }
+      { "id": 1, "document_type": "PROPOSAL_PROGRAM_KERJA", "title": "proposal.pdf", "file_size": 102400, "mime_type": "application/pdf", "uploaded_at": "2026-10-14T00:00:00.000Z", "uploaded_by": "Ketua LPPM", "url": "https://xxx.supabase.co/storage/v1/object/public/lppm_documents/kkm-kelompok/1/..." }
     ]
   }
 }

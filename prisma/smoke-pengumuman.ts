@@ -32,7 +32,7 @@ async function main() {
   );
 
   const admin = await prisma.users.findFirst({
-    where: { roles: { roles: "ADMIN_LPPM" } },
+    where: { roles: { roles: "KETUA_LPPM" } },
     select: { id: true },
   });
   const createdBy = admin?.id ?? 1;
