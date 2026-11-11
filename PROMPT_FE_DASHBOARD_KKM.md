@@ -13,7 +13,7 @@ GET /api/dashboard/kkm
 ```
 
 - **Auth:** Bearer token.
-- **Role yang diizinkan:** `ADMIN_LPPM`, `STAFF_LPPM` (lainnya 403).
+- **Role yang diizinkan:** `KETUA_LPPM`, `STAFF_LPPM` (lainnya 403).
 - **Query (opsional):** `?periode_id=<int>`
   - Tanpa parameter → menampilkan periode berstatus **`AKTIF`**.
   - Dengan `periode_id` → menampilkan periode itu (404 jika tidak ada).

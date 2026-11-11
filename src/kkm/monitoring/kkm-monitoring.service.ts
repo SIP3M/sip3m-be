@@ -1,6 +1,7 @@
 import { prisma } from "../../prisma";
 import { KkmPeriodStatus } from "../../generated/prisma/enums";
 import { HttpError } from "../../common/errors/http-error";
+import { ROLES } from "../../auth/role";
 import { supabase } from "../../config/storage";
 import { hitungJadwalMingguan, cariMingguUntukTanggal } from "../common/kkm-deadline";
 import type { KkmPeriodeRef } from "../../dashboard/dashboard.types";
@@ -635,7 +636,7 @@ export const reviewLogbookEntry = async (
   if (!kelompok) throw new HttpError("Kelompok KKM tidak ditemukan.", 404);
 
   const isDpl = role === "DOSEN" && kelompok.dpl_id === userId;
-  const isAdmin = role === "ADMIN_LPPM" || role === "STAFF_LPPM";
+  const isAdmin = role === ROLES.KETUA_LPPM || role === "STAFF_LPPM";
   if (!isDpl && !isAdmin) {
     throw new HttpError("Hanya DPL kelompok atau admin LPPM yang bisa me-review logbook.", 403);
   }

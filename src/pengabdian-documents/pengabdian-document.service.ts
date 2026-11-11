@@ -69,7 +69,7 @@ const mapFieldToDocumentType = (
 const AUTO_APPROVED_NOTE = "Disetujui otomatis — bukan laporan akhir";
 
 /**
- * Hanya `LAPORAN_AKHIR` yang tetap menunggu persetujuan Admin LPPM.
+ * Hanya `LAPORAN_AKHIR` yang tetap menunggu persetujuan Ketua LPPM.
  * Semua dokumen lain (laporan kemajuan, logbook, bukti anggaran) di-approve
  * otomatis saat diunggah.
  */
@@ -119,7 +119,7 @@ export type ApprovalEffects = {
 };
 
 /**
- * Efek persetujuan dokumen milestone — dipakai `approveDocument` (Admin LPPM)
+ * Efek persetujuan dokumen milestone — dipakai `approveDocument` (Ketua LPPM)
  * dan auto-approve saat upload:
  * 1. milestone -> COMPLETED (+ completed_at)
  * 2. proyek.overall_progress = target milestone
@@ -408,7 +408,7 @@ export const uploadMilestoneDocuments = async (
 
     // Status per dokumen:
     // - draft            -> DRAFT (menunggu dosen kirim final)
-    // - LAPORAN_AKHIR    -> PENDING (menunggu Admin LPPM)
+    // - LAPORAN_AKHIR    -> PENDING (menunggu Ketua LPPM)
     // - selainnya        -> APPROVED otomatis
     const isFinalReport = requiresAdminApproval(documentType);
     const verificationStatus: DocumentVerificationStatus = isDraft
@@ -448,7 +448,7 @@ export const uploadMilestoneDocuments = async (
   //   progres naik ke target milestone, milestone berikutnya dibuka (ONGOING),
   //   dan notifikasi ke ketua peneliti.
   // - Milestone "akhir" (judul akhir/final atau milestone terakhir) TIDAK pernah
-  //   di-auto-complete: proyek baru SELESAI setelah Admin LPPM menyetujui
+  //   di-auto-complete: proyek baru SELESAI setelah Ketua LPPM menyetujui
   //   LAPORAN_AKHIR.
   // - Draft tetap menunggu dosen mengirim versi final.
   const autoApprovedDocuments = uploadedDocuments.filter(

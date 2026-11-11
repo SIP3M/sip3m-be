@@ -12,7 +12,7 @@ Kamu adalah Frontend Engineer untuk SIP3M (Sistem Informasi LPPM).
 
 - Module **Lokasi KKM** sudah jadi di BE. Lokasi = **level Desa**, aturan: **1 Desa = 1 Kelompok KKM**, jadi 1 Kecamatan isinya beberapa Desa/Kelompok. Contoh: `Kec. Plumbon ada 4 kelompok` = 4 row Desa dengan `kecamatan=Plumbon` beda nama desa.
 - Base URL: `http://localhost:3000/api` (prod: `https://sip3m-be.vercel.app/api`)
-- Auth: `Authorization: Bearer <JWT>` (login sebagai ADMIN_LPPM untuk write)
+- Auth: `Authorization: Bearer <JWT>` (login sebagai KETUA_LPPM untuk write)
 - Swagger lengkap ada di `GET /docs` tag **KKM Lokasi**, schema `KkmLocation`.
 - DB sudah live (`prisma db push` done), validasi Zod & RBAC sudah aktif.
 
@@ -26,7 +26,7 @@ Mockup Figma masih ada kolom **TEMA** dan **MAKS. KELOMPOK** — **HAPUS KEDUANY
 ### Final UI yang harus kamu bikin
 
 **1. Halaman List: `/kkm/lokasi` (atau `/kkm/locations`)**
-- Header: `Lokasi / Desa KKM` + subtitle `Manajemen lokasi dan desa penempatan KKM` + tombol `+ Tambah Lokasi` (merah, hanya ADMIN_LPPM).
+- Header: `Lokasi / Desa KKM` + subtitle `Manajemen lokasi dan desa penempatan KKM` + tombol `+ Tambah Lokasi` (merah, hanya KETUA_LPPM).
 - Filter di atas tabel:
   - Dropdown **Periode** (wajib pilih dulu, default = periode AKTIF dari `GET /kkm/periods/active`). Tanpa periode_id, tabel kosong + hint "Pilih periode dulu".
   - Input **Search** (cari desa/kecamatan/kabupaten)
@@ -123,7 +123,7 @@ Success 201:
 1. **Lokasi selalu nempel ke Periode.** Setiap create harus kirim `periode_id`. BE cek periode exist, jika `status=SELESAI` -> 400 "Periode sudah SELESAI, tidak bisa tambah/edit".
 2. **Unique: `[periode_id, kabupaten, kecamatan, desa]`** — jika Desa yang sama di Kec/Kab yang sama di periode yang sama sudah ada -> 409. Beda periode boleh duplikat (Desa yang sama tahun beda tidak masalah).
 3. **Kuota 1-1000**, required. `terisi` tidak dikirim FE, dari BE (0 dulu).
-4. **RBAC:** `POST/PUT/DELETE` = ADMIN_LPPM only (403 jika bukan). `GET` (list/stats/detail) = ADMIN_LPPM + STAFF_LPPM. UI sembunyikan tombol Tambah/Edit/Hapus jika bukan ADMIN.
+4. **RBAC:** `POST/PUT/DELETE` = KETUA_LPPM only (403 jika bukan). `GET` (list/stats/detail) = KETUA_LPPM + STAFF_LPPM. UI sembunyikan tombol Tambah/Edit/Hapus jika bukan ADMIN.
 5. **Pagination 10/halaman**, `page` default 1.
 
 ### Error handling

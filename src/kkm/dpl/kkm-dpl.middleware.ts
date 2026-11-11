@@ -12,7 +12,7 @@ import { isDplAktif } from "./kkm-dpl.service";
  * Status dihitung derived — otomatis hilang saat penugasan dicabut.
  *
  * Catatan:
- * - Role selain DOSEN (ADMIN_LPPM / STAFF_LPPM / MAHASISWA) diteruskan
+ * - Role selain DOSEN (KETUA_LPPM / STAFF_LPPM / MAHASISWA) diteruskan
  *   tanpa cek; penentuan akses per-kelompok tetap dilakukan di service.
  * - Merespons JSON 403 langsung agar FE mudah membaca pesannya.
  */

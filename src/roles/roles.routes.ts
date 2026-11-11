@@ -35,7 +35,7 @@ const adminSistem = [
 router.get("/permissions", ...adminSistem, listPermissionsController);
 
 // Role CRUD — daftar role juga dipakai dropdown Manajemen Pengguna
-// (ADMIN_LPPM punya pengguna.lihat), jadi GET list memakai any-of.
+// (KETUA_LPPM punya pengguna.lihat), jadi GET list memakai any-of.
 // Sisanya (create/update/delete/matriks) tetap khusus role.kelola.
 router.get(
   "/roles",

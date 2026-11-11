@@ -143,7 +143,7 @@ export const fetchGoogleProfile = async (
  * Melempar HttpError dengan kode ramah untuk redirect kembali ke FE:
  * - email_not_verified : email Google belum diverifikasi Google
  * - email_not_registered: email belum terdaftar di sistem
- * - inactive           : akun menunggu verifikasi Admin LPPM
+ * - inactive           : akun menunggu verifikasi Ketua LPPM
  */
 export const loginWithGoogle = async (
   profile: GoogleProfile,

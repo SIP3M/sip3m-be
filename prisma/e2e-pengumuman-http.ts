@@ -179,12 +179,12 @@ async function main() {
     let adminToken: string;
     try {
       adminToken = await login("admin@lppm.ac.id", "password123");
-      ok(true, "login ADMIN_LPPM (200 + token)");
+      ok(true, "login KETUA_LPPM (200 + token)");
     } catch {
       const adminRole = await prisma.roles.findUnique({
-        where: { roles: "ADMIN_LPPM" },
+        where: { roles: "KETUA_LPPM" },
       });
-      if (!adminRole) throw new Error("Role ADMIN_LPPM tidak ditemukan.");
+      if (!adminRole) throw new Error("Role KETUA_LPPM tidak ditemukan.");
       const email = `e2e-admin-${Date.now()}@example.test`;
       const hash = await bcrypt.hash("Admin1234!", 10);
       await prisma.users.create({
@@ -196,7 +196,7 @@ async function main() {
         },
       });
       adminToken = await login(email, "Admin1234!");
-      ok(true, "login ADMIN_LPPM via akun uji sementara (password README kedaluwarsa)");
+      ok(true, "login KETUA_LPPM via akun uji sementara (password README kedaluwarsa)");
     }
     const penerimaToken = await login(target.user.email, "Mahasiswa123!");
     ok(true, `login penerima ${target.user.email}`);

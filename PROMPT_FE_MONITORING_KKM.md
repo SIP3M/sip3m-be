@@ -7,7 +7,7 @@
 Halaman pemantauan KKM per periode. Menampilkan **5 kartu ringkasan**, **filter** (search, periode, desa, DPL), **tab status**, **tabel per-kelompok** (progres, tahapan, indikator, logbook + delta, DPL "terakhir"), dan **pagination**. Semua nilai turunan (status, progres, tahapan, indikator, delta) **dihitung di backend** — FE tinggal render.
 
 Endpoint:
-- `GET  /api/kkm/monitoring` — list + stats + opsi filter (ADMIN_LPPM & STAFF_LPPM)
+- `GET  /api/kkm/monitoring` — list + stats + opsi filter (KETUA_LPPM & STAFF_LPPM)
 - `GET  /api/kkm/kelompok/:id/logbook` — daftar entri logbook (mahasiswa anggota / DPL / admin / staff)
 - `POST /api/kkm/kelompok/:id/logbook` — tambah entri logbook (hanya **mahasiswa anggota** / **DPL**)
 - `POST /api/kkm/kelompok/:id/monitoring` — DPL tandai "sudah monitoring" (DPL / admin / staff)
@@ -127,9 +127,9 @@ Body opsional: `{ "catatan": "…catatan monitoring…" }` (`catatan` belum disi
 Mengembalikan array entri (terbaru dulu), tiap entri: `id, tanggal, judul, deskripsi, lokasi_kegiatan, created_at, penulis:{id,nama,nim_nip}`. Untuk modal detail logbook.
 
 ## 5. Otorisasi
-- `GET /kkm/monitoring`: **ADMIN_LPPM, STAFF_LPPM** (403 untuk lainnya).
+- `GET /kkm/monitoring`: **KETUA_LPPM, STAFF_LPPM** (403 untuk lainnya).
 - `GET/POST .../logbook`: GET boleh semua role terkait; **POST hanya MAHASISWA anggota kelompok / DOSEN (DPL kelompok)** — admin/staff **tidak** boleh menulis entri.
-- `POST .../monitoring`: **DOSEN (DPL kelompok), ADMIN_LPPM, STAFF_LPPM**.
+- `POST .../monitoring`: **DOSEN (DPL kelompok), KETUA_LPPM, STAFF_LPPM**.
 
 ## 6. Catatan Environment
 - Butuh `prisma db push` (tabel baru `KkmLogbookEntry` + kolom `KkmKelompok.last_monitored_at`).

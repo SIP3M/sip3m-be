@@ -111,7 +111,7 @@ export const registerReviewerController = async (
 
     return res.status(201).json({
       message:
-        "Registrasi Reviewer Eksternal berhasil. Akun Anda sedang menunggu verifikasi oleh Admin LPPM.",
+        "Registrasi Reviewer Eksternal berhasil. Akun Anda sedang menunggu verifikasi oleh Ketua LPPM.",
       data: user,
     });
   } catch (error) {

@@ -116,7 +116,7 @@ const PERMISSION_CATALOG: SeedPermission[] = [
 
 // ─── Deskripsi role bawaan ─────────────────────────────────────────────
 const ROLE_DESKRIPSI: Record<string, string> = {
-  ADMIN_LPPM: "Pimpinan LPPM dengan akses manajerial penuh terhadap Penelitian dan KKM.",
+  KETUA_LPPM: "Pimpinan LPPM dengan akses manajerial penuh terhadap Penelitian dan KKM.",
   ADMIN_SISTEM: "Administrator teknis sistem: pengguna, konfigurasi, master data, integrasi.",
   STAFF_LPPM: "Staf operasional LPPM untuk verifikasi proposal dan administrasi harian.",
   DOSEN: "Dosen yang mengajukan proposal penelitian dan melaksanakan proyek.",
@@ -127,7 +127,7 @@ const ROLE_DESKRIPSI: Record<string, string> = {
 
 // ─── Grant parity: izin per role = akses route sebelum konversi ────────
 const ROLE_GRANTS: Record<string, string[]> = {
-  ADMIN_LPPM: [
+  KETUA_LPPM: [
     P.PENGGUNA_LIHAT, P.PENGGUNA_LIHAT_REVIEWER, P.PENGGUNA_TAMBAH, P.PENGGUNA_EDIT,
     P.PENGGUNA_HAPUS, P.PENGGUNA_UBAH_ROLE, P.PENGGUNA_UBAH_STATUS,
     P.PROPOSAL_LIHAT, P.PROPOSAL_LIHAT_DETAIL, P.PROPOSAL_STATUS, P.PROPOSAL_PLOTTING,
