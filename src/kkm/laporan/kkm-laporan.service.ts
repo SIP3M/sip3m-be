@@ -12,6 +12,16 @@ import {
   isJabatanPenunggah,
   type JabatanKelompokValue,
 } from "../logbook-kelompok/kkm-logbook-kelompok.service";
+import {
+  JENIS_LAPORAN,
+  JENIS_LABEL,
+  STATUS_LABEL,
+  alasanTertutupForJenis,
+  deadlineOf,
+  deriveStatusLaporan,
+  jendelaForJenis,
+  type JenisLaporan,
+} from "./kkm-laporan.shared";
 
 const BUCKET = "lppm_documents";
 const MAX_FILE_BYTES = 10 * 1024 * 1024; // 10 MB (PDF)
@@ -231,9 +241,12 @@ export const uploadLaporanIndividu = async (
 // =============================================
 
 /**
- * Status laporan kelompok (dokumen tipe LAPORAN_AKHIR).
- * Terbuka setelah tgl_penarikan lewat, ditutup pada deadline_laporan + jam.
+ * Status laporan kelompok — seluruh jenis (Awal/Mingguan/Akhir).
+ * Setiap jenis punya jendela & deadline sendiri (diatur admin LPPM).
  * Hanya Ketua/Sekretaris yang boleh mengunggah; anggota hanya melihat.
+ *
+ * Field `jendela`/`bisa_unggah`/`laporan` paling lama tetap ada dan
+ * menunjuk jenis LAPORAN_AKHIR (kompatibel dengan konsumen lama).
  */
 export const getLaporanKelompokSaya = async (userId: number) => {
   const keanggotaan = await getKeanggotaanSaya(userId);
@@ -255,9 +268,14 @@ export const getLaporanKelompokSaya = async (userId: number) => {
           nama_periode: true,
           tahun_akademik: true,
           status: true,
+          tgl_pelaksanaan: true,
           tgl_penarikan: true,
           deadline_laporan: true,
           jam_laporan_kelompok: true,
+          deadline_laporan_awal: true,
+          jam_laporan_awal: true,
+          deadline_laporan_mingguan: true,
+          jam_laporan_mingguan: true,
         },
       },
       peserta: {
@@ -268,14 +286,18 @@ export const getLaporanKelompokSaya = async (userId: number) => {
         },
       },
       documents: {
-        where: { document_type: "LAPORAN_AKHIR" },
+        where: { document_type: { in: [...JENIS_LAPORAN] } },
         select: {
           id: true,
+          document_type: true,
           title: true,
           file_path: true,
           file_size: true,
           mime_type: true,
           uploaded_at: true,
+          status_review: true,
+          catatan_revisi: true,
+          reviewed_at: true,
           uploader: { select: { name: true } },
         },
       },
@@ -289,21 +311,58 @@ export const getLaporanKelompokSaya = async (userId: number) => {
   }
 
   const { periode } = kelompok;
-  const jendela = cekJendelaUpload({
-    bukaSetelah: bukaSetelahPenarikan(periode.tgl_penarikan),
-    tutupPada: periode.deadline_laporan
-      ? atJam(periode.deadline_laporan, periode.jam_laporan_kelompok)
-      : null,
-    alasanTertutup: periode.tgl_penarikan
-      ? `Laporan kelompok dibuka setelah kegiatan KKM selesai (${formatDeadline(
-          bukaSetelahPenarikan(periode.tgl_penarikan) as Date,
-        )}).`
-      : "Jadwal pelaksanaan KKM belum ditentukan, laporan kelompok belum dapat diunggah.",
-  });
-
-  const dokumen = kelompok.documents[0] ?? null;
   const jabatan = keanggotaan.jabatan;
   const bolehUnggah = isJabatanPenunggah(jabatan);
+
+  const toBerkas = (doc: (typeof kelompok.documents)[number] | null) =>
+    doc
+      ? {
+          id: doc.id,
+          nama: doc.file_path.split("/").pop() ?? doc.file_path,
+          judul: doc.title,
+          url: fileUrlOf(doc.file_path),
+          ukuran: doc.file_size,
+          mime: doc.mime_type,
+          diunggah_pada: doc.uploaded_at.toISOString(),
+          diunggah_oleh: doc.uploader.name,
+          terkunci: false,
+        }
+      : null;
+
+  // Satu entri per jenis laporan: jendela, status review, & berkasnya.
+  const daftar = JENIS_LAPORAN.map((jenis: JenisLaporan) => {
+    const { bukaSetelah, tutupPada } = jendelaForJenis(periode, jenis);
+    const jendela = cekJendelaUpload({
+      bukaSetelah,
+      tutupPada,
+      alasanTertutup: alasanTertutupForJenis(jenis, periode),
+    });
+    const doc = kelompok.documents.find((d) => d.document_type === jenis) ?? null;
+    const deadline = deadlineOf(periode, jenis);
+    const status = deriveStatusLaporan(doc, deadline);
+
+    return {
+      jenis,
+      label: JENIS_LABEL[jenis],
+      jendela: {
+        ...jendela,
+        ditutup_pada: deadline ? jendela.ditutup_pada : null,
+        deadline_tampil: deadline ? jendela.deadline_tampil : null,
+        tanpa_batas: !deadline,
+      },
+      bisa_unggah: bolehUnggah && jendela.terbuka,
+      status,
+      status_label: STATUS_LABEL[status],
+      catatan_revisi: doc?.catatan_revisi ?? null,
+      reviewed_at: doc?.reviewed_at ? doc.reviewed_at.toISOString() : null,
+      laporan: doc
+        ? { ...toBerkas(doc)!, terkunci: !jendela.terbuka }
+        : null,
+    };
+  });
+
+  // Kompatibel lama: field tunggal = jenis LAPORAN_AKHIR.
+  const akhir = daftar.find((d) => d.jenis === "LAPORAN_AKHIR")!;
 
   return {
     kelompok: { id: kelompok.id, nama: kelompok.nama },
@@ -320,42 +379,39 @@ export const getLaporanKelompokSaya = async (userId: number) => {
     alasan_tidak_boleh_unggah: bolehUnggah
       ? null
       : "Hanya Ketua dan Sekretaris kelompok yang dapat mengunggah laporan kelompok.",
-    jendela: {
-      ...jendela,
-      ditutup_pada: periode.deadline_laporan ? jendela.ditutup_pada : null,
-      deadline_tampil: periode.deadline_laporan ? jendela.deadline_tampil : null,
-      tanpa_batas: !periode.deadline_laporan,
-    },
-    bisa_unggah: bolehUnggah && jendela.terbuka,
+    daftar,
+    jendela: akhir.jendela,
+    bisa_unggah: akhir.bisa_unggah,
     ketua: kelompok.peserta
       .filter((p) => p.jabatan?.nama === "KETUA")
       .map((p) => ({ nama: p.user.name, nim: p.user.nidn_nip })),
     sekretaris: kelompok.peserta
       .filter((p) => p.jabatan?.nama === "SEKRETARIS")
       .map((p) => ({ nama: p.user.name, nim: p.user.nidn_nip })),
-    laporan: dokumen
-      ? {
-          id: dokumen.id,
-          nama: dokumen.file_path.split("/").pop() ?? dokumen.file_path,
-          judul: dokumen.title,
-          url: fileUrlOf(dokumen.file_path),
-          ukuran: dokumen.file_size,
-          mime: dokumen.mime_type,
-          diunggah_pada: dokumen.uploaded_at.toISOString(),
-          diunggah_oleh: dokumen.uploader.name,
-          terkunci: !jendela.terbuka,
-        }
-      : null,
+    laporan: akhir.laporan,
   };
 };
 
-/** Unggah / ganti laporan kelompok (dokumen LAPORAN_AKHIR) — ketua/sekretaris. */
+/**
+ * Unggah / ganti laporan kelompok per jenis (Awal/Mingguan/Akhir) —
+ * ketua/sekretaris. Upload ulang menimpa dokumen sejenis dan mereset
+ * status review ke MENUNGGU_REVIEW (catatan revisi terakhir dipertahankan).
+ */
 export const uploadLaporanKelompok = async (
   kelompokId: number,
   userId: number,
   file?: Express.Multer.File,
+  jenisRaw?: string,
 ) => {
   const f = assertPdf(file, "laporan kelompok");
+
+  const jenis = (jenisRaw || "LAPORAN_AKHIR") as JenisLaporan;
+  if (!JENIS_LAPORAN.includes(jenis)) {
+    throw new HttpError(
+      `Jenis laporan tidak valid. Pilihan: ${JENIS_LAPORAN.map((j) => JENIS_LABEL[j]).join(", ")}.`,
+      400,
+    );
+  }
 
   const kelompok = await prisma.kkmKelompok.findUnique({
     where: { id: kelompokId },
@@ -364,9 +420,14 @@ export const uploadLaporanKelompok = async (
       periode: {
         select: {
           status: true,
+          tgl_pelaksanaan: true,
           tgl_penarikan: true,
           deadline_laporan: true,
           jam_laporan_kelompok: true,
+          deadline_laporan_awal: true,
+          jam_laporan_awal: true,
+          deadline_laporan_mingguan: true,
+          jam_laporan_mingguan: true,
         },
       },
       peserta: { select: { user_id: true, jabatan: { select: { id: true, nama: true } } } },
@@ -384,26 +445,21 @@ export const uploadLaporanKelompok = async (
   }
 
   const { periode } = kelompok;
+  const { bukaSetelah, tutupPada } = jendelaForJenis(periode, jenis);
   const jendela = cekJendelaUpload({
-    bukaSetelah: bukaSetelahPenarikan(periode.tgl_penarikan),
-    tutupPada: periode.deadline_laporan
-      ? atJam(periode.deadline_laporan, periode.jam_laporan_kelompok)
-      : null,
-    alasanTertutup: periode.tgl_penarikan
-      ? `Laporan kelompok dibuka setelah kegiatan KKM selesai (${formatDeadline(
-          bukaSetelahPenarikan(periode.tgl_penarikan) as Date,
-        )}).`
-      : "Jadwal pelaksanaan KKM belum ditentukan, laporan kelompok belum dapat diunggah.",
+    bukaSetelah,
+    tutupPada,
+    alasanTertutup: alasanTertutupForJenis(jenis, periode),
   });
   if (!jendela.terbuka) {
     throw new HttpError(jendela.alasan ?? "Jendela unggah laporan kelompok tertutup.", 400);
   }
 
   const existing = await prisma.kkmKelompokDocument.findUnique({
-    where: { kelompok_id_document_type: { kelompok_id: kelompokId, document_type: "LAPORAN_AKHIR" } },
+    where: { kelompok_id_document_type: { kelompok_id: kelompokId, document_type: jenis } },
   });
 
-  const filePath = `kkm-kelompok/${kelompokId}/LAPORAN_AKHIR/${Date.now()}-${safeFileName(f.originalname)}`;
+  const filePath = `kkm-kelompok/${kelompokId}/${jenis}/${Date.now()}-${safeFileName(f.originalname)}`;
   const { error: uploadError } = await supabase.storage
     .from(BUCKET)
     .upload(filePath, f.buffer, { contentType: f.mimetype, cacheControl: "3600" });
@@ -416,15 +472,18 @@ export const uploadLaporanKelompok = async (
     await prisma.kkmKelompokDocument.delete({ where: { id: existing.id } });
   }
 
+  // status_review ikut default MENUNGGU_REVIEW (reset hasil review lama);
+  // catatan revisi terakhir dipertahankan sebagai referensi sampai review berikutnya.
   const created = await prisma.kkmKelompokDocument.create({
     data: {
       kelompok_id: kelompokId,
-      document_type: "LAPORAN_AKHIR",
+      document_type: jenis,
       title: f.originalname,
       file_path: filePath,
       file_size: f.size,
       mime_type: f.mimetype,
       uploaded_by: userId,
+      catatan_revisi: existing?.catatan_revisi ?? null,
     },
     select: {
       id: true,
@@ -432,11 +491,14 @@ export const uploadLaporanKelompok = async (
       file_path: true,
       file_size: true,
       uploaded_at: true,
+      status_review: true,
     },
   });
 
   return {
     id: created.id,
+    jenis,
+    status_review: created.status_review,
     judul: created.title,
     nama: created.file_path.split("/").pop() ?? created.file_path,
     url: fileUrlOf(created.file_path),

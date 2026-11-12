@@ -80,6 +80,8 @@ const validateDeadlineUnggahan = (
     tgl_penarikan?: Date | null;
     deadline_logbook_individu?: Date | null;
     deadline_laporan_individu?: Date | null;
+    deadline_laporan_awal?: Date | null;
+    deadline_laporan_mingguan?: Date | null;
   },
   ctx: z.RefinementCtx,
 ) => {
@@ -121,6 +123,22 @@ const validateDeadlineUnggahan = (
       message: "Deadline laporan individu tidak boleh lebih awal dari tanggal penarikan.",
     });
   }
+
+  // Laporan Awal & Mingguan: jendela buka saat tgl_pelaksanaan → deadline
+  // tidak boleh lebih awal dari tanggal pelaksanaan.
+  for (const [key, label] of [
+    ["deadline_laporan_awal", "Deadline laporan awal"],
+    ["deadline_laporan_mingguan", "Deadline laporan mingguan"],
+  ] as const) {
+    const deadline = data[key];
+    if (deadline && tgl_pelaksanaan && deadline < tgl_pelaksanaan) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: [key],
+        message: `${label} tidak boleh lebih awal dari tanggal pelaksanaan.`,
+      });
+    }
+  }
 };
 
 const baseFields = {
@@ -161,6 +179,11 @@ const baseFields = {
   deadline_laporan_individu: dateField,
   jam_laporan_individu: jamField,
   jam_laporan_kelompok: jamField,
+  // Laporan kelompok per jenis (Awal & Mingguan); Akhir memakai deadline_laporan
+  deadline_laporan_awal: dateField,
+  jam_laporan_awal: jamField,
+  deadline_laporan_mingguan: dateField,
+  jam_laporan_mingguan: jamField,
 
   target_peserta: z.coerce
     .number({ message: "Target peserta harus berupa angka." })
@@ -227,6 +250,10 @@ export const updateKkmPeriodSchema = z
     deadline_laporan_individu: baseFields.deadline_laporan_individu.optional(),
     jam_laporan_individu: baseFields.jam_laporan_individu,
     jam_laporan_kelompok: baseFields.jam_laporan_kelompok,
+    deadline_laporan_awal: baseFields.deadline_laporan_awal,
+    jam_laporan_awal: baseFields.jam_laporan_awal,
+    deadline_laporan_mingguan: baseFields.deadline_laporan_mingguan,
+    jam_laporan_mingguan: baseFields.jam_laporan_mingguan,
     target_peserta: baseFields.target_peserta.optional(),
     minimal_semester: baseFields.minimal_semester,
     maks_anggota_kelompok: baseFields.maks_anggota_kelompok.optional(),

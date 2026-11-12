@@ -317,6 +317,7 @@ model users {
   kkmPeserta               KkmPeserta[]
   sessions                 UserSession[]
   kkmKelompokDocsUploaded  KkmKelompokDocument[] @relation("KkmKelompokDocUploader")
+  kkmKelompokDocsReviewed  KkmKelompokDocument[] @relation("KkmKelompokDocReviewer")
   kkmLogbookEntries        KkmLogbookEntry[]
   kkmLogbookReviews        KkmLogbookEntry[] @relation("KkmLogbookReviewer")
   kkmPenilaianDpl          KkmPenilaian[]    @relation("DplPenilai")
@@ -440,8 +441,14 @@ model KkmPeriod {
   // Laporan individu: buka setelah tgl_penarikan, tutup pada deadline di bawah.
   deadline_laporan_individu DateTime?     @db.Date
   jam_laporan_individu      String?       @db.VarChar(5) // "HH:mm", default 23:59
-  // Laporan kelompok: menumpuk pada deadline_laporan + jam di bawah.
+  // Laporan kelompok (Akhir): menumpuk pada deadline_laporan + jam di bawah.
   jam_laporan_kelompok      String?       @db.VarChar(5) // "HH:mm", default 23:59
+  // Laporan kelompok per jenis (Awal & Mingguan) — deadline terpisah.
+  // Jenis Akhir memakai deadline_laporan + jam_laporan_kelompok di atas.
+  deadline_laporan_awal     DateTime?     @db.Date
+  jam_laporan_awal          String?       @db.VarChar(5) // "HH:mm", default 23:59
+  deadline_laporan_mingguan DateTime?     @db.Date
+  jam_laporan_mingguan      String?       @db.VarChar(5) // "HH:mm", default 23:59
 
   target_peserta          Int             @default(0)
   minimal_semester        Int?
@@ -532,7 +539,17 @@ enum JabatanKelompok {
 enum KkmKelompokDocumentType {
   PROPOSAL_PROGRAM_KERJA
   LOGBOOK_KELOMPOK
+  LAPORAN_AWAL
+  LAPORAN_MINGGUAN
   LAPORAN_AKHIR
+}
+
+// Status review laporan kelompok (per dokumen/jenis).
+// Default MENUNGGU_REVIEW — reset saat mahasiswa upload ulang.
+enum KkmLaporanReviewStatus {
+  MENUNGGU_REVIEW
+  DISETUJUI
+  REVISI
 }
 
 enum KkmLogbookStatus {
@@ -580,8 +597,16 @@ model KkmKelompokDocument {
   uploaded_by   Int
   uploaded_at   DateTime                 @default(now())
 
+  // Review laporan (hanya untuk tipe LAPORAN_*): disetujui / revisi oleh
+  // Ketua LPPM, Staff LPPM, atau DPL kelompok. Catatan wajib saat REVISI.
+  status_review KkmLaporanReviewStatus   @default(MENUNGGU_REVIEW)
+  catatan_revisi String?                 @db.Text
+  reviewed_by   Int?
+  reviewed_at   DateTime?
+
   kelompok      KkmKelompok              @relation(fields: [kelompok_id], references: [id], onDelete: Cascade)
   uploader      users                    @relation("KkmKelompokDocUploader", fields: [uploaded_by], references: [id], onDelete: Cascade)
+  reviewer      users?                   @relation("KkmKelompokDocReviewer", fields: [reviewed_by], references: [id], onDelete: SetNull)
 
   created_at    DateTime                 @default(now())
   updated_at    DateTime                 @updatedAt
@@ -590,6 +615,7 @@ model KkmKelompokDocument {
   @@unique([kelompok_id, document_type])
   @@index([kelompok_id])
   @@index([document_type])
+  @@index([status_review])
 }
 
 model UserSession {

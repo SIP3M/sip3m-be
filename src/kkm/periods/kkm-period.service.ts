@@ -69,6 +69,10 @@ export const createKkmPeriod = async (input: CreateKkmPeriodInput, createdBy?: n
           deadline_laporan_individu: input.deadline_laporan_individu ?? null,
           jam_laporan_individu: input.jam_laporan_individu ?? null,
           jam_laporan_kelompok: input.jam_laporan_kelompok ?? null,
+          deadline_laporan_awal: input.deadline_laporan_awal ?? null,
+          jam_laporan_awal: input.jam_laporan_awal ?? null,
+          deadline_laporan_mingguan: input.deadline_laporan_mingguan ?? null,
+          jam_laporan_mingguan: input.jam_laporan_mingguan ?? null,
           target_peserta: input.target_peserta ?? 0,
           minimal_semester: input.minimal_semester ?? null,
           maks_anggota_kelompok: input.maks_anggota_kelompok ?? 10,
@@ -104,6 +108,10 @@ export const createKkmPeriod = async (input: CreateKkmPeriodInput, createdBy?: n
       deadline_laporan_individu: input.deadline_laporan_individu ?? null,
       jam_laporan_individu: input.jam_laporan_individu ?? null,
       jam_laporan_kelompok: input.jam_laporan_kelompok ?? null,
+      deadline_laporan_awal: input.deadline_laporan_awal ?? null,
+      jam_laporan_awal: input.jam_laporan_awal ?? null,
+      deadline_laporan_mingguan: input.deadline_laporan_mingguan ?? null,
+      jam_laporan_mingguan: input.jam_laporan_mingguan ?? null,
       target_peserta: input.target_peserta ?? 0,
       minimal_semester: input.minimal_semester ?? null,
       maks_anggota_kelompok: input.maks_anggota_kelompok ?? 10,
@@ -220,6 +228,14 @@ export const updateKkmPeriod = async (
             input.jam_laporan_individu !== undefined ? (input.jam_laporan_individu ?? null) : undefined,
           jam_laporan_kelompok:
             input.jam_laporan_kelompok !== undefined ? (input.jam_laporan_kelompok ?? null) : undefined,
+          deadline_laporan_awal:
+            input.deadline_laporan_awal !== undefined ? (input.deadline_laporan_awal ?? null) : undefined,
+          jam_laporan_awal:
+            input.jam_laporan_awal !== undefined ? (input.jam_laporan_awal ?? null) : undefined,
+          deadline_laporan_mingguan:
+            input.deadline_laporan_mingguan !== undefined ? (input.deadline_laporan_mingguan ?? null) : undefined,
+          jam_laporan_mingguan:
+            input.jam_laporan_mingguan !== undefined ? (input.jam_laporan_mingguan ?? null) : undefined,
           target_peserta: input.target_peserta ?? undefined,
           minimal_semester: input.minimal_semester !== undefined ? (input.minimal_semester ?? null) : undefined,
           maks_anggota_kelompok: input.maks_anggota_kelompok ?? undefined,
@@ -263,6 +279,14 @@ export const updateKkmPeriod = async (
         input.jam_laporan_individu !== undefined ? (input.jam_laporan_individu ?? null) : undefined,
       jam_laporan_kelompok:
         input.jam_laporan_kelompok !== undefined ? (input.jam_laporan_kelompok ?? null) : undefined,
+      deadline_laporan_awal:
+        input.deadline_laporan_awal !== undefined ? (input.deadline_laporan_awal ?? null) : undefined,
+      jam_laporan_awal:
+        input.jam_laporan_awal !== undefined ? (input.jam_laporan_awal ?? null) : undefined,
+      deadline_laporan_mingguan:
+        input.deadline_laporan_mingguan !== undefined ? (input.deadline_laporan_mingguan ?? null) : undefined,
+      jam_laporan_mingguan:
+        input.jam_laporan_mingguan !== undefined ? (input.jam_laporan_mingguan ?? null) : undefined,
       target_peserta: input.target_peserta ?? undefined,
       minimal_semester: input.minimal_semester !== undefined ? (input.minimal_semester ?? null) : undefined,
       maks_anggota_kelompok: input.maks_anggota_kelompok ?? undefined,
