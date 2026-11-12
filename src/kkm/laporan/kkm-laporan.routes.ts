@@ -3,12 +3,20 @@ import multer from "multer";
 import { MulterError } from "multer";
 import { authMiddleware } from "../../auth/middleware/auth.middleware";
 import { requirePermission } from "../../auth/middleware/permission.middleware";
+import { validate } from "../../common/middleware/validate";
 import { PERMISSIONS } from "../../auth/permission";
+import { kkmLaporanReviewSchema } from "./kkm-laporan.validation";
 import {
   getLaporanIndividuController,
   getLaporanKelompokController,
   uploadLaporanIndividuController,
   uploadLaporanKelompokController,
+  getLaporanListController,
+  getLaporanDetailController,
+  reviewLaporanController,
+  bulkApproveLaporanController,
+  exportLaporanExcelController,
+  downloadLaporanZipController,
 } from "./kkm-laporan.controller";
 
 const router = Router();
@@ -79,6 +87,58 @@ router.post(
   uploadPdf,
   handleUploadError,
   uploadLaporanKelompokController,
+);
+
+// ===== LAPORAN KELOMPOK — ADMIN/KETUA LPPM, STAFF, DPL =====
+// DPL otomatis dibatasi kelompok bimbingannya (scope server-side).
+
+// Daftar + stats + opsi filter (permission lihat)
+router.get(
+  "/kkm/laporan",
+  authMiddleware,
+  requirePermission(PERMISSIONS.KKM_LAPORAN_LIHAT),
+  getLaporanListController,
+);
+
+// Detail satu baris (kelompok × jenis) — sebelum :id apa pun
+router.get(
+  "/kkm/laporan/detail",
+  authMiddleware,
+  requirePermission(PERMISSIONS.KKM_LAPORAN_LIHAT),
+  getLaporanDetailController,
+);
+
+// Export Excel (permission export)
+router.get(
+  "/kkm/laporan/export",
+  authMiddleware,
+  requirePermission(PERMISSIONS.KKM_LAPORAN_EXPORT),
+  exportLaporanExcelController,
+);
+
+// Download ZIP semua file PDF sesuai filter (permission export)
+router.get(
+  "/kkm/laporan/zip",
+  authMiddleware,
+  requirePermission(PERMISSIONS.KKM_LAPORAN_EXPORT),
+  downloadLaporanZipController,
+);
+
+// Review satu laporan: DISETUJUI / REVISI (catatan wajib saat revisi)
+router.patch(
+  "/kkm/laporan/review",
+  authMiddleware,
+  requirePermission(PERMISSIONS.KKM_LAPORAN_REVIEW),
+  validate(kkmLaporanReviewSchema),
+  reviewLaporanController,
+);
+
+// Setujui massal baris terpilih
+router.post(
+  "/kkm/laporan/bulk-approve",
+  authMiddleware,
+  requirePermission(PERMISSIONS.KKM_LAPORAN_REVIEW),
+  bulkApproveLaporanController,
 );
 
 export default router;

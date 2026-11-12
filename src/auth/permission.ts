@@ -80,6 +80,9 @@ export const PERMISSIONS = {
   KKM_LOGBOOK_KELOMPOK_KIRIM: "kkm.logbook-kelompok.kirim",
   KKM_LAPORAN_INDIVIDU: "kkm.laporan.individu",
   KKM_LAPORAN_KELOMPOK: "kkm.laporan.kelompok",
+  KKM_LAPORAN_LIHAT: "kkm.laporan.lihat",
+  KKM_LAPORAN_REVIEW: "kkm.laporan.review",
+  KKM_LAPORAN_EXPORT: "kkm.laporan.export",
   KKM_PENDAFTARAN: "kkm.pendaftaran",
 
   // ── KKM: Penilaian & Pengumuman ────────────────────────────────────

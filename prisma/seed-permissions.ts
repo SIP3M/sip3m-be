@@ -95,6 +95,9 @@ const PERMISSION_CATALOG: SeedPermission[] = [
   { kode: P.KKM_LOGBOOK_KELOMPOK_KIRIM, nama: "Kirim Logbook Kelompok", grup: "KKM: Logbook & Laporan" },
   { kode: P.KKM_LAPORAN_INDIVIDU, nama: "Laporan Individu", grup: "KKM: Logbook & Laporan" },
   { kode: P.KKM_LAPORAN_KELOMPOK, nama: "Laporan Kelompok", grup: "KKM: Logbook & Laporan" },
+  { kode: P.KKM_LAPORAN_LIHAT, nama: "Lihat Daftar Laporan KKM", grup: "KKM: Logbook & Laporan" },
+  { kode: P.KKM_LAPORAN_REVIEW, nama: "Review Laporan KKM", grup: "KKM: Logbook & Laporan" },
+  { kode: P.KKM_LAPORAN_EXPORT, nama: "Export Laporan KKM", grup: "KKM: Logbook & Laporan" },
   { kode: P.KKM_PENDAFTARAN, nama: "Pendaftaran KKM", grup: "KKM: Logbook & Laporan" },
 
   // ── KKM: Penilaian & Pengumuman ────────────────────────────────────
@@ -142,6 +145,7 @@ const ROLE_GRANTS: Record<string, string[]> = {
     P.KKM_GENERATE_LIHAT, P.KKM_GENERATE_JALANKAN,
     P.KKM_KELOMPOK_LIHAT, P.KKM_KELOMPOK_DETAIL, P.KKM_KELOMPOK_KELOLA,
     P.KKM_MONITORING_LIHAT, P.KKM_LOGBOOK_VALIDASI, P.KKM_LOGBOOK_LIHAT, P.KKM_LOGBOOK_REVIEW,
+    P.KKM_LAPORAN_LIHAT, P.KKM_LAPORAN_REVIEW, P.KKM_LAPORAN_EXPORT,
     P.KKM_PENGUMUMAN_LIHAT, P.KKM_PENGUMUMAN_KELOLA,
   ],
   STAFF_LPPM: [
@@ -156,6 +160,7 @@ const ROLE_GRANTS: Record<string, string[]> = {
     P.KKM_GENERATE_LIHAT,
     P.KKM_KELOMPOK_LIHAT, P.KKM_KELOMPOK_DETAIL,
     P.KKM_MONITORING_LIHAT, P.KKM_LOGBOOK_VALIDASI, P.KKM_LOGBOOK_LIHAT, P.KKM_LOGBOOK_REVIEW,
+    P.KKM_LAPORAN_LIHAT, P.KKM_LAPORAN_REVIEW, P.KKM_LAPORAN_EXPORT,
     P.KKM_PENGUMUMAN_LIHAT,
   ],
   ADMIN_SISTEM: [
@@ -176,6 +181,7 @@ const ROLE_GRANTS: Record<string, string[]> = {
     P.KKM_KELOMPOK_DETAIL,
     P.KKM_MONITORING_LIHAT, P.KKM_LOGBOOK_VALIDASI, P.KKM_LOGBOOK_LIHAT,
     P.KKM_LOGBOOK_KIRIM, P.KKM_LOGBOOK_REVIEW,
+    P.KKM_LAPORAN_LIHAT, P.KKM_LAPORAN_REVIEW,
     P.KKM_PENILAIAN_ISI,
   ],
   REVIEWER: [
