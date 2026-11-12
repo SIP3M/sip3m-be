@@ -8,6 +8,9 @@ export interface CreateProposalBody {
   funding_request_amount?: string | number;
   sumber_data_penelitian?: string;
   detail_sumber_penelitian?: string;
+  tujuan_penelitian?: string;
+  metode_penelitian?: string;
+  abstrak?: string;
   instansi?: string;
   nama_ketua?: string;
   nidn_ketua?: string;
@@ -31,6 +34,9 @@ export interface CreateProposalData {
   funding_request_amount: number;
   sumber_data_penelitian?: string | null;
   detail_sumber_penelitian?: string | null;
+  tujuan_penelitian?: string | null;
+  metode_penelitian?: string | null;
+  abstrak?: string | null;
   instansi?: string | null;
   nama_ketua?: string | null;
   nidn_ketua?: string | null;

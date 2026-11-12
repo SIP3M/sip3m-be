@@ -77,6 +77,30 @@ export const swaggerSpec = swaggerJSDoc({
               type: ["string", "null"],
               example: "Survei lapangan dan data BPS",
             },
+            detail_sumber_penelitian: {
+              type: ["string", "null"],
+              example:
+                "Data dikumpulkan melalui survei lapangan kepada 120 petani serta data sekunder dari BPS Kabupaten Cirebon.",
+              description: "Maks 2000 karakter. Wajib diisi saat submit final.",
+            },
+            tujuan_penelitian: {
+              type: ["string", "null"],
+              example:
+                "Mengembangkan model deteksi hama yang akurat dan mudah diakses petani.",
+              description: "Maks 2000 karakter. Wajib diisi saat submit final.",
+            },
+            metode_penelitian: {
+              type: ["string", "null"],
+              example:
+                "Penelitian kuantitatif dengan pendekatan CNN dan validasi lapangan.",
+              description: "Maks 2000 karakter. Wajib diisi saat submit final.",
+            },
+            abstrak: {
+              type: ["string", "null"],
+              example:
+                "Penelitian ini mengembangkan deteksi hama padi menggunakan deep learning...",
+              description: "Maks 2000 karakter. Wajib diisi saat submit final.",
+            },
             sumber_pendanaan: {
               type: ["string", "null"],
               example: "Internal Kampus",
@@ -2454,6 +2478,34 @@ Endpoint untuk membuat proposal penelitian baru.
                       type: "string",
                       example: "Survei lapangan dan data BPS",
                       description: "Opsional.",
+                    },
+                    detail_sumber_penelitian: {
+                      type: "string",
+                      example:
+                        "Data dikumpulkan melalui survei lapangan kepada 120 petani serta data sekunder dari BPS.",
+                      description:
+                        "Maks 2000 karakter. **Wajib diisi saat submit** (`is_draft=false`); boleh kosong saat simpan draft.",
+                    },
+                    tujuan_penelitian: {
+                      type: "string",
+                      example:
+                        "Mengembangkan model deteksi hama yang akurat dan mudah diakses petani.",
+                      description:
+                        "Maks 2000 karakter. **Wajib diisi saat submit** (`is_draft=false`); boleh kosong saat simpan draft.",
+                    },
+                    metode_penelitian: {
+                      type: "string",
+                      example:
+                        "Penelitian kuantitatif dengan pendekatan CNN dan validasi lapangan.",
+                      description:
+                        "Maks 2000 karakter. **Wajib diisi saat submit** (`is_draft=false`); boleh kosong saat simpan draft.",
+                    },
+                    abstrak: {
+                      type: "string",
+                      example:
+                        "Penelitian ini mengembangkan deteksi hama padi menggunakan deep learning...",
+                      description:
+                        "Maks 2000 karakter. **Wajib diisi saat submit** (`is_draft=false`); boleh kosong saat simpan draft.",
                     },
                     instansi: {
                       type: "string",

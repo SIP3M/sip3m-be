@@ -186,6 +186,9 @@ export const createProposal = async (
         funding_request_amount: input.funding_request_amount,
         sumber_data_penelitian: input.sumber_data_penelitian,
         detail_sumber_penelitian: input.detail_sumber_penelitian,
+        tujuan_penelitian: input.tujuan_penelitian,
+        metode_penelitian: input.metode_penelitian,
+        abstrak: input.abstrak,
         instansi: input.instansi,
         dosen_terlibat: input.dosen_terlibat,
         nidn_dosen_terlibat: input.nidn_dosen_terlibat,
@@ -321,6 +324,10 @@ export const getAllProposals = async ({
         skema: true,
         sumber_pendanaan: true,
         sumber_data_penelitian: true,
+        detail_sumber_penelitian: true,
+        tujuan_penelitian: true,
+        metode_penelitian: true,
+        abstrak: true,
         instansi: true,
         nama_ketua: true,
         nidn_ketua: true,
@@ -446,6 +453,10 @@ export const getAssignedProposalsForReviewer = async ({
         skema: true,
         sumber_pendanaan: true,
         sumber_data_penelitian: true,
+        detail_sumber_penelitian: true,
+        tujuan_penelitian: true,
+        metode_penelitian: true,
+        abstrak: true,
         instansi: true,
         nama_ketua: true,
         nidn_ketua: true,
@@ -560,6 +571,10 @@ export const getMyProposals = async ({
         skema: true,
         sumber_pendanaan: true,
         sumber_data_penelitian: true,
+        detail_sumber_penelitian: true,
+        tujuan_penelitian: true,
+        metode_penelitian: true,
+        abstrak: true,
         instansi: true,
         nama_ketua: true,
         nidn_ketua: true,
@@ -605,6 +620,10 @@ export const getProposalById = async (proposalId: number) => {
       skema: true,
       sumber_pendanaan: true,
       sumber_data_penelitian: true,
+      detail_sumber_penelitian: true,
+      tujuan_penelitian: true,
+      metode_penelitian: true,
+      abstrak: true,
       instansi: true,
       dosen_terlibat: true,
       nidn_dosen_terlibat: true,
@@ -784,6 +803,13 @@ export const editProposal = async (
           ...(input.detail_sumber_penelitian !== undefined && {
             detail_sumber_penelitian: input.detail_sumber_penelitian,
           }),
+          ...(input.tujuan_penelitian !== undefined && {
+            tujuan_penelitian: input.tujuan_penelitian,
+          }),
+          ...(input.metode_penelitian !== undefined && {
+            metode_penelitian: input.metode_penelitian,
+          }),
+          ...(input.abstrak !== undefined && { abstrak: input.abstrak }),
           ...(input.nama_ketua !== undefined && {
             nama_ketua: input.nama_ketua?.trim()
               ? input.nama_ketua.trim()
@@ -901,6 +927,20 @@ export const submitProposal = async (proposalId: number, userId: number) => {
   if (!proposal.proposal_file_path || !proposal.rab_file_path) {
     throw new HttpError(
       "File Proposal dan RAB wajib diunggah sebelum melakukan Submit.",
+      400,
+    );
+  }
+
+  // Ke-4 field naratif wajib terisi sebelum submit final
+  const fieldKurang: string[] = [];
+  if (!proposal.detail_sumber_penelitian?.trim())
+    fieldKurang.push("Detail Sumber Data Penelitian");
+  if (!proposal.tujuan_penelitian?.trim()) fieldKurang.push("Tujuan Penelitian");
+  if (!proposal.metode_penelitian?.trim()) fieldKurang.push("Metode Penelitian");
+  if (!proposal.abstrak?.trim()) fieldKurang.push("Abstrak");
+  if (fieldKurang.length > 0) {
+    throw new HttpError(
+      `Lengkapi isian berikut sebelum submit: ${fieldKurang.join(", ")}.`,
       400,
     );
   }
