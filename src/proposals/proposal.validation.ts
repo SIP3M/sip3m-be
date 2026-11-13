@@ -157,6 +157,55 @@ const detailSumberField = z
   .max(2000, "Detail sumber penelitian maksimal 2000 karakter.")
   .optional();
 
+// Field naratif proposal — wajib diisi saat submit final (bukan draft).
+const tujuanPenelitianField = z
+  .string()
+  .trim()
+  .max(2000, "Tujuan penelitian maksimal 2000 karakter.")
+  .optional();
+
+const metodePenelitianField = z
+  .string()
+  .trim()
+  .max(2000, "Metode penelitian maksimal 2000 karakter.")
+  .optional();
+
+const abstrakField = z
+  .string()
+  .trim()
+  .max(2000, "Abstrak maksimal 2000 karakter.")
+  .optional();
+
+// Ke-4 field naratif wajib terisi saat proposal disubmit final.
+// Simpan draft (is_draft=true) tetap boleh kosong.
+const WAJIB_SUBMIT_FIELDS = [
+  ["detail_sumber_penelitian", "Detail Sumber Data Penelitian"],
+  ["tujuan_penelitian", "Tujuan Penelitian"],
+  ["metode_penelitian", "Metode Penelitian"],
+  ["abstrak", "Abstrak"],
+] as const;
+
+const assertFieldWajibSubmit = (
+  data: {
+    detail_sumber_penelitian?: string;
+    tujuan_penelitian?: string;
+    metode_penelitian?: string;
+    abstrak?: string;
+  },
+  ctx: z.RefinementCtx,
+) => {
+  for (const [key, label] of WAJIB_SUBMIT_FIELDS) {
+    const value = data[key];
+    if (!value || !value.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: [key],
+        message: `${label} wajib diisi saat submit.`,
+      });
+    }
+  }
+};
+
 const instansiField = z
   .string()
   .trim()
@@ -194,6 +243,9 @@ export const createProposalSchema = z
     funding_request_amount: fundingField.optional().default(0),
     sumber_data_penelitian: sumberDataField,
     detail_sumber_penelitian: detailSumberField,
+    tujuan_penelitian: tujuanPenelitianField,
+    metode_penelitian: metodePenelitianField,
+    abstrak: abstrakField,
     instansi: instansiField,
 
     dosen_terlibat: dosenTerlibatField,
@@ -205,7 +257,11 @@ export const createProposalSchema = z
 
     is_draft: isDraftField.optional().default(false),
   })
-  .superRefine((data, ctx) => assertNoDuplicateDosen(data, ctx));
+  .superRefine((data, ctx) => {
+    assertNoDuplicateDosen(data, ctx);
+    // Submit final langsung dari form → ke-4 field naratif wajib terisi
+    if (!data.is_draft) assertFieldWajibSubmit(data, ctx);
+  });
 
 export const editProposalSchema = z
   .object({
@@ -216,6 +272,9 @@ export const editProposalSchema = z
     funding_request_amount: fundingField.optional(),
     sumber_data_penelitian: sumberDataField,
     detail_sumber_penelitian: detailSumberField,
+    tujuan_penelitian: tujuanPenelitianField,
+    metode_penelitian: metodePenelitianField,
+    abstrak: abstrakField,
     instansi: instansiField,
 
     dosen_terlibat: dosenTerlibatField,
@@ -237,6 +296,8 @@ export const editProposalSchema = z
       data.nama_anggota !== undefined ||
       data.nim_anggota !== undefined;
     if (hasDosenInput) assertNoDuplicateDosen(data as never, ctx);
+    // Submit final dari form edit → ke-4 field naratif wajib terisi
+    if (data.is_draft === false) assertFieldWajibSubmit(data, ctx);
   });
 
 const adminReviewerStatuses = Object.values(ProposalStatus).filter(

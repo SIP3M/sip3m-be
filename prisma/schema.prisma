@@ -123,6 +123,9 @@ model proposals {
 
   sumber_data_penelitian String?        @db.Text
   detail_sumber_penelitian String?      @db.Text
+  tujuan_penelitian      String?        @db.Text
+  metode_penelitian      String?        @db.Text
+  abstrak                String?        @db.Text
   instansi               String?        @db.VarChar(255)
 
   submitted_at DateTime?
