@@ -6244,17 +6244,34 @@ Mencairkan dana proyek pengabdian.
       "/dashboard/admin": {
         get: {
           tags: ["Dashboard"],
-          summary: "Ambil data dashboard Ketua LPPM",
+          summary: "Ambil data dashboard Ketua LPPM (fokus Penelitian)",
           description: `
-Mengambil data dashboard khusus **KETUA_LPPM** untuk kebutuhan tampilan ringkasan statistik.
+Mengambil data dashboard khusus **KETUA_LPPM** untuk kebutuhan tampilan ringkasan statistik **penelitian**.
 
-Struktur data mencakup:
+**Filter tahun:** tanpa parameter, semua agregat dihitung dari seluruh data proposal (trend = 6 bulan terakhir).
+Dengan \`?tahun=2026\`, seluruh agregat proposal (summaryCards kecuali \`dosenAktif\`, statusChart, kategoriChart, fakultasChart, trendBulanan, recentProposals) difilter ke tahun berjalan — trend menampilkan 12 bulan tahun tersebut.
+
+Struktur data:
 - **summaryCards**: total proposal, dosen aktif, proposal disetujui, menunggu review.
 - **statusChart**: distribusi jumlah proposal berdasarkan status.
 - **kategoriChart**: distribusi jumlah proposal berdasarkan skema.
-- **trendBulanan**: jumlah proposal per bulan dalam 6 bulan terakhir.
+- **trendBulanan**: jumlah proposal per bulan (6 bulan terakhir, atau 12 bulan saat filter tahun aktif).
+- **fakultasChart**: distribusi jumlah proposal berdasarkan fakultas (urut menurun).
+- **recentProposals**: 6 proposal terbaru (\`id, title, status, created_at\`).
+- **tahunTersedia**: daftar tahun unik dari \`created_at\` proposal — untuk isi dropdown filter.
           `,
           security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: "tahun",
+              in: "query",
+              required: false,
+              schema: { type: "integer" },
+              description:
+                "Tahun filter (opsional, mis. 2026). Tanpa parameter = semua tahun.",
+              example: 2026,
+            },
+          ],
           responses: {
             200: {
               description: "Data dashboard berhasil diambil",
@@ -6291,7 +6308,32 @@ Struktur data mencakup:
                         { bulan: "Mar", jumlah: 9 },
                         { bulan: "Apr", jumlah: 4 },
                       ],
+                      fakultasChart: [
+                        { fakultas: "Teknik", jumlah: 18 },
+                        { fakultas: "Ekonomi", jumlah: 14 },
+                        { fakultas: "Tanpa Fakultas", jumlah: 10 },
+                      ],
+                      recentProposals: [
+                        {
+                          id: 42,
+                          title: "Penelitian AI untuk Pertanian",
+                          status: "SUBMITTED",
+                          created_at: "2026-11-01T08:00:00.000Z",
+                        },
+                      ],
+                      tahunTersedia: [2026, 2025, 2024],
                     },
+                  },
+                },
+              },
+            },
+            400: {
+              description: "Query tahun tidak valid",
+              content: {
+                "application/json": {
+                  example: {
+                    message:
+                      "Query tahun harus berupa angka tahun yang valid (mis. 2026).",
                   },
                 },
               },

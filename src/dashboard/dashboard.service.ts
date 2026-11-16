@@ -10,11 +10,13 @@ import { deriveStatus } from "../kkm/kelompok/kkm-kelompok.service";
 import type { KelompokStatus } from "../kkm/kelompok/kkm-kelompok.service";
 import {
   AdminDashboardData,
+  FakultasChartItem,
   KategoriChartItem,
   KkmDashboardData,
   KkmJumlahItem,
   KkmPeriodeRef,
   KkmStatusKelompokItem,
+  RecentProposalItem,
   StatusChartItem,
   TrendBulananItem,
 } from "./dashboard.types";
@@ -42,9 +44,33 @@ const getLastSixMonthBuckets = (): Array<{ key: string; label: string }> => {
   });
 };
 
-export const getAdminDashboardData = async (): Promise<AdminDashboardData> => {
+// Bucket 12 bulan untuk tahun tertentu (filter tahun aktif).
+const getYearMonthBuckets = (tahun: number): Array<{ key: string; label: string }> =>
+  Array.from({ length: 12 }, (_, index) => {
+    const monthDate = new Date(tahun, index, 1);
+    return {
+      key: createMonthKey(monthDate),
+      label: monthDate.toLocaleString("id-ID", { month: "short" }),
+    };
+  });
+
+export const getAdminDashboardData = async (
+  tahun?: number,
+): Promise<AdminDashboardData> => {
   const now = new Date();
   const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+
+  // Filter tahun (opsional) berlaku ke semua agregat proposal —
+  // dosenAktif & tahunTersedia tetap global (tidak terikat tahun).
+  const tahunFilter =
+    tahun !== undefined
+      ? {
+          created_at: {
+            gte: new Date(tahun, 0, 1),
+            lte: new Date(tahun, 11, 31, 23, 59, 59, 999),
+          },
+        }
+      : undefined;
 
   const [
     totalProposal,
@@ -53,9 +79,12 @@ export const getAdminDashboardData = async (): Promise<AdminDashboardData> => {
     menungguReview,
     statusGroups,
     kategoriGroups,
-    proposalCreatedAt,
+    fakultasGroups,
+    recentRows,
+    trendCreatedAt,
+    tahunRows,
   ] = await Promise.all([
-    prisma.proposals.count(),
+    prisma.proposals.count({ where: tahunFilter }),
     prisma.users.count({
       where: {
         is_active: true,
@@ -65,37 +94,64 @@ export const getAdminDashboardData = async (): Promise<AdminDashboardData> => {
       },
     }),
     prisma.proposals.count({
-      where: { status: ProposalStatus.ACCEPTED },
+      where: { status: ProposalStatus.ACCEPTED, ...tahunFilter },
     }),
     prisma.proposals.count({
       where: {
         status: {
           in: [ProposalStatus.ADMIN_VERIFIED, ProposalStatus.UNDER_REVIEW],
         },
+        ...tahunFilter,
       },
     }),
     prisma.proposals.groupBy({
       by: ["status"],
+      where: tahunFilter,
       _count: {
         _all: true,
       },
     }),
     prisma.proposals.groupBy({
       by: ["skema"],
+      where: tahunFilter,
       _count: {
         _all: true,
       },
     }),
+    prisma.proposals.groupBy({
+      by: ["faculty"],
+      where: tahunFilter,
+      _count: {
+        _all: true,
+      },
+      orderBy: { _count: { faculty: "desc" } },
+    }),
+    prisma.proposals.findMany({
+      where: tahunFilter,
+      select: {
+        id: true,
+        title: true,
+        status: true,
+        created_at: true,
+      },
+      orderBy: { created_at: "desc" },
+      take: 6,
+    }),
     prisma.proposals.findMany({
       where: {
         created_at: {
-          gte: sixMonthsAgo,
-          lte: now,
+          gte: tahun !== undefined ? new Date(tahun, 0, 1) : sixMonthsAgo,
+          lte: tahun !== undefined ? new Date(tahun, 11, 31, 23, 59, 59, 999) : now,
         },
       },
       select: {
         created_at: true,
       },
+    }),
+    prisma.proposals.findMany({
+      // Ambil semua created_at lalu derive tahun unik di JS
+      // (jumlah proposal skala kecil-menengah — aman di memori)
+      select: { created_at: true },
     }),
   ]);
 
@@ -115,12 +171,18 @@ export const getAdminDashboardData = async (): Promise<AdminDashboardData> => {
     jumlah: row._count._all,
   }));
 
-  const monthBuckets = getLastSixMonthBuckets();
+  const fakultasChart: FakultasChartItem[] = fakultasGroups.map((row) => ({
+    fakultas: row.faculty?.trim() || "Tanpa Fakultas",
+    jumlah: row._count._all,
+  }));
+
+  const monthBuckets =
+    tahun !== undefined ? getYearMonthBuckets(tahun) : getLastSixMonthBuckets();
   const trendCountMap = new Map<string, number>(
     monthBuckets.map((month) => [month.key, 0]),
   );
 
-  proposalCreatedAt.forEach((row) => {
+  trendCreatedAt.forEach((row) => {
     const key = createMonthKey(row.created_at);
     if (trendCountMap.has(key)) {
       const current = trendCountMap.get(key) ?? 0;
@@ -133,6 +195,12 @@ export const getAdminDashboardData = async (): Promise<AdminDashboardData> => {
     jumlah: trendCountMap.get(month.key) ?? 0,
   }));
 
+  const tahunSet = new Set<number>();
+  tahunRows.forEach((row) => tahunSet.add(row.created_at.getFullYear()));
+  const tahunTersedia = [...tahunSet].sort((a, b) => b - a);
+
+  const recentProposals: RecentProposalItem[] = recentRows;
+
   return {
     summaryCards: {
       totalProposal,
@@ -143,6 +211,9 @@ export const getAdminDashboardData = async (): Promise<AdminDashboardData> => {
     statusChart,
     kategoriChart,
     trendBulanan,
+    fakultasChart,
+    recentProposals,
+    tahunTersedia,
   };
 };
 

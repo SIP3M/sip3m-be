@@ -1,7 +1,7 @@
 import { ProposalStatus } from "../generated/prisma/enums";
 import type { KelompokStatus } from "../kkm/kelompok/kkm-kelompok.service";
 
-export interface SummaryCards {
+export interface AdminSummaryCards {
   totalProposal: number;
   dosenAktif: number;
   proposalDisetujui: number;
@@ -23,11 +23,27 @@ export interface TrendBulananItem {
   jumlah: number;
 }
 
+export interface FakultasChartItem {
+  fakultas: string;
+  jumlah: number;
+}
+
+export interface RecentProposalItem {
+  id: number;
+  title: string;
+  status: ProposalStatus;
+  created_at: Date;
+}
+
 export interface AdminDashboardData {
-  summaryCards: SummaryCards;
+  summaryCards: AdminSummaryCards;
   statusChart: StatusChartItem[];
   kategoriChart: KategoriChartItem[];
   trendBulanan: TrendBulananItem[];
+  fakultasChart: FakultasChartItem[];
+  recentProposals: RecentProposalItem[];
+  /** Tahun unik dari created_at proposal — untuk isi dropdown filter */
+  tahunTersedia: number[];
 }
 
 // =============================================

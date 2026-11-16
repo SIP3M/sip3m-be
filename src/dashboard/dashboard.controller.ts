@@ -4,11 +4,28 @@ import { HttpError } from "../common/errors/http-error";
 import { getAdminDashboardData, getKkmDashboardData } from "./dashboard.service";
 
 export const getAdminDashboardController = async (
-  _req: AuthenticatedRequest,
+  req: AuthenticatedRequest,
   res: Response,
 ): Promise<Response> => {
   try {
-    const data = await getAdminDashboardData();
+    // Filter tahun opsional (mis. ?tahun=2026) — hanya angka valid yang diterima.
+    const raw = req.query.tahun;
+    let tahun: number | undefined;
+
+    if (raw !== undefined && raw !== "") {
+      const parsed = Number(raw);
+
+      if (!Number.isInteger(parsed) || parsed < 1900 || parsed > 2100) {
+        throw new HttpError(
+          "Query tahun harus berupa angka tahun yang valid (mis. 2026).",
+          400,
+        );
+      }
+
+      tahun = parsed;
+    }
+
+    const data = await getAdminDashboardData(tahun);
 
     return res.status(200).json({
       message: "Success",
