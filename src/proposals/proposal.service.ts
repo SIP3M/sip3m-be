@@ -1307,14 +1307,16 @@ const calculateTotalScore = (input: {
   score_anggaran: number;
   score_luaran: number;
 }): number => {
-  const total =
-    input.score_perumusan +
-    input.score_tinjauan +
-    input.score_metode +
-    input.score_anggaran +
-    input.score_luaran;
+  // Rata-rata terbobot — bobot sama dengan form reviewer (FE ReviewDetailPage):
+  // perumusan 20%, tinjauan 20%, metode 25%, anggaran 15%, luaran 20% → skala 0–100
+  const weighted =
+    input.score_perumusan * 0.2 +
+    input.score_tinjauan * 0.2 +
+    input.score_metode * 0.25 +
+    input.score_anggaran * 0.15 +
+    input.score_luaran * 0.2;
 
-  return Number(total.toFixed(2));
+  return Number(weighted.toFixed(1));
 };
 
 export const evaluateProposal = async (
