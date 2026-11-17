@@ -1,7 +1,11 @@
 import { Response } from "express";
 import { AuthenticatedRequest } from "../auth/types/auth.jwt.types";
 import { HttpError } from "../common/errors/http-error";
-import { getAdminDashboardData, getKkmDashboardData } from "./dashboard.service";
+import {
+  getAdminDashboardData,
+  getKkmDashboardData,
+  getStaffDashboardData,
+} from "./dashboard.service";
 
 export const getAdminDashboardController = async (
   req: AuthenticatedRequest,
@@ -38,6 +42,28 @@ export const getAdminDashboardController = async (
 
     return res.status(500).json({
       message: "Terjadi kesalahan pada server saat mengambil data dashboard.",
+    });
+  }
+};
+
+export const getStaffDashboardController = async (
+  _req: AuthenticatedRequest,
+  res: Response,
+): Promise<Response> => {
+  try {
+    const data = await getStaffDashboardData();
+
+    return res.status(200).json({
+      message: "Success",
+      data,
+    });
+  } catch (error) {
+    if (error instanceof HttpError) {
+      return res.status(error.statusCode).json({ message: error.message });
+    }
+
+    return res.status(500).json({
+      message: "Terjadi kesalahan pada server saat mengambil data dashboard staff.",
     });
   }
 };

@@ -1,5 +1,5 @@
 /**
- * Seed katalog Permission (68 izin) + mapping parity role bawaan.
+ * Seed katalog Permission (69 izin) + mapping parity role bawaan.
  *
  * Jalankan: npx ts-node -r dotenv/config prisma/seed-permissions.ts
  *
@@ -55,6 +55,7 @@ const PERMISSION_CATALOG: SeedPermission[] = [
   // ── Monitoring & Dashboard ─────────────────────────────────────────
   { kode: P.MONITORING_PROYEK_LIHAT, nama: "Monitoring Proyek", grup: "Monitoring & Dashboard" },
   { kode: P.DASHBOARD_ADMIN, nama: "Dashboard Admin", grup: "Monitoring & Dashboard" },
+  { kode: P.DASHBOARD_STAFF, nama: "Dashboard Staff LPPM", grup: "Monitoring & Dashboard" },
   { kode: P.DASHBOARD_KKM, nama: "Dashboard KKM", grup: "Monitoring & Dashboard" },
 
   // ── Sistem & Master Data ───────────────────────────────────────────
@@ -153,7 +154,8 @@ const ROLE_GRANTS: Record<string, string[]> = {
     P.PROPOSAL_LIHAT, P.PROPOSAL_LIHAT_DETAIL, P.PROPOSAL_STATUS, P.PROPOSAL_PLOTTING,
     P.PROPOSAL_LIHAT_REVIEW,
     P.PENGABDIAN_LIHAT, P.PENGABDIAN_KELOLA, P.PENGABDIAN_DOKUMEN,
-    P.KEUANGAN_LIHAT, P.DASHBOARD_KKM,
+    P.KEUANGAN_LIHAT, P.DASHBOARD_KKM, P.DASHBOARD_STAFF,
+    P.MONITORING_PROYEK_LIHAT,
     P.KKM_PERIODE_LIHAT, P.KKM_PERIODE_DETAIL, P.KKM_SKEMA_LIHAT,
     P.KKM_LOKASI_LIHAT, P.KKM_DPL_LIHAT,
     P.KKM_PESERTA_LIHAT, P.KKM_PESERTA_EXPORT,

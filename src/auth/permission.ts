@@ -40,6 +40,7 @@ export const PERMISSIONS = {
   // ── Monitoring & Dashboard ─────────────────────────────────────────
   MONITORING_PROYEK_LIHAT: "monitoring.proyek.lihat",
   DASHBOARD_ADMIN: "dashboard.admin",
+  DASHBOARD_STAFF: "dashboard.staff",
   DASHBOARD_KKM: "dashboard.kkm",
 
   // ── Sistem & Master Data ───────────────────────────────────────────

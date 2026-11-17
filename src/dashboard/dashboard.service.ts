@@ -10,15 +10,20 @@ import { deriveStatus } from "../kkm/kelompok/kkm-kelompok.service";
 import type { KelompokStatus } from "../kkm/kelompok/kkm-kelompok.service";
 import {
   AdminDashboardData,
+  AktivitasHarianItem,
   FakultasChartItem,
   KategoriChartItem,
   KkmDashboardData,
   KkmJumlahItem,
   KkmPeriodeRef,
   KkmStatusKelompokItem,
+  PrioritasItem,
+  ProposalPerluVerifikasiItem,
   RecentProposalItem,
+  StaffDashboardData,
   StatusChartItem,
   TrendBulananItem,
+  VerifikasiChartItem,
 } from "./dashboard.types";
 
 const createMonthKey = (date: Date): string => {
@@ -214,6 +219,174 @@ export const getAdminDashboardData = async (
     fakultasChart,
     recentProposals,
     tahunTersedia,
+  };
+};
+
+// =============================================
+// Dashboard Staff LPPM (fokus proposal penelitian)
+// =============================================
+
+const createDayKey = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+/** 7 hari terakhir (termasuk hari ini), urut dari yang paling awal. */
+const getLastSevenDayBuckets = (): Date[] => {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+  return Array.from({ length: 7 }, (_, index) =>
+    new Date(today.getFullYear(), today.getMonth(), today.getDate() - 6 + index),
+  );
+};
+
+// Donut pipeline verifikasi — seluruh slice dijumlahkan = totalProposal.
+const buildVerifikasiChart = (
+  statusMap: Map<ProposalStatus, number>,
+): VerifikasiChartItem[] => {
+  const count = (...statuses: ProposalStatus[]): number =>
+    statuses.reduce((sum, status) => sum + (statusMap.get(status) ?? 0), 0);
+
+  return [
+    { label: "Draft", jumlah: count(ProposalStatus.DRAFT) },
+    { label: "Perlu Verifikasi", jumlah: count(ProposalStatus.SUBMITTED) },
+    { label: "Terverifikasi", jumlah: count(ProposalStatus.ADMIN_VERIFIED) },
+    {
+      label: "Dalam Review",
+      jumlah: count(
+        ProposalStatus.UNDER_REVIEW,
+        ProposalStatus.REVISION,
+        ProposalStatus.REVISION_PENDING,
+        ProposalStatus.REVIEW_DONE,
+      ),
+    },
+    { label: "Disetujui", jumlah: count(ProposalStatus.ACCEPTED) },
+    { label: "Ditolak", jumlah: count(ProposalStatus.REJECTED) },
+  ];
+};
+
+export const getStaffDashboardData = async (): Promise<StaffDashboardData> => {
+  const dayBuckets = getLastSevenDayBuckets();
+  const startOfWindow = dayBuckets[0];
+
+  const [
+    totalProposal,
+    perluVerifikasi,
+    proposalDisetujui,
+    dosenAktif,
+    menungguPlotting,
+    reviewBerjalan,
+    statusGroups,
+    weeklyRows,
+    antreanRows,
+    recentRows,
+  ] = await Promise.all([
+    prisma.proposals.count(),
+    prisma.proposals.count({ where: { status: ProposalStatus.SUBMITTED } }),
+    prisma.proposals.count({
+      where: { status: ProposalStatus.ACCEPTED },
+    }),
+    prisma.users.count({
+      where: {
+        is_active: true,
+        roles: { roles: ROLES.DOSEN },
+      },
+    }),
+    // Menunggu plotting: SUBMITTED yang belum punya reviewer
+    prisma.proposals.count({
+      where: {
+        status: ProposalStatus.SUBMITTED,
+        reviewers: { none: {} },
+      },
+    }),
+    prisma.proposals.count({
+      where: { status: ProposalStatus.UNDER_REVIEW },
+    }),
+    prisma.proposals.groupBy({
+      by: ["status"],
+      _count: { _all: true },
+    }),
+    // updated_at >= awal jendela juga menangkap proposal yang baru dibuat
+    // (created_at <= updated_at), jadi cukup satu filter ini.
+    prisma.proposals.findMany({
+      where: { updated_at: { gte: startOfWindow } },
+      select: { created_at: true, updated_at: true },
+    }),
+    prisma.proposals.findMany({
+      where: { status: ProposalStatus.SUBMITTED },
+      select: {
+        id: true,
+        title: true,
+        faculty: true,
+        status: true,
+        created_at: true,
+      },
+      orderBy: { created_at: "asc" },
+      take: 5,
+    }),
+    prisma.proposals.findMany({
+      select: { id: true, title: true, status: true, created_at: true },
+      orderBy: { created_at: "desc" },
+      take: 5,
+    }),
+  ]);
+
+  const statusMap = new Map<ProposalStatus, number>(
+    statusGroups.map((row) => [row.status, row._count._all]),
+  );
+
+  // Aktivitas 7 hari: masuk = created_at hari itu, diproses = updated_at hari itu
+  const masukMap = new Map<string, number>(dayBuckets.map((d) => [createDayKey(d), 0]));
+  const diprosesMap = new Map<string, number>(
+    dayBuckets.map((d) => [createDayKey(d), 0]),
+  );
+
+  weeklyRows.forEach((row) => {
+    const createdKey = createDayKey(row.created_at);
+    if (masukMap.has(createdKey)) {
+      masukMap.set(createdKey, (masukMap.get(createdKey) ?? 0) + 1);
+    }
+
+    const updatedKey = createDayKey(row.updated_at);
+    if (diprosesMap.has(updatedKey)) {
+      diprosesMap.set(updatedKey, (diprosesMap.get(updatedKey) ?? 0) + 1);
+    }
+  });
+
+  const aktivitasMingguan: AktivitasHarianItem[] = dayBuckets.map((date) => {
+    const key = createDayKey(date);
+    return {
+      tanggal: key,
+      hari: date.toLocaleString("id-ID", { weekday: "short" }),
+      masuk: masukMap.get(key) ?? 0,
+      diproses: diprosesMap.get(key) ?? 0,
+    };
+  });
+
+  const prioritas: PrioritasItem[] = [
+    { key: "verifikasi", jumlah: perluVerifikasi },
+    { key: "plotting", jumlah: menungguPlotting },
+    { key: "review", jumlah: reviewBerjalan },
+  ];
+
+  const proposalPerluVerifikasi: ProposalPerluVerifikasiItem[] = antreanRows;
+  const recentProposals: RecentProposalItem[] = recentRows;
+
+  return {
+    summaryCards: {
+      totalProposal,
+      perluVerifikasi,
+      proposalDisetujui,
+      dosenAktif,
+    },
+    verifikasiChart: buildVerifikasiChart(statusMap),
+    aktivitasMingguan,
+    proposalPerluVerifikasi,
+    prioritas,
+    recentProposals,
   };
 };
 
