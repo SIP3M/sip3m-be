@@ -342,6 +342,25 @@ export const getAllProposals = async ({
             nidn_nip: true,
           },
         },
+        // Ringkasan review terbaru — untuk tooltip & popup di daftar proposal
+        reviews: {
+          select: {
+            id: true,
+            status: true,
+            total_score: true,
+            decision: true,
+            rekomendasi_akhir: true,
+            kekuatan_proposal: true,
+            kelemahan_proposal: true,
+            notes: true,
+            created_at: true,
+            reviewer: {
+              select: { name: true },
+            },
+          },
+          orderBy: { created_at: "desc" },
+          take: 1,
+        },
       },
       orderBy: { created_at: "desc" },
       skip,
