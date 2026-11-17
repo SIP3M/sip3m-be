@@ -47,6 +47,63 @@ export interface AdminDashboardData {
 }
 
 // =============================================
+// Dashboard Staff LPPM (fokus proposal penelitian)
+// =============================================
+
+export interface StaffSummaryCards {
+  totalProposal: number;
+  /** Proposal berstatus SUBMITTED — menunggu verifikasi administratif */
+  perluVerifikasi: number;
+  proposalDisetujui: number;
+  dosenAktif: number;
+}
+
+export interface VerifikasiChartItem {
+  label: string;
+  jumlah: number;
+}
+
+export interface AktivitasHarianItem {
+  /** Key ISO (YYYY-MM-DD) untuk keperluan mapping FE */
+  tanggal: string;
+  /** Label hari pendek, mis. "Sen" */
+  hari: string;
+  /** Proposal masuk (created_at) pada hari itu */
+  masuk: number;
+  /** Proposal diproses/diubah (updated_at) pada hari itu */
+  diproses: number;
+}
+
+export interface ProposalPerluVerifikasiItem {
+  id: number;
+  title: string;
+  faculty: string | null;
+  status: ProposalStatus;
+  created_at: Date;
+}
+
+/** Kunci prioritas — FE memetakan ke label, ikon, dan rute halaman. */
+export type PrioritasKey = "verifikasi" | "plotting" | "review";
+
+export interface PrioritasItem {
+  key: PrioritasKey;
+  jumlah: number;
+}
+
+export interface StaffDashboardData {
+  summaryCards: StaffSummaryCards;
+  /** Donut pipeline verifikasi — jumlahnya selalu = totalProposal */
+  verifikasiChart: VerifikasiChartItem[];
+  /** 7 hari terakhir (urut, paling akhir = hari ini) */
+  aktivitasMingguan: AktivitasHarianItem[];
+  /** Maks 5 proposal SUBMITTED, antrean terlama lebih dulu */
+  proposalPerluVerifikasi: ProposalPerluVerifikasiItem[];
+  /** Derive dari data: menunggu verifikasi / menunggu plotting / review berjalan */
+  prioritas: PrioritasItem[];
+  recentProposals: RecentProposalItem[];
+}
+
+// =============================================
 // Dashboard KKM
 // =============================================
 

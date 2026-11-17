@@ -2,7 +2,11 @@ import { Router } from "express";
 import { authMiddleware } from "../auth/middleware/auth.middleware";
 import { requirePermission } from "../auth/middleware/permission.middleware";
 import { PERMISSIONS } from "../auth/permission";
-import { getAdminDashboardController, getKkmDashboardController } from "./dashboard.controller";
+import {
+  getAdminDashboardController,
+  getKkmDashboardController,
+  getStaffDashboardController,
+} from "./dashboard.controller";
 
 const router = Router();
 
@@ -11,6 +15,13 @@ router.get(
   authMiddleware,
   requirePermission(PERMISSIONS.DASHBOARD_ADMIN),
   getAdminDashboardController,
+);
+
+router.get(
+  "/dashboard/staff",
+  authMiddleware,
+  requirePermission(PERMISSIONS.DASHBOARD_STAFF),
+  getStaffDashboardController,
 );
 
 router.get(

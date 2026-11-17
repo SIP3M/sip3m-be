@@ -6372,6 +6372,120 @@ Struktur data:
         },
       },
 
+      "/dashboard/staff": {
+        get: {
+          tags: ["Dashboard"],
+          summary: "Ambil data Dashboard Staff LPPM (fokus proposal)",
+          description: `
+Mengambil data dashboard khusus **STAFF_LPPM** — fokus pada siklus **proposal penelitian** (widget KKM tidak termasuk; gunakan \`/dashboard/kkm\`).
+
+Seluruh angka **di-derive dari data nyata** (tidak ada nilai hardcode):
+
+- **summaryCards**: \`totalProposal\`, \`perluVerifikasi\` (proposal berstatus \`SUBMITTED\`), \`proposalDisetujui\` (\`ACCEPTED\`), \`dosenAktif\` (akun dosen aktif).
+- **verifikasiChart**: donut pipeline verifikasi (\`Draft, Perlu Verifikasi, Terverifikasi, Dalam Review, Disetujui, Ditolak\`) — selalu dijumlahkan = \`totalProposal\`.
+- **aktivitasMingguan**: 7 hari terakhir (urut, terakhir = hari ini) — \`masuk\` (berdasarkan \`created_at\`) dan \`diproses\` (berdasarkan \`updated_at\`).
+- **proposalPerluVerifikasi**: maks 5 proposal \`SUBMITTED\`, antrean terlama lebih dulu (\`id, title, faculty, status, created_at\`).
+- **prioritas**: turunan data — \`verifikasi\` (menunggu verifikasi), \`plotting\` (SUBMITTED tanpa reviewer), \`review\` (status UNDER_REVIEW). Key dipetakan ke label & rute halaman di sisi FE.
+- **recentProposals**: 5 proposal terbaru (\`id, title, status, created_at\`).
+          `,
+          security: [{ bearerAuth: [] }],
+          responses: {
+            200: {
+              description: "Data dashboard staff berhasil diambil",
+              content: {
+                "application/json": {
+                  example: {
+                    message: "Success",
+                    data: {
+                      summaryCards: {
+                        totalProposal: 45,
+                        perluVerifikasi: 6,
+                        proposalDisetujui: 14,
+                        dosenAktif: 8,
+                      },
+                      verifikasiChart: [
+                        { label: "Draft", jumlah: 12 },
+                        { label: "Perlu Verifikasi", jumlah: 6 },
+                        { label: "Terverifikasi", jumlah: 5 },
+                        { label: "Dalam Review", jumlah: 8 },
+                        { label: "Disetujui", jumlah: 14 },
+                        { label: "Ditolak", jumlah: 0 },
+                      ],
+                      aktivitasMingguan: [
+                        {
+                          tanggal: "2026-11-11",
+                          hari: "Sel",
+                          masuk: 2,
+                          diproses: 3,
+                        },
+                        {
+                          tanggal: "2026-11-17",
+                          hari: "Sen",
+                          masuk: 4,
+                          diproses: 5,
+                        },
+                      ],
+                      proposalPerluVerifikasi: [
+                        {
+                          id: 42,
+                          title: "Penelitian AI untuk Pertanian",
+                          faculty: "Fakultas Teknik",
+                          status: "SUBMITTED",
+                          created_at: "2026-11-01T08:00:00.000Z",
+                        },
+                      ],
+                      prioritas: [
+                        { key: "verifikasi", jumlah: 6 },
+                        { key: "plotting", jumlah: 4 },
+                        { key: "review", jumlah: 8 },
+                      ],
+                      recentProposals: [
+                        {
+                          id: 45,
+                          title: "Observasi Limbah Industri",
+                          status: "SUBMITTED",
+                          created_at: "2026-11-16T09:30:00.000Z",
+                        },
+                      ],
+                    },
+                  },
+                },
+              },
+            },
+            401: {
+              description: "Unauthorized",
+              content: {
+                "application/json": {
+                  example: { message: "Unauthorized." },
+                },
+              },
+            },
+            403: {
+              description: "Forbidden — hanya STAFF_LPPM",
+              content: {
+                "application/json": {
+                  example: {
+                    message:
+                      "You do not have permission to access this resource.",
+                  },
+                },
+              },
+            },
+            500: {
+              description: "Internal server error",
+              content: {
+                "application/json": {
+                  example: {
+                    message:
+                      "Terjadi kesalahan pada server saat mengambil data dashboard staff.",
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+
       "/dashboard/kkm": {
         get: {
           tags: ["Dashboard"],
