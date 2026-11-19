@@ -1,7 +1,10 @@
 import { existsSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import puppeteer, { type Page } from "puppeteer-core";
+// Type-only — dihapus saat compile, tidak menjadi require() saat runtime.
+// Package puppeteer-core ESM-only, jadi modulnya dimuat lewat dynamic import()
+// di dalam openSession() (lihat catatan di sana).
+import type { Page } from "puppeteer-core";
 
 /**
  * Daftar dosen PDDikti (https://pddikti.kemdiktisaintek.go.id).
@@ -132,6 +135,19 @@ export const buildDedupeKey = (row: {
 // Sesi browser: buka satu halaman PDDikti, curi token reCAPTCHA dari SPA
 // ---------------------------------------------------------------------------
 
+/** Tipe modul puppeteer-core tanpa memuatnya saat runtime. */
+type PuppeteerModule = typeof import("puppeteer-core");
+
+/**
+ * `import()` asli yang tidak ikut ditranspilasi TypeScript.
+ * Dengan module=CommonJS, `await import("x")` dikompilasi jadi
+ * `require("x")` — yang ditolak Node lama untuk paket ESM-only.
+ */
+const dynamicImport = new Function(
+  "specifier",
+  "return import(specifier);",
+) as <T>(specifier: string) => Promise<T>;
+
 type PddiktiSession = {
   page: Page;
   getToken: () => string;
@@ -142,6 +158,17 @@ type PddiktiSession = {
 const openSession = async (): Promise<PddiktiSession> => {
   const executablePath = findBrowserPath();
   if (!executablePath) throw new PddiktiBrowserUnavailableError();
+
+  // Dynamic import, bukan require(): puppeteer-core adalah ESM-only, dan
+  // require(ESM) hanya didukung Node baru (>=20.19/22.12) — runtime Vercel
+  // yang lebih tua akan crash dengan ERR_REQUIRE_ESM. Dengan impor di sini,
+  // paketnya pun tidak pernah dimuat di server tanpa browser (mis. Vercel).
+  // Catatan: fungsi `dynamicImport` dibuat via new Function agar TIDAK ikut
+  // ditranspilasi — TypeScript (module=CommonJS) mengecilkan `await import()`
+  // menjadi `require()`, yang justru bermasalah untuk paket ESM-only.
+  const { default: puppeteer } = await dynamicImport<PuppeteerModule>(
+    "puppeteer-core",
+  );
 
   const browser = await puppeteer.launch({
     executablePath,
