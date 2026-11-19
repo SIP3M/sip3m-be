@@ -7,7 +7,8 @@
     "dev": "ts-node-dev --respawn --transpile-only -r dotenv/config src/server.ts",
     "build": "prisma generate && tsc",
     "start": "node dist/server.js",
-    "audit:prune": "ts-node -r dotenv/config prisma/prune-audit-log.ts"
+    "audit:prune": "ts-node -r dotenv/config prisma/prune-audit-log.ts",
+    "sync:dosen": "ts-node -r dotenv/config prisma/sync-dosen.ts"
   },
   "prisma": {
     "seed": "ts-node prisma/seed.ts"
@@ -21,6 +22,7 @@
     "@supabase/supabase-js": "^2.97.0",
     "archiver": "^7.0.1",
     "bcrypt": "^6.0.0",
+    "cheerio": "^1.2.0",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
     "dotenv": "^17.2.4",
@@ -31,6 +33,7 @@
     "multer": "^2.0.2",
     "pdfkit": "^0.18.0",
     "prisma": "^6.19.2",
+    "puppeteer-core": "^25.18.1",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1",
     "zod": "^4.3.6"

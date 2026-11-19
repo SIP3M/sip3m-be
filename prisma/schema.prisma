@@ -905,3 +905,59 @@ model MasterReferensi {
   @@unique([jenis, nama])
   @@index([jenis, is_aktif])
 }
+
+// =============================================
+// Repository Publikasi Dosen — baris dari daftar
+// dosen PDDikti (disimpan internal, di-sync otomatis
+// saat halaman repository dibuka, TTL 24 jam) +
+// angka publikasi dari SINTA per dosen.
+// =============================================
+model DosenRepository {
+  id         String  @id @default(cuid())
+  // Normalisasi anti-ganda: nidn:{nidn} | nuptk:{nuptk} | nama:{NAMA}
+  dedupe_key String  @unique @db.VarChar(160)
+  nama       String  @db.VarChar(200)
+  nidn       String? @db.VarChar(30)
+  nuptk      String? @db.VarChar(30)
+  prodi      String? @db.VarChar(150)
+  jenjang    String? @db.VarChar(20)
+
+  // PDDikti
+  status_aktif      String?   @db.VarChar(50)
+  ikatan_kerja      String?   @db.VarChar(50)
+  pddikti_synced_at DateTime?
+
+  // SINTA (cocok otomatis by nama terhadap daftar author afiliasi)
+  sinta_id          String?   @db.VarChar(30)
+  sinta_profile_url String?   @db.VarChar(300)
+  scopus_count      Int?
+  garuda_count      Int?
+  gs_count          Int?
+  sinta_synced_at   DateTime?
+
+  // Cache detail publikasi per basis {scopus|garuda|googlescholar}:
+  // disimpan kumulatif (union) agar publikasi yang pernah tampil tidak hilang.
+  publikasi_cache     Json?
+  publikasi_cached_at DateTime?
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@index([nama])
+  @@map("dosen_repository")
+}
+
+// =============================================
+// Status sinkronisasi repository dosen —
+// kunci anti-dobel lintas proses + pencatat TTL 24 jam
+// =============================================
+model RepositorySyncState {
+  key          String    @id @db.VarChar(50) // "dosen_repository"
+  status       String    @default("idle") @db.VarChar(20) // idle | syncing | error
+  locked_at    DateTime?
+  last_sync_at DateTime?
+  last_error   String?   @db.Text
+  updated_at   DateTime  @updatedAt
+
+  @@map("repository_sync_state")
+}
