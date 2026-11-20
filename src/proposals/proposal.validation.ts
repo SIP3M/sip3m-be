@@ -317,6 +317,20 @@ export const assignReviewerSchema = z.object({
     .min(1, "Minimal memilih 1 proposal untuk diproses."),
 });
 
+// Assign reviewer MANUAL per proposal (plotting manual oleh admin).
+// Berlaku hanya selama proposal BELUM terplot — setelah ada reviewer,
+// plotting bersifat final dan ditolak di service (409).
+export const assignManualReviewerSchema = z.object({
+  reviewerId: z
+    .number({ message: "reviewerId harus berupa angka." })
+    .int("reviewerId harus berupa bilangan bulat.")
+    .positive("reviewerId harus lebih besar dari 0."),
+});
+
+export type AssignManualReviewerInput = z.infer<
+  typeof assignManualReviewerSchema
+>;
+
 const scoreField = z
   .number({ message: "Nilai skor harus berupa angka." })
   .min(0, "Skor minimal 0.")

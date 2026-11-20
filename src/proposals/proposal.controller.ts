@@ -10,6 +10,7 @@ import {
   editProposalSchema,
   updateProposalStatusSchema,
   assignReviewerSchema,
+  assignManualReviewerSchema,
   getAllProposalsQuerySchema,
   FUNDING_MAX_MESSAGE,
 } from "./proposal.validation";
@@ -27,6 +28,8 @@ import {
   submitProposal,
   updateProposalStatus,
   autoAssignReviewerService,
+  assignReviewerManualService,
+  getReviewerCandidatesService,
 } from "./proposal.service";
 import type { ProposalFiles } from "./proposal.types";
 
@@ -472,6 +475,88 @@ export const assignReviewersController = async (
     console.error("[BULK_AUTO_ASSIGN_REVIEWER_ERROR]", error);
     return res.status(500).json({
       message: "Terjadi kesalahan pada server saat melakukan auto-assign massal.",
+    });
+  }
+};
+
+/**
+ * GET /proposals/:id/reviewer-candidates
+ * Daftar kandidat reviewer untuk 1 proposal — dipakai FE pada pemilihan
+ * reviewer manual & menampilkan hasil plotting.
+ */
+export const getReviewerCandidatesController = async (
+  req: AuthenticatedRequest,
+  res: Response,
+): Promise<Response> => {
+  try {
+    if (!req.user?.userId) {
+      throw new HttpError("Unauthorized", 401);
+    }
+
+    const proposalId = Number(req.params.id);
+    if (isNaN(proposalId)) {
+      return res.status(400).json({ message: "ID proposal tidak valid." });
+    }
+
+    const result = await getReviewerCandidatesService(proposalId);
+
+    return res.status(200).json(result);
+  } catch (error) {
+    if (error instanceof HttpError) {
+      return res.status(error.statusCode).json({ message: error.message });
+    }
+
+    console.error("[REVIEWER_CANDIDATES_ERROR]", error);
+    return res.status(500).json({
+      message: "Terjadi kesalahan pada server saat mengambil kandidat reviewer.",
+    });
+  }
+};
+
+/**
+ * POST /proposals/:id/reviewer
+ * Assign reviewer MANUAL — hanya untuk proposal yang BELUM terplot;
+ * setelah terplot, plotting bersifat final dan ditolak dengan 409.
+ */
+export const assignReviewerManuallyController = async (
+  req: AuthenticatedRequest,
+  res: Response,
+): Promise<Response> => {
+  try {
+    if (!req.user?.userId) {
+      throw new HttpError("Unauthorized", 401);
+    }
+
+    const proposalId = Number(req.params.id);
+    if (isNaN(proposalId)) {
+      return res.status(400).json({ message: "ID proposal tidak valid." });
+    }
+
+    const validatedData = assignManualReviewerSchema.parse(req.body);
+
+    const result = await assignReviewerManualService(
+      proposalId,
+      validatedData.reviewerId,
+    );
+
+    return res.status(200).json(result);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      const zodError = error as z.ZodError;
+
+      return res.status(400).json({
+        message: "Validasi gagal.",
+        errors: zodError.issues,
+      });
+    }
+
+    if (error instanceof HttpError) {
+      return res.status(error.statusCode).json({ message: error.message });
+    }
+
+    console.error("[ASSIGN_REVIEWER_MANUAL_ERROR]", error);
+    return res.status(500).json({
+      message: "Terjadi kesalahan pada server saat menugaskan reviewer.",
     });
   }
 };

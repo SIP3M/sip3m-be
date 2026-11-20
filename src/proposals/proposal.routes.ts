@@ -5,6 +5,7 @@ import { PERMISSIONS } from "../auth/permission";
 import { handleProposalUploadError, uploadMiddleware } from "../config/storage";
 import {
   assignReviewersController,
+  assignReviewerManuallyController,
   createProposalController,
   deleteProposalController,
   editProposalController,
@@ -14,6 +15,7 @@ import {
   getMyProposalsController,
   getProposalByIdController,
   getProposalReviewsController,
+  getReviewerCandidatesController,
   submitProposalController,
   updateProposalStatusController,
 } from "./proposal.controller";
@@ -117,6 +119,25 @@ router.post(
   requirePermission(PERMISSIONS.PROPOSAL_PLOTTING),
   assignReviewersController,
 );
+
+// Admin/Staff LPPM: Daftar kandidat reviewer untuk 1 proposal
+// (pemilihan reviewer manual + menampilkan hasil plotting)
+router.get(
+  "/proposals/:id/reviewer-candidates",
+  authMiddleware,
+  requirePermission(PERMISSIONS.PROPOSAL_PLOTTING),
+  getReviewerCandidatesController,
+);
+
+// Admin/Staff LPPM: Assign reviewer MANUAL untuk 1 proposal.
+// Hanya berlaku selama BELUM terplot — setelah terplot bersifat final.
+router.post(
+  "/proposals/:id/reviewer",
+  authMiddleware,
+  requirePermission(PERMISSIONS.PROPOSAL_PLOTTING),
+  assignReviewerManuallyController,
+);
+
 router.put(
   "/proposals/:id/evaluate",
   authMiddleware,

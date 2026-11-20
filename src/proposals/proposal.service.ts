@@ -1175,6 +1175,297 @@ export const updateProposalStatus = async (
   };
 };
 
+// =============================================
+// Plotting reviewer — otomatis (bulk) & manual
+// =============================================
+
+type ReviewerCandidateRow = {
+  id: number;
+  name: string;
+  faculty: string | null;
+  /** Fakultas reviewer sama dengan fakultas proposal (kandidat utama auto). */
+  is_sebidang: boolean;
+  /** Jumlah proposal yang sedang/melewati direview reviewer ini. */
+  beban: number;
+  /** false = ditampilkan tapi tidak bisa dipilih (konflik kepentingan). */
+  eligible: boolean;
+  alasan: string[];
+};
+
+/** Blob nama anggota tim untuk cek konflik kepentingan (case-insensitive). */
+const buildTeamNameBlob = (proposal: {
+  dosen_terlibat?: string | null;
+  nama_anggota?: string | null;
+}): string =>
+  `${proposal.dosen_terlibat ?? ""}\n${proposal.nama_anggota ?? ""}`.toLowerCase();
+
+/**
+ * Normalisasi nama fakultas untuk pencocokan sebidang.
+ * Data tidak konsisten di lapangan: `proposal.faculty` ada yang "Teknik"
+ * dan ada yang "Fakultas Teknik", sementara tabel master Fakultas selalu
+ * ber-prefix "Fakultas ". Tanpa normalisasi ini, plotting otomatis untuk
+ * proposal "Teknik" tidak menemukan reviewer sebidang sama sekali.
+ */
+const normalizeFacultyNama = (value: string | null | undefined): string =>
+  (value ?? "")
+    .trim()
+    .replace(/^fakultas\s+/i, "")
+    .replace(/\s+/g, " ")
+    .toUpperCase();
+
+const isConflictOfInterest = (teamBlob: string, reviewerName: string): boolean =>
+  teamBlob.includes(reviewerName.toLowerCase());
+
+/**
+ * Daftar kandidat reviewer untuk SATU proposal — dipakai FE untuk
+ * pemilihan reviewer manual (plotting manual).
+ *
+ * Aturan (konsisten dengan auto):
+ * - Kandidat: user aktif dengan role REVIEWER / REVIEWER_EKSTERNAL.
+ * - Konflik kepentingan (ketua peneliti / anggota tim) → eligible=false
+ *   tetapi tetap ditampilkan agar admin tahu alasannya.
+ * - Lintas fakultas DIIZINKAN (is_sebidang=false) — admin boleh memilih
+ *   ahli lintas bidang; urutkan sebidang dulu, lalu beban paling ringan.
+ * - Tolak bila proposal sudah terplot (plotting bersifat final).
+ */
+export const getReviewerCandidatesService = async (proposalId: number) => {
+  const proposal = await prisma.proposals.findUnique({
+    where: { id: proposalId },
+    select: {
+      id: true,
+      title: true,
+      faculty: true,
+      status: true,
+      lead_researcher_id: true,
+      dosen_terlibat: true,
+      nama_anggota: true,
+    },
+  });
+
+  if (!proposal) {
+    throw new HttpError("Proposal tidak ditemukan.", 404);
+  }
+
+  const existingAssignment = await prisma.proposalReviewers.findFirst({
+    where: { proposal_id: proposalId },
+    select: { reviewer_id: true },
+  });
+  if (existingAssignment) {
+    throw new HttpError(
+      "Proposal sudah terplot reviewer dan bersifat final — plotting hanya berlaku sebelum reviewer ditugaskan.",
+      409,
+    );
+  }
+
+  const candidates = await prisma.users.findMany({
+    where: {
+      roles: { roles: { in: ["REVIEWER", "REVIEWER_EKSTERNAL"] } },
+      is_active: true,
+    },
+    select: {
+      id: true,
+      name: true,
+      Fakultas: { select: { nama: true } },
+      _count: { select: { reviewers: true } },
+    },
+    orderBy: { name: "asc" },
+  });
+
+  const teamBlob = buildTeamNameBlob(proposal);
+  const proposalFaculty = normalizeFacultyNama(proposal.faculty);
+
+  const rows: ReviewerCandidateRow[] = candidates.map((reviewer) => {
+    const faculty = reviewer.Fakultas?.nama ?? null;
+    const alasan: string[] = [];
+
+    if (reviewer.id === proposal.lead_researcher_id) {
+      alasan.push("Konflik kepentingan: ketua peneliti pada proposal ini.");
+    } else if (isConflictOfInterest(teamBlob, reviewer.name)) {
+      alasan.push("Konflik kepentingan: tercatat sebagai anggota tim.");
+    }
+
+    return {
+      id: reviewer.id,
+      name: reviewer.name,
+      faculty,
+      is_sebidang:
+        Boolean(proposal.faculty) &&
+        normalizeFacultyNama(faculty) === proposalFaculty,
+      beban: reviewer._count.reviewers,
+      eligible: alasan.length === 0,
+      alasan,
+    };
+  });
+
+  rows.sort((a, b) => {
+    if (a.is_sebidang !== b.is_sebidang) return a.is_sebidang ? -1 : 1;
+    if (a.beban !== b.beban) return a.beban - b.beban;
+    return a.name.localeCompare(b.name);
+  });
+
+  return {
+    message: "Berhasil mengambil kandidat reviewer.",
+    data: {
+      proposal: {
+        id: proposal.id,
+        title: proposal.title,
+        faculty: proposal.faculty,
+        status: proposal.status,
+      },
+      candidates: rows,
+    },
+  };
+};
+
+/**
+ * Assign reviewer MANUAL untuk satu proposal — hanya berlaku selama
+ * proposal BELUM terplot. Setelah ada reviewer, plotting bersifat final
+ * dan permintaan apa pun (ganti reviewer) ditolak dengan 409.
+ *
+ * Validasi: reviewer aktif + role REVIEWER/REVIEWER_EKSTERNAL;
+ * konflik kepentingan DIBLOKIR; lintas fakultas diizinkan.
+ * Efek sama dengan auto: simpan relasi, status → UNDER_REVIEW, notifikasi.
+ */
+export const assignReviewerManualService = async (
+  proposalId: number,
+  reviewerId: number,
+) => {
+  const proposal = await prisma.proposals.findUnique({
+    where: { id: proposalId },
+    select: {
+      id: true,
+      title: true,
+      status: true,
+      faculty: true,
+      lead_researcher_id: true,
+      dosen_terlibat: true,
+      nama_anggota: true,
+    },
+  });
+
+  if (!proposal) {
+    throw new HttpError("Proposal tidak ditemukan.", 404);
+  }
+
+  const existingAssignment = await prisma.proposalReviewers.findFirst({
+    where: { proposal_id: proposalId },
+    select: { reviewer_id: true },
+  });
+  if (existingAssignment) {
+    throw new HttpError(
+      "Proposal sudah terplot reviewer dan bersifat final — reviewer tidak dapat diganti.",
+      409,
+    );
+  }
+
+  if (
+    proposal.status !== ProposalStatus.SUBMITTED &&
+    proposal.status !== ProposalStatus.UNDER_REVIEW
+  ) {
+    throw new HttpError(
+      `Plotting reviewer hanya bisa dilakukan saat proposal SUBMITTED atau UNDER_REVIEW tanpa reviewer (sekarang: ${proposal.status}).`,
+      409,
+    );
+  }
+
+  const reviewer = await prisma.users.findFirst({
+    where: {
+      id: reviewerId,
+      is_active: true,
+      roles: { roles: { in: ["REVIEWER", "REVIEWER_EKSTERNAL"] } },
+    },
+    select: {
+      id: true,
+      name: true,
+      Fakultas: { select: { nama: true } },
+    },
+  });
+
+  if (!reviewer) {
+    throw new HttpError(
+      "Reviewer tidak ditemukan, tidak aktif, atau bukan reviewer/reviewer eksternal.",
+      404,
+    );
+  }
+
+  const teamBlob = buildTeamNameBlob(proposal);
+  if (reviewer.id === proposal.lead_researcher_id) {
+    throw new HttpError(
+      `Konflik kepentingan: "${reviewer.name}" adalah ketua peneliti pada proposal ini.`,
+      409,
+    );
+  }
+  if (isConflictOfInterest(teamBlob, reviewer.name)) {
+    throw new HttpError(
+      `Konflik kepentingan: "${reviewer.name}" tercatat sebagai anggota tim pada proposal ini.`,
+      409,
+    );
+  }
+
+  const result = await prisma.$transaction(async (tx) => {
+    // Cek ulang di dalam transaksi agar tidak ada plot ganda
+    // pada dua request yang berbarengan.
+    const stillFree = await tx.proposalReviewers.findFirst({
+      where: { proposal_id: proposalId },
+      select: { id: true },
+    });
+    if (stillFree) {
+      throw new HttpError(
+        "Proposal sudah terplot reviewer dan bersifat final — reviewer tidak dapat diganti.",
+        409,
+      );
+    }
+
+    await tx.proposalReviewers.create({
+      data: { proposal_id: proposalId, reviewer_id: reviewer.id },
+    });
+
+    const updatedProposal =
+      proposal.status === ProposalStatus.UNDER_REVIEW
+        ? { status: proposal.status }
+        : await tx.proposals.update({
+            where: { id: proposalId },
+            data: { status: ProposalStatus.UNDER_REVIEW },
+          });
+
+    await tx.notifications.createMany({
+      data: [
+        {
+          user_id: reviewer.id,
+          title: "Penugasan Review Proposal",
+          message: `Admin LPPM menugaskan Anda mereview proposal "${proposal.title}".`,
+        },
+        {
+          user_id: proposal.lead_researcher_id,
+          title: "Proposal Sedang Ditinjau",
+          message: `Proposal Anda "${proposal.title}" sedang ditinjau.`,
+        },
+      ],
+    });
+
+    return updatedProposal;
+  });
+
+  const facultyName = reviewer.Fakultas?.nama ?? null;
+  const isSebidang =
+    Boolean(proposal.faculty) &&
+    normalizeFacultyNama(facultyName) === normalizeFacultyNama(proposal.faculty);
+
+  return {
+    message: `Reviewer "${reviewer.name}" ditugaskan ke proposal "${proposal.title}". Status proposal menjadi UNDER_REVIEW.`,
+    data: {
+      proposalId: proposal.id,
+      status: result.status,
+      reviewer: {
+        id: reviewer.id,
+        name: reviewer.name,
+        faculty: facultyName,
+        is_sebidang: isSebidang,
+      },
+    },
+  };
+};
+
 export const autoAssignReviewerService = async (proposalIds: number[]) => {
   const successResults = [];
   const errorResults = [];
@@ -1201,24 +1492,30 @@ export const autoAssignReviewerService = async (proposalIds: number[]) => {
         );
       }
 
-      // 2. Cari candidate reviewer aktif, sebidang, dan bukan ketua
+      // 2. Cari candidate reviewer aktif, sebidang, dan bukan ketua.
+      //    Pencocokan fakultas dinormalisasi (lihat normalizeFacultyNama):
+      //    proposal "Teknik" tetap cocok dengan master "Fakultas Teknik".
       const candidateReviewers = await prisma.users.findMany({
         where: {
           roles: { roles: { in: ["REVIEWER", "REVIEWER_EKSTERNAL"] } },
-          Fakultas: {
-            nama: proposal.faculty, // Mencocokkan teks string dari proposal ke tabel master
-          },
           id: { not: proposal.lead_researcher_id },
           is_active: true,
         },
         select: {
           id: true,
           name: true,
+          Fakultas: { select: { nama: true } },
           _count: { select: { reviewers: true } },
         },
       });
 
-      if (candidateReviewers.length === 0) {
+      const proposalFaculty = normalizeFacultyNama(proposal.faculty);
+      const sebidangReviewers = candidateReviewers.filter(
+        (reviewer) =>
+          normalizeFacultyNama(reviewer.Fakultas?.nama) === proposalFaculty,
+      );
+
+      if (sebidangReviewers.length === 0) {
         throw new Error(
           `Tidak ada reviewer tersedia untuk Fakultas ${proposal.faculty}.`,
         );
@@ -1229,7 +1526,7 @@ export const autoAssignReviewerService = async (proposalIds: number[]) => {
       const namaAnggota = (proposal.nama_anggota || "").toLowerCase();
       const allTeamNames = `${dosenTerlibat}\n${namaAnggota}`;
 
-      const safeReviewers = candidateReviewers.filter((reviewer) => {
+      const safeReviewers = sebidangReviewers.filter((reviewer) => {
         return !allTeamNames.includes(reviewer.name.toLowerCase());
       });
 
@@ -1279,6 +1576,7 @@ export const autoAssignReviewerService = async (proposalIds: number[]) => {
       successResults.push({
         proposalId,
         title: proposal.title,
+        reviewerId: selectedReviewer.id,
         reviewerName: selectedReviewer.name,
       });
     } catch (error: unknown) {
