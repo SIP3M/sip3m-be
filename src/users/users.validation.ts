@@ -1,16 +1,45 @@
 import { z } from "zod";
-import { ROLES } from "../auth/role";
+
+/**
+ * Nama role TIDAK lagi dibatasi enum statis: role bisa ditambah/diubah lewat
+ * CRUD Role oleh ADMIN_SISTEM (mis. KEUANGAN). Formatnya tetap disamakan dengan
+ * aturan pembuatan role (huruf besar, angka, underscore) dan keberadaan role
+ * divalidasi terhadap tabel `roles` di controller.
+ */
+const roleNameSchema = z
+  .string()
+  .trim()
+  .min(1, "Role wajib dipilih")
+  .max(50, "Nama role maksimal 50 karakter")
+  .regex(
+    /^[A-Za-z][A-Za-z0-9_]*$/,
+    "Nama role hanya boleh berisi huruf, angka, dan underscore",
+  )
+  .transform((value) => value.toUpperCase());
+
+/**
+ * NIDN/NIP opsional. String kosong dianggap "tidak diisi" (bukan error), dan
+ * pemisah yang lazim diketik pengguna (spasi, titik, strip) dibuang sebelum
+ * dicek, sehingga "1987 6543" atau "1987.6543" tetap valid sebagai angka.
+ */
+const optionalNidnNipSchema = z
+  .string()
+  .trim()
+  .optional()
+  .transform((value) => {
+    if (value === undefined) return undefined;
+    const cleaned = value.replace(/[\s.-]/g, "");
+    return cleaned === "" ? undefined : cleaned;
+  })
+  .refine((value) => value === undefined || /^\d+$/.test(value), {
+    message: "NIDN/NIP hanya boleh berisi angka",
+  })
+  .refine((value) => value === undefined || value.length <= 30, {
+    message: "NIDN/NIP maksimal 30 karakter",
+  });
 
 export const updateUserRoleSchema = z.object({
-  roles: z.enum([
-    ROLES.KETUA_LPPM,
-    ROLES.ADMIN_SISTEM,
-    ROLES.STAFF_LPPM,
-    ROLES.DOSEN,
-    ROLES.REVIEWER,
-    ROLES.REVIEWER_EKSTERNAL,
-    ROLES.MAHASISWA,
-  ]),
+  roles: roleNameSchema,
 });
 
 export const updateUserStatusSchema = z.object({
@@ -22,20 +51,8 @@ export const createUserSchema = z.object({
   email: z.string().email().max(100),
   username: z.string().min(3).max(50).optional(),
   password: z.string().min(6).max(100),
-  roles: z.enum([
-    ROLES.KETUA_LPPM,
-    ROLES.ADMIN_SISTEM,
-    ROLES.STAFF_LPPM,
-    ROLES.DOSEN,
-    ROLES.REVIEWER,
-    ROLES.REVIEWER_EKSTERNAL,
-    ROLES.MAHASISWA,
-  ]),
-  nidn_nip: z
-    .string()
-    .regex(/^\d+$/, "NIDN/NIP hanya boleh berisi angka")
-    .max(30)
-    .optional(),
+  roles: roleNameSchema,
+  nidn_nip: optionalNidnNipSchema,
   fakultas: z.string().max(100).optional(),
   program_studi: z.string().max(100).optional(),
   tempat_lahir: z.string().max(100).optional(),
@@ -59,22 +76,8 @@ export const updateUserSchema = z.object({
   email: z.string().email().max(100).optional(),
   username: z.string().min(3).max(50).optional(),
   password: z.string().min(6).max(100).optional(),
-  roles: z
-    .enum([
-      ROLES.KETUA_LPPM,
-      ROLES.ADMIN_SISTEM,
-      ROLES.STAFF_LPPM,
-      ROLES.DOSEN,
-      ROLES.REVIEWER,
-      ROLES.REVIEWER_EKSTERNAL,
-      ROLES.MAHASISWA,
-    ])
-    .optional(),
-  nidn_nip: z
-    .string()
-    .regex(/^\d+$/, "NIDN/NIP hanya boleh berisi angka")
-    .max(30)
-    .optional(),
+  roles: roleNameSchema.optional(),
+  nidn_nip: optionalNidnNipSchema,
   fakultas: z.string().max(100).optional(),
   program_studi: z.string().max(100).optional(),
   tempat_lahir: z.string().max(100).optional(),
