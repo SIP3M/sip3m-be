@@ -2699,6 +2699,7 @@ Endpoint untuk mengambil daftar proposal dengan pagination.
 - Gunakan query \`page\` untuk berpindah halaman.
 - Gunakan query \`search\` untuk mencari berdasarkan judul, skema, fakultas, nama dosen, atau NIDN/NIP.
 - Gunakan query \`status\` untuk filter status proposal (misalnya \`ADMIN_VERIFIED\` saat proses assign reviewer).
+- Setiap proposal menyertakan \`assigned_reviewer\` — nama reviewer hasil plotting (auto atau manual); \`null\` bila belum terplot.
 - Membutuhkan autentikasi JWT.
           `,
           security: [{ bearerAuth: [] }],
@@ -2773,6 +2774,10 @@ Endpoint untuk mengambil daftar proposal dengan pagination.
                         submitted_at: "2026-03-07T10:00:00.000Z",
                         created_at: "2026-03-07T09:00:00.000Z",
                         updated_at: "2026-03-07T10:00:00.000Z",
+                        assigned_reviewer: {
+                          name: "Dr. Budi Santoso",
+                          assigned_at: "2026-03-08T02:15:00.000Z",
+                        },
                       },
                     ],
                     meta: {

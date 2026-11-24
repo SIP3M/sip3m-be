@@ -310,7 +310,7 @@ export const getAllProposals = async ({
   const whereClause: Prisma.proposalsWhereInput =
     andFilters.length > 0 ? { AND: andFilters } : {};
 
-  const [totalData, data] = await prisma.$transaction([
+  const [totalData, rawData] = await prisma.$transaction([
     prisma.proposals.count({ where: whereClause }),
     prisma.proposals.findMany({
       where: whereClause,
@@ -361,12 +361,34 @@ export const getAllProposals = async ({
           orderBy: { created_at: "desc" },
           take: 1,
         },
+        // Penugasan reviewer (plotting) — nama reviewer hasil auto/manual
+        // supaya FE bisa menampilkan siapa reviewer pada tiap proposal.
+        reviewers: {
+          orderBy: { created_at: "desc" },
+          take: 1,
+          select: {
+            created_at: true,
+            reviewer: {
+              select: { name: true },
+            },
+          },
+        },
       },
       orderBy: { created_at: "desc" },
       skip,
       take: PROPOSALS_PER_PAGE,
     }),
   ]);
+
+  const data = rawData.map(({ reviewers, ...proposal }) => ({
+    ...proposal,
+    assigned_reviewer: reviewers[0]
+      ? {
+          name: reviewers[0].reviewer.name,
+          assigned_at: reviewers[0].created_at,
+        }
+      : null,
+  }));
 
   return {
     data,
