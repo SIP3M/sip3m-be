@@ -16,6 +16,13 @@ export const createRoleSchema = z.object({
     .max(255, "Deskripsi maksimal 255 karakter.")
     .optional()
     .nullable(),
+  dashboard_path: z
+    .string()
+    .trim()
+    .max(100)
+    .regex(/^\/[a-zA-Z0-9\-/:]*$/, "Dashboard path harus diawali /.")
+    .nullable()
+    .optional(),
   // Salin izin dari role lain (opsional) — jadi template awal.
   salin_dari_role_id: z.number().int().positive().optional().nullable(),
   // Izin awal (opsional) — daftar kode permission.

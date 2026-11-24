@@ -94,7 +94,7 @@ export const createRole = async (input: CreateRoleInput) => {
     data: {
       roles: input.nama,
       deskripsi: input.deskripsi ?? null,
-      dashboard_path: "/reviewer-eksternal-dashboard",
+      dashboard_path: input.dashboard_path ?? null,
       permissions: {
         create: permissionRows.map((p) => ({ permission_id: p.id })),
       },

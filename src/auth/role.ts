@@ -6,6 +6,7 @@ export const ROLES = {
   REVIEWER: "REVIEWER",
   REVIEWER_EKSTERNAL: "REVIEWER_EKSTERNAL",
   MAHASISWA: "MAHASISWA",
+  KEUANGAN: "KEUANGAN",
 } as const;
 
 export type Role = (typeof ROLES)[keyof typeof ROLES];

@@ -51,6 +51,8 @@ const PERMISSION_CATALOG: SeedPermission[] = [
   // ── Keuangan ───────────────────────────────────────────────────────
   { kode: P.KEUANGAN_LIHAT, nama: "Lihat Keuangan", grup: "Keuangan" },
   { kode: P.KEUANGAN_CAIKAN, nama: "Input Dana Terealisasi", grup: "Keuangan" },
+  { kode: P.KEUANGAN_SETUJUI, nama: "Setujui Anggaran Proyek", grup: "Keuangan" },
+  { kode: P.KEUANGAN_EXPORT, nama: "Export Rekap Keuangan", grup: "Keuangan" },
 
   // ── Monitoring & Dashboard ─────────────────────────────────────────
   { kode: P.MONITORING_PROYEK_LIHAT, nama: "Monitoring Proyek", grup: "Monitoring & Dashboard" },
@@ -127,7 +129,13 @@ const ROLE_DESKRIPSI: Record<string, string> = {
   REVIEWER: "Penilai internal yang mengevaluasi proposal penelitian yang diajukan.",
   REVIEWER_EKSTERNAL: "Penilai eksternal yang mengevaluasi proposal penelitian yang diajukan.",
   MAHASISWA: "Mahasiswa peserta KKM yang mendaftar, membuat logbook, dan laporan.",
+  KEUANGAN: "Pengelola keuangan LPPM: memverifikasi proyek berjalan dan mencatat pencairan dana.",
 };
+
+// ─── Role tambahan yang dibuat oleh seed ini (idempoten) ───────────────
+const EXTRA_ROLES: { nama: string; dashboard_path: string }[] = [
+  { nama: "KEUANGAN", dashboard_path: "/keuangan-dashboard" },
+];
 
 // ─── Grant parity: izin per role = akses route sebelum konversi ────────
 const ROLE_GRANTS: Record<string, string[]> = {
@@ -137,7 +145,7 @@ const ROLE_GRANTS: Record<string, string[]> = {
     P.PROPOSAL_LIHAT, P.PROPOSAL_LIHAT_DETAIL, P.PROPOSAL_STATUS, P.PROPOSAL_PLOTTING,
     P.PROPOSAL_LIHAT_REVIEW, P.PROPOSAL_EXPORT,
     P.PENGABDIAN_LIHAT, P.PENGABDIAN_KELOLA, P.PENGABDIAN_DOKUMEN, P.PENGABDIAN_EXPORT,
-    P.KEUANGAN_LIHAT, P.KEUANGAN_CAIKAN,
+    P.KEUANGAN_LIHAT, P.KEUANGAN_SETUJUI, P.KEUANGAN_EXPORT,
     P.MONITORING_PROYEK_LIHAT, P.DASHBOARD_ADMIN, P.DASHBOARD_KKM,
     P.KKM_PERIODE_LIHAT, P.KKM_PERIODE_DETAIL, P.KKM_PERIODE_KELOLA, P.KKM_SKEMA_LIHAT,
     P.KKM_LOKASI_LIHAT, P.KKM_LOKASI_KELOLA,
@@ -205,6 +213,9 @@ const ROLE_GRANTS: Record<string, string[]> = {
     P.KKM_PENDAFTARAN,
     P.KKM_PENILAIAN_LIHAT,
   ],
+  KEUANGAN: [
+    P.KEUANGAN_LIHAT, P.KEUANGAN_CAIKAN, P.KEUANGAN_EXPORT,
+  ],
 };
 
 const main = async () => {
@@ -219,6 +230,21 @@ const main = async () => {
     permissionCount++;
   }
   console.log(`✓ ${permissionCount} permission upserted.`);
+
+  // Role tambahan (mis. KEUANGAN) — dibuat bila belum ada, dashboard_path
+  // selalu diselaraskan agar redirect login mendarat di halaman yang benar.
+  for (const extra of EXTRA_ROLES) {
+    await prisma.roles.upsert({
+      where: { roles: extra.nama },
+      update: { dashboard_path: extra.dashboard_path },
+      create: {
+        roles: extra.nama,
+        deskripsi: ROLE_DESKRIPSI[extra.nama] ?? null,
+        dashboard_path: extra.dashboard_path,
+      },
+    });
+    console.log(`✓ Role ${extra.nama} siap (dashboard: ${extra.dashboard_path}).`);
+  }
 
   // Bersihkan grant permission untuk kode yang sudah tidak ada di katalog
   // (menjaga idempoten & menghindari izin basi).
@@ -258,6 +284,10 @@ const main = async () => {
       data: {
         deskripsi: ROLE_DESKRIPSI[roleName] ?? role.deskripsi,
         is_system: roleName === "ADMIN_SISTEM" ? true : role.is_system,
+        // Role KEUANGAN punya dashboard sendiri; jangan biarkan tersimpan
+        // sebagai fallback dashboard reviewer eksternal.
+        dashboard_path:
+          roleName === "KEUANGAN" ? "/keuangan-dashboard" : role.dashboard_path,
       },
     });
 
