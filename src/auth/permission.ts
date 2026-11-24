@@ -36,6 +36,8 @@ export const PERMISSIONS = {
   // ── Keuangan ───────────────────────────────────────────────────────
   KEUANGAN_LIHAT: "keuangan.lihat",
   KEUANGAN_CAIKAN: "keuangan.cairkan",
+  KEUANGAN_SETUJUI: "keuangan.setujui",
+  KEUANGAN_EXPORT: "keuangan.export",
 
   // ── Monitoring & Dashboard ─────────────────────────────────────────
   MONITORING_PROYEK_LIHAT: "monitoring.proyek.lihat",

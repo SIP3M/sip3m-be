@@ -313,6 +313,8 @@ model users {
   notifications     Notifications[]
   reviewers ProposalReviewers[]
   pengabdianDocumentsUploaded PengabdianDocuments[] @relation("UploadedByUser")
+  pengabdianDisbursementsApproved PengabdianProjects[] @relation("DisbursementApprover")
+  pengabdianDisbursementsDisbursed PengabdianProjects[] @relation("Disburser")
   kkmPeriodsCreated        KkmPeriod[]
   kkmLocationsCreated      KkmLocation[]
   dplKelompok              KkmKelompok[]       @relation("DplKelompok")
@@ -362,7 +364,18 @@ model PengabdianProjects {
   realized_amount     Int?               @default(0) 
   disbursed_at        DateTime?          
 
+  // Persetujuan anggaran oleh KETUA_LPPM sebelum KEUANGAN boleh input nominal
+  disbursement_approved_at DateTime?
+  disbursement_approved_by Int?
+  // Detail pencairan yang diinput role KEUANGAN
+  disbursed_by        Int?
+  disbursement_note   String?         @db.Text
+  transfer_proof_path String?         @db.VarChar(500)
+  transfer_proof_url  String?         @db.VarChar(1000)
+
   proposal proposals @relation(fields: [proposal_id], references: [id])
+  approver users?    @relation("DisbursementApprover", fields: [disbursement_approved_by], references: [id], onDelete: SetNull)
+  disburser users?   @relation("Disburser", fields: [disbursed_by], references: [id], onDelete: SetNull)
 
   milestones PengabdianMilestones[]
   documents  PengabdianDocuments[]
