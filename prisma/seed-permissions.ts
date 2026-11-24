@@ -132,9 +132,23 @@ const ROLE_DESKRIPSI: Record<string, string> = {
   KEUANGAN: "Pengelola keuangan LPPM: memverifikasi proyek berjalan dan mencatat pencairan dana.",
 };
 
+// ─── Halaman tujuan setelah login per role bawaan ──────────────────────
+// Disimpan di kolom roles.dashboard_path supaya FE cukup membaca data DB
+// (tidak ada lagi pemetaan nama role → route di kode frontend).
+const ROLE_DASHBOARDS: Record<string, string> = {
+  KETUA_LPPM: "/admin-dashboard",
+  ADMIN_SISTEM: "/admin-dashboard/master-data/fakultas",
+  STAFF_LPPM: "/staff-lppm/staff-dashboard",
+  DOSEN: "/dosen-dashboard",
+  MAHASISWA: "/mahasiswa-dashboard",
+  REVIEWER: "/reviewer-dashboard",
+  REVIEWER_EKSTERNAL: "/reviewer-eksternal-dashboard",
+  KEUANGAN: "/keuangan-dashboard",
+};
+
 // ─── Role tambahan yang dibuat oleh seed ini (idempoten) ───────────────
 const EXTRA_ROLES: { nama: string; dashboard_path: string }[] = [
-  { nama: "KEUANGAN", dashboard_path: "/keuangan-dashboard" },
+  { nama: "KEUANGAN", dashboard_path: ROLE_DASHBOARDS.KEUANGAN },
 ];
 
 // ─── Grant parity: izin per role = akses route sebelum konversi ────────
@@ -284,10 +298,9 @@ const main = async () => {
       data: {
         deskripsi: ROLE_DESKRIPSI[roleName] ?? role.deskripsi,
         is_system: roleName === "ADMIN_SISTEM" ? true : role.is_system,
-        // Role KEUANGAN punya dashboard sendiri; jangan biarkan tersimpan
-        // sebagai fallback dashboard reviewer eksternal.
-        dashboard_path:
-          roleName === "KEUANGAN" ? "/keuangan-dashboard" : role.dashboard_path,
+        // Role bawaan selalu diarahkan ke dashboard-nya masing-masing;
+        // role lain dibiarkan apa adanya.
+        dashboard_path: ROLE_DASHBOARDS[roleName] ?? role.dashboard_path,
       },
     });
 
