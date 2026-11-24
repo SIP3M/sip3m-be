@@ -28,7 +28,7 @@ const optionalNidnNipSchema = z
   .optional()
   .transform((value) => {
     if (value === undefined) return undefined;
-    const cleaned = value.replace(/[\s.\-]/g, "");
+    const cleaned = value.replace(/[\s.-]/g, "");
     return cleaned === "" ? undefined : cleaned;
   })
   .refine((value) => value === undefined || /^\d+$/.test(value), {
