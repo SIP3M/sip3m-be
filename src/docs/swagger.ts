@@ -4675,19 +4675,28 @@ Endpoint untuk mengambil riwayat review sebuah proposal.
       "/proposals/bulk-assign-reviewers": {
         post: {
           tags: ["Proposal"],
-          summary: "Plotting otomatis — assign reviewer massal",
+          summary: "Plotting massal — otomatis atau ke reviewer pilihan admin",
           description: `
-Endpoint untuk plotting **otomatis** banyak proposal sekaligus (1 proposal → 1 reviewer).
+Endpoint untuk plotting **banyak proposal sekaligus** dalam dua mode:
+
+1. **Otomatis** (tanpa \`reviewerId\`) — sistem memilih reviewer terbaik per proposal.
+2. **Manual** (\`reviewerId\` diisi) — SEMUA proposal yang valid ditugaskan ke **satu reviewer pilihan admin** (misal pilih 4 proposal → tentukan reviewer-nya sekaligus).
 
 **Role akses (permission \`proposal.plotting\`):**
 - KETUA_LPPM
 - STAFF_LPPM
 
-**Aturan pemilihan reviewer (per proposal):**
+**Aturan umum (per proposal):**
+- Proposal harus berstatus \`ADMIN_VERIFIED\` dan belum pernah terplot — yang bermasalah **dilewati dan masuk daftar \`failed\`** beserta alasannya (proses proposal lain tetap lanjut).
+
+**Aturan pemilihan reviewer mode otomatis:**
 - User aktif dengan role REVIEWER / REVIEWER_EKSTERNAL, fakultasnya sama dengan fakultas proposal (sebidang).
 - Bukan ketua peneliti dan tidak tercatat sebagai anggota tim (konflik kepentingan diblokir).
 - Dari yang lolos, dipilih yang **beban paling ringan** (jumlah review paling sedikit).
-- Proposal harus berstatus \`SUBMITTED\` dan belum pernah terplot.
+
+**Aturan mode manual (\`reviewerId\` diisi):**
+- Reviewer divalidasi sekali di awal (aktif + role REVIEWER/REVIEWER_EKSTERNAL) — bila tidak valid seluruh request ditolak 404.
+- Per proposal: konflik kepentingan (ketua/anggota tim) **diblokir** → masuk \`failed\`; lintas fakultas diizinkan.
 
 **Setelah berhasil (per proposal):**
 - Data reviewer disimpan ke tabel \`ProposalReviewers\`.
@@ -4695,7 +4704,7 @@ Endpoint untuk plotting **otomatis** banyak proposal sekaligus (1 proposal → 1
 - Notifikasi dikirim ke reviewer dan pemilik proposal.
 - Hasil sukses menyertakan \`reviewerId\` dan \`reviewerName\` — tampilkan ke admin sebagai hasil plotting.
 
-**Catatan: setelah terplot, plotting bersifat FINAL — reviewer tidak dapat diganti.**
+**Catatan: untuk mengganti reviewer yang sudah terplot gunakan \`PUT /proposals/{id}/reviewer\`.**
           `,
           security: [{ bearerAuth: [] }],
           requestBody: {
@@ -4709,8 +4718,14 @@ Endpoint untuk plotting **otomatis** banyak proposal sekaligus (1 proposal → 1
                       type: "array",
                       items: { type: "number" },
                       minItems: 1,
-                      description: "Daftar ID proposal berstatus SUBMITTED yang akan diplotting.",
+                      description: "Daftar ID proposal berstatus ADMIN_VERIFIED yang akan diplotting.",
                       example: [12, 15, 18],
+                    },
+                    reviewerId: {
+                      type: "number",
+                      description:
+                        "Opsional — bila diisi, semua proposal yang valid ditugaskan ke reviewer ini (mode manual); tanpa field ini → mode otomatis.",
+                      example: 5,
                     },
                   },
                 },
@@ -4769,6 +4784,17 @@ Endpoint untuk plotting **otomatis** banyak proposal sekaligus (1 proposal → 1
                 },
               },
             },
+            404: {
+              description: "reviewerId tidak valid (mode manual) — reviewer tidak ditemukan / bukan reviewer aktif",
+              content: {
+                "application/json": {
+                  example: {
+                    message:
+                      "Reviewer tidak ditemukan, tidak aktif, atau bukan reviewer/reviewer eksternal.",
+                  },
+                },
+              },
+            },
             500: {
               description: "Internal server error",
               content: {
@@ -4803,7 +4829,7 @@ Endpoint untuk mengambil **kandidat reviewer** satu proposal — dipakai FE pada
 
 **Urutan:** sebidang dulu → beban paling ringan → nama (konsisten dengan plotting otomatis).
 
-**Catatan: ditolak (409) bila proposal sudah terplot — plotting bersifat final.**
+**Catatan:** daftar kandidat juga dikembalikan untuk proposal yang **sudah terplot** — dipakai alur ubah penugasan (reassign).
           `,
           security: [{ bearerAuth: [] }],
           parameters: [
@@ -4880,17 +4906,6 @@ Endpoint untuk mengambil **kandidat reviewer** satu proposal — dipakai FE pada
                 "application/json": { example: { message: "Proposal tidak ditemukan." } },
               },
             },
-            409: {
-              description: "Proposal sudah terplot (plotting bersifat final)",
-              content: {
-                "application/json": {
-                  example: {
-                    message:
-                      "Proposal sudah terplot reviewer dan bersifat final — plotting hanya berlaku sebelum reviewer ditugaskan.",
-                  },
-                },
-              },
-            },
             500: {
               description: "Internal server error",
               content: {
@@ -4917,8 +4932,8 @@ Endpoint untuk plotting **manual**: admin memilih sendiri reviewer yang paling c
 - STAFF_LPPM
 
 **Aturan:**
-- Proposal harus berstatus \`SUBMITTED\` (atau \`UNDER_REVIEW\` yang belum punya reviewer) dan **belum pernah terplot**.
-- **Setelah terplot, plotting bersifat FINAL** — permintaan ganti reviewer akan ditolak dengan 409.
+- Proposal harus berstatus \`ADMIN_VERIFIED\` (lolos verifikasi administrasi) dan **belum pernah terplot**.
+- **Bila sudah terplot, gunakan \`PUT /proposals/{id}/reviewer\`** untuk mengganti reviewer — permintaan ini ditolak dengan 409.
 - Reviewer harus user aktif dengan role REVIEWER / REVIEWER_EKSTERNAL.
 - **Konflik kepentingan DIBLOKIR** (409): ketua peneliti atau nama tercatat sebagai anggota tim.
 - Lintas fakultas **diizinkan** — silakan pilih ahli lintas bidang bila memang paling cocok.
@@ -5033,15 +5048,15 @@ Endpoint untuk plotting **manual**: admin memilih sendiri reviewer yang paling c
               },
             },
             409: {
-              description: "Sudah terplot (final), konflik kepentingan, atau status tidak sesuai",
+              description: "Sudah terplot (gunakan PUT), konflik kepentingan, atau status tidak sesuai",
               content: {
                 "application/json": {
                   examples: {
                     alreadyPlotted: {
-                      summary: "Proposal sudah terplot — final",
+                      summary: "Proposal sudah terplot — gunakan PUT",
                       value: {
                         message:
-                          "Proposal sudah terplot reviewer dan bersifat final — reviewer tidak dapat diganti.",
+                          "Proposal sudah terplot reviewer — gunakan ubah penugasan (PUT /proposals/:id/reviewer) untuk mengganti reviewer.",
                       },
                     },
                     conflict: {
@@ -5052,10 +5067,10 @@ Endpoint untuk plotting **manual**: admin memilih sendiri reviewer yang paling c
                       },
                     },
                     wrongStatus: {
-                      summary: "Status proposal tidak sesuai",
+                      summary: "Status proposal belum ADMIN_VERIFIED",
                       value: {
                         message:
-                          "Plotting reviewer hanya bisa dilakukan saat proposal SUBMITTED atau UNDER_REVIEW tanpa reviewer (sekarang: REVISION).",
+                          "Plotting reviewer hanya bisa dilakukan setelah proposal lolos verifikasi administrasi (status ADMIN_VERIFIED). Status saat ini: REVISION.",
                       },
                     },
                   },
@@ -5068,6 +5083,173 @@ Endpoint untuk plotting **manual**: admin memilih sendiri reviewer yang paling c
                 "application/json": {
                   example: {
                     message: "Terjadi kesalahan pada server saat menugaskan reviewer.",
+                  },
+                },
+              },
+            },
+          },
+        },
+        put: {
+          tags: ["Proposal"],
+          summary: "Ubah (reassign) reviewer pada proposal yang sudah terplot",
+          description: `
+Endpoint untuk **mengganti reviewer** pada proposal yang sudah terplot.
+
+**Role akses (permission \`proposal.plotting\`):**
+- KETUA_LPPM
+- STAFF_LPPM
+
+**Aturan:**
+- Proposal **wajib sudah terplot** — bila belum, ditolak dengan 409 (gunakan POST untuk plotting pertama).
+- Reviewer baru harus user aktif dengan role REVIEWER / REVIEWER_EKSTERNAL.
+- **Konflik kepentingan DIBLOKIR** (409): ketua peneliti atau nama tercatat sebagai anggota tim.
+- Lintas fakultas **diizinkan**.
+- Status proposal tidak diubah; **tanpa notifikasi in-app** (notifikasi hanya untuk penugasan awal).
+- Bila reviewer sama dengan reviewer saat ini, ditolak dengan 409.
+
+**Setelah berhasil:**
+- Baris \`ProposalReviewers\` diperbarui: \`reviewer_id\` baru + waktu penugasan (\`created_at\`) di-reset ke waktu sekarang.
+- Respons menyertakan data reviewer (\`id\`, \`name\`, \`faculty\`, \`is_sebidang\`) untuk langsung ditampilkan di FE.
+          `,
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: "id",
+              in: "path",
+              required: true,
+              description: "ID proposal",
+              schema: { type: "integer", example: 12 },
+            },
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  required: ["reviewerId"],
+                  properties: {
+                    reviewerId: {
+                      type: "number",
+                      description: "ID reviewer pengganti (hasil dari GET reviewer-candidates).",
+                      example: 7,
+                    },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            200: {
+              description: "Penugasan reviewer berhasil diubah",
+              content: {
+                "application/json": {
+                  example: {
+                    message:
+                      'Penugasan reviewer proposal "Penelitian AI untuk Pertanian" diubah menjadi "Prof. Siti Aminah".',
+                    data: {
+                      proposalId: 12,
+                      status: "UNDER_REVIEW",
+                      reviewer: {
+                        id: 7,
+                        name: "Prof. Siti Aminah",
+                        faculty: "Kedokteran",
+                        is_sebidang: false,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            400: {
+              description: "Validasi gagal atau ID proposal tidak valid",
+              content: {
+                "application/json": {
+                  examples: {
+                    invalidId: {
+                      summary: "ID proposal tidak valid",
+                      value: { message: "ID proposal tidak valid." },
+                    },
+                    validationError: {
+                      summary: "reviewerId tidak valid",
+                      value: {
+                        message: "Validasi gagal.",
+                        errors: { reviewerId: ["reviewerId harus berupa angka."] },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            401: {
+              description: "Unauthorized",
+              content: {
+                "application/json": { example: { message: "Unauthorized" } },
+              },
+            },
+            403: {
+              description: "Forbidden — tidak memiliki permission proposal.plotting",
+              content: {
+                "application/json": {
+                  example: { message: "You do not have permission to access this resource." },
+                },
+              },
+            },
+            404: {
+              description: "Proposal atau reviewer tidak ditemukan",
+              content: {
+                "application/json": {
+                  examples: {
+                    proposal: {
+                      summary: "Proposal tidak ditemukan",
+                      value: { message: "Proposal tidak ditemukan." },
+                    },
+                    reviewer: {
+                      summary: "Reviewer tidak ditemukan / bukan reviewer aktif",
+                      value: {
+                        message:
+                          "Reviewer tidak ditemukan, tidak aktif, atau bukan reviewer/reviewer eksternal.",
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            409: {
+              description: "Belum terplot, reviewer sama, atau konflik kepentingan",
+              content: {
+                "application/json": {
+                  examples: {
+                    notPlotted: {
+                      summary: "Proposal belum terplot — gunakan POST",
+                      value: {
+                        message:
+                          "Proposal belum terplot reviewer — gunakan assign manual (POST /proposals/:id/reviewer).",
+                      },
+                    },
+                    sameReviewer: {
+                      summary: "Reviewer sama dengan yang sekarang",
+                      value: {
+                        message: "Reviewer tersebut sudah menjadi reviewer proposal ini.",
+                      },
+                    },
+                    conflict: {
+                      summary: "Konflik kepentingan — diblokir",
+                      value: {
+                        message:
+                          'Konflik kepentingan: "Dr. Budi Santoso" adalah ketua peneliti pada proposal ini.',
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            500: {
+              description: "Internal server error",
+              content: {
+                "application/json": {
+                  example: {
+                    message:
+                      "Terjadi kesalahan pada server saat mengubah penugasan reviewer.",
                   },
                 },
               },
