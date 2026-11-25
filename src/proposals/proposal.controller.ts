@@ -12,6 +12,10 @@ import {
   assignReviewerSchema,
   assignManualReviewerSchema,
   getAllProposalsQuerySchema,
+  adminVerificationQueueQuerySchema,
+  adminVerificationDecisionSchema,
+  adminVerificationHistoryQuerySchema,
+  revokeAdminVerificationSchema,
   FUNDING_MAX_MESSAGE,
 } from "./proposal.validation";
 import { normalizeProposalReferensi } from "../master/referensi/referensi.service";
@@ -30,6 +34,14 @@ import {
   autoAssignReviewerService,
   assignReviewerManualService,
   getReviewerCandidatesService,
+  getAdminVerificationQueue,
+  getAdminVerificationChecklist,
+  getAdminVerificationStats,
+  getAdminVerificationHistory,
+  claimAdminVerification,
+  releaseAdminVerificationClaim,
+  submitAdminVerification,
+  revokeAdminVerification,
 } from "./proposal.service";
 import type { ProposalFiles } from "./proposal.types";
 
@@ -640,6 +652,280 @@ export const evaluateProposalController = async (
     console.error("[EVALUATE_PROPOSAL_ERROR]", error);
     return res.status(500).json({
       message: "Terjadi kesalahan pada server saat menilai proposal.",
+    });
+  }
+};
+
+// =============================================
+// Verifikasi Administrasi (REVIEWER_ADMINISTRASI)
+// =============================================
+
+export const getAdminVerificationQueueController = async (
+  req: AuthenticatedRequest,
+  res: Response,
+): Promise<Response> => {
+  try {
+    if (!req.user?.userId) {
+      throw new HttpError("Unauthorized", 401);
+    }
+
+    const parsed = adminVerificationQueueQuerySchema.safeParse(req.query);
+    if (!parsed.success) {
+      return res.status(400).json({
+        message: "Validasi query gagal.",
+        errors: parsed.error.flatten().fieldErrors,
+      });
+    }
+
+    const result = await getAdminVerificationQueue({
+      page: parsed.data.page,
+      search: parsed.data.search,
+      skema: parsed.data.skema,
+      adminStatus: parsed.data.admin_status,
+      userId: Number(req.user.userId),
+    });
+
+    return res.status(200).json({
+      message: "Berhasil mengambil antrean verifikasi administrasi.",
+      ...result,
+    });
+  } catch (error) {
+    if (error instanceof HttpError) {
+      return res.status(error.statusCode).json({ message: error.message });
+    }
+
+    console.error("[ADMIN_VERIFICATION_QUEUE_ERROR]", error);
+    return res.status(500).json({
+      message: "Terjadi kesalahan pada server saat mengambil antrean verifikasi.",
+    });
+  }
+};
+
+export const getAdminVerificationChecklistController = async (
+  _req: AuthenticatedRequest,
+  res: Response,
+): Promise<Response> => {
+  try {
+    const data = await getAdminVerificationChecklist();
+    return res.status(200).json({
+      message: "Berhasil mengambil checklist verifikasi administrasi.",
+      data,
+    });
+  } catch (error) {
+    console.error("[ADMIN_VERIFICATION_CHECKLIST_ERROR]", error);
+    return res.status(500).json({
+      message: "Terjadi kesalahan pada server saat mengambil checklist.",
+    });
+  }
+};
+
+export const getAdminVerificationStatsController = async (
+  req: AuthenticatedRequest,
+  res: Response,
+): Promise<Response> => {
+  try {
+    if (!req.user?.userId) {
+      throw new HttpError("Unauthorized", 401);
+    }
+
+    const data = await getAdminVerificationStats(Number(req.user.userId));
+    return res.status(200).json({
+      message: "Berhasil mengambil statistik verifikasi administrasi.",
+      data,
+    });
+  } catch (error) {
+    if (error instanceof HttpError) {
+      return res.status(error.statusCode).json({ message: error.message });
+    }
+
+    console.error("[ADMIN_VERIFICATION_STATS_ERROR]", error);
+    return res.status(500).json({
+      message: "Terjadi kesalahan pada server saat mengambil statistik.",
+    });
+  }
+};
+
+export const getAdminVerificationHistoryController = async (
+  req: AuthenticatedRequest,
+  res: Response,
+): Promise<Response> => {
+  try {
+    if (!req.user?.userId) {
+      throw new HttpError("Unauthorized", 401);
+    }
+
+    const parsed = adminVerificationHistoryQuerySchema.safeParse(req.query);
+    if (!parsed.success) {
+      return res.status(400).json({
+        message: "Validasi query gagal.",
+        errors: parsed.error.flatten().fieldErrors,
+      });
+    }
+
+    const result = await getAdminVerificationHistory({
+      page: parsed.data.page,
+      userId: Number(req.user.userId),
+      hanyaSaya: parsed.data.hanya_saya === "true",
+    });
+
+    return res.status(200).json({
+      message: "Berhasil mengambil riwayat verifikasi administrasi.",
+      ...result,
+    });
+  } catch (error) {
+    if (error instanceof HttpError) {
+      return res.status(error.statusCode).json({ message: error.message });
+    }
+
+    console.error("[ADMIN_VERIFICATION_HISTORY_ERROR]", error);
+    return res.status(500).json({
+      message: "Terjadi kesalahan pada server saat mengambil riwayat.",
+    });
+  }
+};
+
+export const claimAdminVerificationController = async (
+  req: AuthenticatedRequest,
+  res: Response,
+): Promise<Response> => {
+  try {
+    if (!req.user?.userId) {
+      throw new HttpError("Unauthorized", 401);
+    }
+
+    const proposalId = Number(req.params.id);
+    if (Number.isNaN(proposalId) || proposalId <= 0) {
+      return res.status(400).json({ message: "ID proposal tidak valid." });
+    }
+
+    const result = await claimAdminVerification(
+      proposalId,
+      Number(req.user.userId),
+    );
+
+    return res.status(200).json(result);
+  } catch (error) {
+    if (error instanceof HttpError) {
+      return res.status(error.statusCode).json({ message: error.message });
+    }
+
+    console.error("[ADMIN_VERIFICATION_CLAIM_ERROR]", error);
+    return res.status(500).json({
+      message: "Terjadi kesalahan pada server saat klaim verifikasi.",
+    });
+  }
+};
+
+export const releaseAdminVerificationClaimController = async (
+  req: AuthenticatedRequest,
+  res: Response,
+): Promise<Response> => {
+  try {
+    if (!req.user?.userId) {
+      throw new HttpError("Unauthorized", 401);
+    }
+
+    const proposalId = Number(req.params.id);
+    if (Number.isNaN(proposalId) || proposalId <= 0) {
+      return res.status(400).json({ message: "ID proposal tidak valid." });
+    }
+
+    const result = await releaseAdminVerificationClaim(
+      proposalId,
+      Number(req.user.userId),
+    );
+
+    return res.status(200).json(result);
+  } catch (error) {
+    if (error instanceof HttpError) {
+      return res.status(error.statusCode).json({ message: error.message });
+    }
+
+    console.error("[ADMIN_VERIFICATION_RELEASE_ERROR]", error);
+    return res.status(500).json({
+      message: "Terjadi kesalahan pada server saat melepas klaim verifikasi.",
+    });
+  }
+};
+
+export const submitAdminVerificationController = async (
+  req: AuthenticatedRequest,
+  res: Response,
+): Promise<Response> => {
+  try {
+    if (!req.user?.userId) {
+      throw new HttpError("Unauthorized", 401);
+    }
+
+    const proposalId = Number(req.params.id);
+    if (Number.isNaN(proposalId) || proposalId <= 0) {
+      return res.status(400).json({ message: "ID proposal tidak valid." });
+    }
+
+    const parsed = adminVerificationDecisionSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({
+        message: "Validasi data gagal.",
+        errors: parsed.error.flatten().fieldErrors,
+      });
+    }
+
+    const result = await submitAdminVerification(
+      proposalId,
+      Number(req.user.userId),
+      parsed.data,
+    );
+
+    return res.status(200).json(result);
+  } catch (error) {
+    if (error instanceof HttpError) {
+      return res.status(error.statusCode).json({ message: error.message });
+    }
+
+    console.error("[ADMIN_VERIFICATION_SUBMIT_ERROR]", error);
+    return res.status(500).json({
+      message: "Terjadi kesalahan pada server saat menyimpan verifikasi.",
+    });
+  }
+};
+
+export const revokeAdminVerificationController = async (
+  req: AuthenticatedRequest,
+  res: Response,
+): Promise<Response> => {
+  try {
+    if (!req.user?.userId) {
+      throw new HttpError("Unauthorized", 401);
+    }
+
+    const proposalId = Number(req.params.id);
+    if (Number.isNaN(proposalId) || proposalId <= 0) {
+      return res.status(400).json({ message: "ID proposal tidak valid." });
+    }
+
+    const parsed = revokeAdminVerificationSchema.safeParse(req.body ?? {});
+    if (!parsed.success) {
+      return res.status(400).json({
+        message: "Validasi data gagal.",
+        errors: parsed.error.flatten().fieldErrors,
+      });
+    }
+
+    const result = await revokeAdminVerification(
+      proposalId,
+      Number(req.user.userId),
+      parsed.data.catatan,
+    );
+
+    return res.status(200).json(result);
+  } catch (error) {
+    if (error instanceof HttpError) {
+      return res.status(error.statusCode).json({ message: error.message });
+    }
+
+    console.error("[ADMIN_VERIFICATION_REVOKE_ERROR]", error);
+    return res.status(500).json({
+      message: "Terjadi kesalahan pada server saat menarik verifikasi.",
     });
   }
 };

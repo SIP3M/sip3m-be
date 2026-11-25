@@ -17,20 +17,42 @@ export const kkmPesertaQuerySchema = z.object({
   status_kelompok: z.enum(["BelumDitempatkan", "SudahDitempatkan"]).optional(),
 });
 
-export const kkmPesertaBulkStatusSchema = z.object({
-  periode_id: z.coerce.number().int().positive(),
-  peserta_ids: z.array(z.coerce.number().int().positive()).min(1, "Minimal 1 peserta."),
-  status: z.nativeEnum(KkmPesertaStatus),
-});
+export const kkmPesertaBulkStatusSchema = z
+  .object({
+    periode_id: z.coerce.number().int().positive(),
+    peserta_ids: z.array(z.coerce.number().int().positive()).min(1, "Minimal 1 peserta."),
+    status: z.nativeEnum(KkmPesertaStatus),
+    catatan_verifikasi: z.string().trim().max(1000).optional(),
+  })
+  .refine(
+    (v) =>
+      v.status !== KkmPesertaStatus.REJECTED ||
+      Boolean(v.catatan_verifikasi?.trim()),
+    {
+      message: "Catatan wajib diisi saat menolak pendaftaran.",
+      path: ["catatan_verifikasi"],
+    },
+  );
 
 export const kkmPesertaAssignKelompokSchema = z.object({
   peserta_ids: z.array(z.coerce.number().int().positive()).min(1, "Minimal 1 peserta."),
   kelompok_id: z.coerce.number().int().positive({ message: "kelompok_id wajib." }),
 });
 
-export const kkmPesertaUpdateStatusSchema = z.object({
-  status: z.nativeEnum(KkmPesertaStatus),
-});
+export const kkmPesertaUpdateStatusSchema = z
+  .object({
+    status: z.nativeEnum(KkmPesertaStatus),
+    catatan_verifikasi: z.string().trim().max(1000).optional(),
+  })
+  .refine(
+    (v) =>
+      v.status !== KkmPesertaStatus.REJECTED ||
+      Boolean(v.catatan_verifikasi?.trim()),
+    {
+      message: "Catatan wajib diisi saat menolak pendaftaran.",
+      path: ["catatan_verifikasi"],
+    },
+  );
 
 export type KkmPesertaQuery = z.infer<typeof kkmPesertaQuerySchema>;
 export type KkmPesertaBulkStatusInput = z.infer<typeof kkmPesertaBulkStatusSchema>;

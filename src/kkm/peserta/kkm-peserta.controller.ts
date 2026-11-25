@@ -65,7 +65,10 @@ export const bulkUpdateStatusController = async (req: AuthenticatedRequest, res:
     if (!req.user?.userId) throw new HttpError("Unauthorized", 401);
     const parsed = kkmPesertaBulkStatusSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ message: "Validasi data gagal.", errors: parsed.error.flatten().fieldErrors });
-    const result = await bulkUpdateStatus(parsed.data);
+    const result = await bulkUpdateStatus({
+      ...parsed.data,
+      verifierId: Number(req.user.userId),
+    });
     return res.status(200).json({ message: `Berhasil update ${result.count} peserta menjadi ${parsed.data.status}.`, data: result });
   } catch (error) {
     if (error instanceof HttpError) return res.status(error.statusCode).json({ message: error.message });
@@ -95,7 +98,14 @@ export const updatePesertaStatusController = async (req: AuthenticatedRequest, r
     if (Number.isNaN(id) || id <= 0) return res.status(400).json({ message: "ID peserta tidak valid." });
     const parsed = kkmPesertaUpdateStatusSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ message: "Validasi data gagal.", errors: parsed.error.flatten().fieldErrors });
-    const result = await updatePesertaStatus(id, parsed.data.status as never);
+    const result = await updatePesertaStatus(
+      id,
+      parsed.data.status as never,
+      {
+        verifierId: Number(req.user.userId),
+        catatan_verifikasi: parsed.data.catatan_verifikasi,
+      },
+    );
     return res.status(200).json({ message: `Status peserta menjadi ${parsed.data.status}.`, data: result });
   } catch (error) {
     if (error instanceof HttpError) return res.status(error.statusCode).json({ message: error.message });

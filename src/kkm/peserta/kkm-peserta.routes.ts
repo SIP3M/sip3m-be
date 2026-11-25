@@ -36,10 +36,12 @@ router.get(
 );
 
 // BULK routes harus di atas :id agar tidak ditangkap param
+// Verifikasi pendaftaran (PENDING → VERIFIED/REJECTED) adalah gate
+// REVIEWER_ADMINISTRASI — bukan wewenang `kkm.peserta.kelola` (staff).
 router.patch(
   "/kkm/peserta/bulk-status",
   authMiddleware,
-  requirePermission(PERMISSIONS.KKM_PESERTA_KELOLA),
+  requirePermission(PERMISSIONS.KKM_PESERTA_VERIFIKASI),
   bulkUpdateStatusController,
 );
 
@@ -60,7 +62,7 @@ router.get(
 router.patch(
   "/kkm/peserta/:id/status",
   authMiddleware,
-  requirePermission(PERMISSIONS.KKM_PESERTA_KELOLA),
+  requirePermission(PERMISSIONS.KKM_PESERTA_VERIFIKASI),
   updatePesertaStatusController,
 );
 

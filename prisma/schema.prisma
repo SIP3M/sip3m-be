@@ -19,6 +19,7 @@ enum StatusPencairanDana {
 enum ProposalStatus {
   DRAFT
   SUBMITTED
+  ADMIN_REVISION
   ADMIN_VERIFIED
   UNDER_REVIEW
   REVISION
@@ -33,6 +34,14 @@ enum ReviewDecision {
   REJECTED
   REVISION_MINOR
   REVISION_MAJOR
+}
+
+// Keputusan verifikasi administrasi (gate REVIEWER_ADMINISTRASI)
+enum AdminVerificationDecision {
+  LOLOS
+  REVISI
+  TOLAK
+  TARIK_KEMBALI
 }
 
 enum PengabdianStatus {
@@ -137,7 +146,15 @@ model proposals {
   reviewers ProposalReviewers[]
   pengabdianProject PengabdianProjects?
 
+  // Klaim aktif verifikasi administrasi (lock pool). Dilepas saat keputusan
+  // disimpan; riwayat keputusan tersimpan di ProposalAdminVerifications.
+  admin_verifier_id  Int?
+  admin_claimed_at   DateTime?
+  admin_verifier     users?                      @relation("ProposalAdminVerifier", fields: [admin_verifier_id], references: [id])
+  adminVerifications ProposalAdminVerifications[]
+
   @@index([lead_researcher_id])
+  @@index([admin_verifier_id])
   @@index([status])
 }
 
@@ -180,6 +197,25 @@ model ProposalReviews {
 
   proposal proposals @relation(fields: [proposal_id], references: [id])
   reviewer users     @relation(fields: [reviewer_id], references: [id])
+}
+
+// Riwayat keputusan verifikasi administrasi per proposal.
+// `checklist` = snapshot [{ kode, label, checked }] saat keputusan diambil,
+// supaya bukti kelengkapan berkas tetap terbaca walau master checklist berubah.
+model ProposalAdminVerifications {
+  id          Int                       @id @default(autoincrement())
+  proposal_id Int
+  verifier_id Int
+  decision    AdminVerificationDecision
+  catatan     String?                   @db.Text
+  checklist   Json?
+  created_at  DateTime                  @default(now())
+
+  proposal proposals @relation(fields: [proposal_id], references: [id], onDelete: Cascade)
+  verifier users     @relation(fields: [verifier_id], references: [id])
+
+  @@index([proposal_id, created_at(sort: Desc)])
+  @@index([verifier_id])
 }
 
 model Notifications {
@@ -310,6 +346,8 @@ model users {
   pengalaman_review String?           @db.Text
   cv_path           String?           @db.VarChar(255)
   proposalReviews   ProposalReviews[]
+  adminVerifiedProposals     proposals[]  @relation("ProposalAdminVerifier")
+  proposalAdminVerifications ProposalAdminVerifications[]
   notifications     Notifications[]
   reviewers ProposalReviewers[]
   pengabdianDocumentsUploaded PengabdianDocuments[] @relation("UploadedByUser")
@@ -320,6 +358,7 @@ model users {
   dplKelompok              KkmKelompok[]       @relation("DplKelompok")
   dplQuotas                KkmDplQuota[]
   kkmPeserta               KkmPeserta[]
+  kkmPesertaVerified       KkmPeserta[] @relation("KkmPesertaVerifier")
   sessions                 UserSession[]
   kkmKelompokDocsUploaded  KkmKelompokDocument[] @relation("KkmKelompokDocUploader")
   kkmKelompokDocsReviewed  KkmKelompokDocument[] @relation("KkmKelompokDocReviewer")
@@ -686,8 +725,14 @@ model KkmPeserta {
   alamat_domisili     String? @db.Text
   bukti_ukt_path      String? @db.VarChar(255)
 
+  // Jejak gate verifikasi administrasi pendaftaran KKM
+  catatan_verifikasi String?   @db.Text
+  verified_by_id     Int?
+  verified_at        DateTime?
+
   periode     KkmPeriod          @relation(fields: [periode_id], references: [id], onDelete: Cascade)
   user        users              @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  verifiedBy  users?             @relation("KkmPesertaVerifier", fields: [verified_by_id], references: [id], onDelete: SetNull)
   kelompok    KkmKelompok?       @relation(fields: [kelompok_id], references: [id], onDelete: SetNull)
   penilaian   KkmPenilaian?
   laporanIndividu KkmLaporanIndividu?

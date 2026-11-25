@@ -40,6 +40,8 @@ const PERMISSION_CATALOG: SeedPermission[] = [
   { kode: P.PROPOSAL_REVIEW, nama: "Review Proposal", grup: "Penelitian" },
   { kode: P.PROPOSAL_LIHAT_REVIEW, nama: "Lihat Hasil Review", grup: "Penelitian" },
   { kode: P.PROPOSAL_EXPORT, nama: "Export Proposal", grup: "Penelitian" },
+  { kode: P.PROPOSAL_VERIFIKASI_ADMINISTRASI, nama: "Verifikasi Administrasi Proposal", grup: "Penelitian" },
+  { kode: P.KKM_PESERTA_VERIFIKASI, nama: "Verifikasi Pendaftaran Peserta KKM", grup: "KKM: Peserta & Kelompok" },
 
   // ── Pengabdian ─────────────────────────────────────────────────────
   { kode: P.PENGABDIAN_LIHAT, nama: "Lihat Proyek Pengabdian", grup: "Pengabdian" },
@@ -130,6 +132,7 @@ const ROLE_DESKRIPSI: Record<string, string> = {
   REVIEWER_EKSTERNAL: "Penilai eksternal yang mengevaluasi proposal penelitian yang diajukan.",
   MAHASISWA: "Mahasiswa peserta KKM yang mendaftar, membuat logbook, dan laporan.",
   KEUANGAN: "Pengelola keuangan LPPM: memverifikasi proyek berjalan dan mencatat pencairan dana.",
+  REVIEWER_ADMINISTRASI: "Gerbang verifikasi administrasi: memeriksa kelengkapan berkas proposal dan pendaftaran peserta KKM sebelum masuk tahap berikutnya.",
 };
 
 // ─── Halaman tujuan setelah login per role bawaan ──────────────────────
@@ -144,11 +147,13 @@ const ROLE_DASHBOARDS: Record<string, string> = {
   REVIEWER: "/reviewer-dashboard",
   REVIEWER_EKSTERNAL: "/reviewer-eksternal-dashboard",
   KEUANGAN: "/keuangan-dashboard",
+  REVIEWER_ADMINISTRASI: "/reviewer-administrasi-dashboard",
 };
 
 // ─── Role tambahan yang dibuat oleh seed ini (idempoten) ───────────────
 const EXTRA_ROLES: { nama: string; dashboard_path: string }[] = [
   { nama: "KEUANGAN", dashboard_path: ROLE_DASHBOARDS.KEUANGAN },
+  { nama: "REVIEWER_ADMINISTRASI", dashboard_path: ROLE_DASHBOARDS.REVIEWER_ADMINISTRASI },
 ];
 
 // ─── Grant parity: izin per role = akses route sebelum konversi ────────
@@ -158,6 +163,8 @@ const ROLE_GRANTS: Record<string, string[]> = {
     P.PENGGUNA_HAPUS, P.PENGGUNA_UBAH_ROLE, P.PENGGUNA_UBAH_STATUS,
     P.PROPOSAL_LIHAT, P.PROPOSAL_LIHAT_DETAIL, P.PROPOSAL_STATUS, P.PROPOSAL_PLOTTING,
     P.PROPOSAL_LIHAT_REVIEW, P.PROPOSAL_EXPORT,
+    // Override verifikasi administrasi (Ketua LPPM boleh memutuskan & menarik)
+    P.PROPOSAL_VERIFIKASI_ADMINISTRASI, P.KKM_PESERTA_VERIFIKASI,
     P.PENGABDIAN_LIHAT, P.PENGABDIAN_KELOLA, P.PENGABDIAN_DOKUMEN, P.PENGABDIAN_EXPORT,
     P.KEUANGAN_LIHAT, P.KEUANGAN_SETUJUI, P.KEUANGAN_EXPORT,
     P.MONITORING_PROYEK_LIHAT, P.DASHBOARD_ADMIN, P.DASHBOARD_KKM,
@@ -229,6 +236,10 @@ const ROLE_GRANTS: Record<string, string[]> = {
   ],
   KEUANGAN: [
     P.KEUANGAN_LIHAT, P.KEUANGAN_CAIKAN, P.KEUANGAN_EXPORT,
+  ],
+  REVIEWER_ADMINISTRASI: [
+    P.PROPOSAL_LIHAT, P.PROPOSAL_LIHAT_DETAIL, P.PROPOSAL_VERIFIKASI_ADMINISTRASI,
+    P.KKM_PESERTA_LIHAT, P.KKM_PESERTA_VERIFIKASI,
   ],
 };
 
