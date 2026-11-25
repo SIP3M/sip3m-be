@@ -3,6 +3,7 @@ export const JENIS_REFERENSI = [
   "SKEMA",
   "SUMBER_PENDANAAN",
   "KATEGORI_PENGUMUMAN",
+  "CHECKLIST_ADMINISTRASI",
 ] as const;
 
 export type JenisReferensi = (typeof JENIS_REFERENSI)[number];
@@ -12,4 +13,5 @@ export const JENIS_MODUL_LABEL: Record<JenisReferensi, string> = {
   SKEMA: "Skema Penelitian",
   SUMBER_PENDANAAN: "Sumber Pendanaan",
   KATEGORI_PENGUMUMAN: "Kategori Pengumuman",
+  CHECKLIST_ADMINISTRASI: "Checklist Verifikasi Administrasi",
 };

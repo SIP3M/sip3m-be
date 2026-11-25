@@ -171,7 +171,9 @@ export const getPesertaById = async (id: number) => {
  * Kuota Verified: KkmPeriod.target_peserta WAJIB dicek untuk set VERIFIED.
  * Jika target_peserta = 0 (belum diset), arti BELUM ada batas — lewati validasi.
  */
-export const bulkUpdateStatus = async (input: KkmPesertaBulkStatusInput) => {
+export const bulkUpdateStatus = async (
+  input: KkmPesertaBulkStatusInput & { verifierId?: number },
+) => {
   const periode = await prisma.kkmPeriod.findUnique({ where: { id: input.periode_id } });
   if (!periode) throw new HttpError("Periode KKM tidak ditemukan.", 404);
 
@@ -209,10 +211,48 @@ export const bulkUpdateStatus = async (input: KkmPesertaBulkStatusInput) => {
     }
   }
 
+  const isDecision =
+    input.status === KkmPesertaStatus.VERIFIED ||
+    input.status === KkmPesertaStatus.REJECTED;
+
   const res = await prisma.kkmPeserta.updateMany({
     where: { id: { in: input.peserta_ids } },
-    data: { status: input.status },
+    data: {
+      status: input.status,
+      ...(isDecision
+        ? {
+            verified_by_id: input.verifierId ?? null,
+            verified_at: new Date(),
+            catatan_verifikasi: input.catatan_verifikasi?.trim() || null,
+          }
+        : {}),
+    },
   });
+
+  // Notifikasi in-app untuk mahasiswa yang keputusannya berubah.
+  if (isDecision) {
+    const rows = await prisma.kkmPeserta.findMany({
+      where: { id: { in: input.peserta_ids } },
+      select: { user_id: true, periode: { select: { nama_periode: true } } },
+    });
+
+    if (rows.length > 0) {
+      await prisma.notifications.createMany({
+        data: rows.map((row) => ({
+          user_id: row.user_id,
+          title:
+            input.status === KkmPesertaStatus.VERIFIED
+              ? "Pendaftaran KKM Terverifikasi"
+              : "Pendaftaran KKM Ditolak",
+          message:
+            input.status === KkmPesertaStatus.VERIFIED
+              ? `Pendaftaran Anda pada periode "${row.periode.nama_periode}" telah lolos verifikasi administrasi.`
+              : `Pendaftaran Anda pada periode "${row.periode.nama_periode}" ditolak. Catatan: ${input.catatan_verifikasi ?? "-"}`,
+        })),
+      });
+    }
+  }
+
   return res;
 };
 
@@ -249,7 +289,11 @@ export const assignKelompokBulk = async (input: KkmPesertaAssignKelompokInput) =
   return res;
 };
 
-export const updatePesertaStatus = async (id: number, status: KkmPesertaStatus) => {
+export const updatePesertaStatus = async (
+  id: number,
+  status: KkmPesertaStatus,
+  opts?: { verifierId?: number | null; catatan_verifikasi?: string },
+) => {
   const existing = await prisma.kkmPeserta.findUnique({ where: { id }, include: { periode: true, user: true } });
   if (!existing) throw new HttpError("Peserta KKM tidak ditemukan.", 404);
   if (status === KkmPesertaStatus.VERIFIED && existing.periode.target_peserta > 0) {
@@ -261,7 +305,41 @@ export const updatePesertaStatus = async (id: number, status: KkmPesertaStatus) 
       throw new HttpError(`Kuota periode penuh (${existing.periode.target_peserta}).`, 400);
     }
   }
-  const updated = await prisma.kkmPeserta.update({ where: { id }, data: { status } });
+
+  const isDecision =
+    status === KkmPesertaStatus.VERIFIED || status === KkmPesertaStatus.REJECTED;
+  const catatan = opts?.catatan_verifikasi?.trim() || null;
+
+  const updated = await prisma.kkmPeserta.update({
+    where: { id },
+    data: {
+      status,
+      ...(isDecision
+        ? {
+            verified_by_id: opts?.verifierId ?? null,
+            verified_at: new Date(),
+            catatan_verifikasi: catatan,
+          }
+        : {}),
+    },
+  });
+
+  if (isDecision) {
+    await prisma.notifications.create({
+      data: {
+        user_id: existing.user_id,
+        title:
+          status === KkmPesertaStatus.VERIFIED
+            ? "Pendaftaran KKM Terverifikasi"
+            : "Pendaftaran KKM Ditolak",
+        message:
+          status === KkmPesertaStatus.VERIFIED
+            ? `Pendaftaran Anda pada periode "${existing.periode.nama_periode}" telah lolos verifikasi administrasi.`
+            : `Pendaftaran Anda pada periode "${existing.periode.nama_periode}" ditolak. Catatan: ${catatan ?? "-"}`,
+      },
+    });
+  }
+
   return updated;
 };
 

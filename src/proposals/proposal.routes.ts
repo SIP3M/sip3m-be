@@ -1,7 +1,9 @@
 import { Router } from "express";
 import { authMiddleware } from "../auth/middleware/auth.middleware";
 import { requirePermission } from "../auth/middleware/permission.middleware";
+import { requireRole } from "../auth/middleware/role.middleware";
 import { PERMISSIONS } from "../auth/permission";
+import { ROLES } from "../auth/role";
 import { handleProposalUploadError, uploadMiddleware } from "../config/storage";
 import {
   assignReviewersController,
@@ -18,9 +20,79 @@ import {
   getReviewerCandidatesController,
   submitProposalController,
   updateProposalStatusController,
+  getAdminVerificationQueueController,
+  getAdminVerificationChecklistController,
+  getAdminVerificationStatsController,
+  getAdminVerificationHistoryController,
+  claimAdminVerificationController,
+  releaseAdminVerificationClaimController,
+  submitAdminVerificationController,
+  revokeAdminVerificationController,
 } from "./proposal.controller";
 
 const router = Router();
+
+// =============================================
+// Verifikasi Administrasi (REVIEWER_ADMINISTRASI)
+// Didaftarkan sebelum /proposals/:id agar tidak tertangkap route detail.
+// =============================================
+router.get(
+  "/proposals/admin-verification/queue",
+  authMiddleware,
+  requirePermission(PERMISSIONS.PROPOSAL_VERIFIKASI_ADMINISTRASI),
+  getAdminVerificationQueueController,
+);
+
+router.get(
+  "/proposals/admin-verification/checklist",
+  authMiddleware,
+  requirePermission(PERMISSIONS.PROPOSAL_VERIFIKASI_ADMINISTRASI),
+  getAdminVerificationChecklistController,
+);
+
+router.get(
+  "/proposals/admin-verification/stats",
+  authMiddleware,
+  requirePermission(PERMISSIONS.PROPOSAL_VERIFIKASI_ADMINISTRASI),
+  getAdminVerificationStatsController,
+);
+
+router.get(
+  "/proposals/admin-verification/history",
+  authMiddleware,
+  requirePermission(PERMISSIONS.PROPOSAL_VERIFIKASI_ADMINISTRASI),
+  getAdminVerificationHistoryController,
+);
+
+router.post(
+  "/proposals/:id/admin-verification/claim",
+  authMiddleware,
+  requirePermission(PERMISSIONS.PROPOSAL_VERIFIKASI_ADMINISTRASI),
+  claimAdminVerificationController,
+);
+
+router.delete(
+  "/proposals/:id/admin-verification/claim",
+  authMiddleware,
+  requirePermission(PERMISSIONS.PROPOSAL_VERIFIKASI_ADMINISTRASI),
+  releaseAdminVerificationClaimController,
+);
+
+router.post(
+  "/proposals/:id/admin-verification",
+  authMiddleware,
+  requirePermission(PERMISSIONS.PROPOSAL_VERIFIKASI_ADMINISTRASI),
+  submitAdminVerificationController,
+);
+
+// Penarikan verifikasi yang sudah lolos — hanya Ketua LPPM (override).
+router.post(
+  "/proposals/:id/admin-verification/revoke",
+  authMiddleware,
+  requirePermission(PERMISSIONS.PROPOSAL_VERIFIKASI_ADMINISTRASI),
+  requireRole([ROLES.KETUA_LPPM]),
+  revokeAdminVerificationController,
+);
 
 // =============================================
 // CRUD Proposal

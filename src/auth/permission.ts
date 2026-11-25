@@ -25,6 +25,7 @@ export const PERMISSIONS = {
   PROPOSAL_REVIEW: "proposal.review",
   PROPOSAL_LIHAT_REVIEW: "proposal.lihat-review",
   PROPOSAL_EXPORT: "proposal.export",
+  PROPOSAL_VERIFIKASI_ADMINISTRASI: "proposal.verifikasi-administrasi",
 
   // ── Pengabdian ─────────────────────────────────────────────────────
   PENGABDIAN_LIHAT: "pengabdian.lihat",
@@ -65,6 +66,7 @@ export const PERMISSIONS = {
   KKM_DPL_KELOLA: "kkm.dpl.kelola",
   KKM_PESERTA_LIHAT: "kkm.peserta.lihat",
   KKM_PESERTA_KELOLA: "kkm.peserta.kelola",
+  KKM_PESERTA_VERIFIKASI: "kkm.peserta.verifikasi",
   KKM_PESERTA_EXPORT: "kkm.peserta.export",
   KKM_GENERATE_LIHAT: "kkm.generate.lihat",
   KKM_GENERATE_JALANKAN: "kkm.generate.jalankan",

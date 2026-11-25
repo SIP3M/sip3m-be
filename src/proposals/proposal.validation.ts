@@ -463,6 +463,55 @@ export const getAllProposalsQuerySchema = z.object({
     .optional(),
 });
 
+// =============================================
+// Verifikasi Administrasi (REVIEWER_ADMINISTRASI)
+// =============================================
+export const adminVerificationQueueQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  search: z.string().trim().optional(),
+  skema: z.string().trim().optional(),
+  admin_status: z.enum(["unclaimed", "mine", "all"]).optional(),
+});
+
+export const adminVerificationDecisionSchema = z.object({
+  keputusan: z.enum(["LOLOS", "REVISI", "TOLAK"], {
+    message: "Keputusan tidak valid. Pilihan: LOLOS, REVISI, TOLAK.",
+  }),
+  catatan: z
+    .string()
+    .trim()
+    .max(2000, "Catatan maksimal 2000 karakter.")
+    .optional(),
+  checklist: z
+    .array(
+      z.object({
+        kode: z.string().trim().min(1),
+        checked: z.boolean(),
+      }),
+    )
+    .default([]),
+});
+
+export const adminVerificationHistoryQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  hanya_saya: z.enum(["true", "false"]).optional(),
+});
+
+export const revokeAdminVerificationSchema = z.object({
+  catatan: z
+    .string()
+    .trim()
+    .max(2000, "Catatan maksimal 2000 karakter.")
+    .optional(),
+});
+
+export type AdminVerificationDecisionInput = z.infer<
+  typeof adminVerificationDecisionSchema
+>;
+export type AdminVerificationQueueQueryInput = z.infer<
+  typeof adminVerificationQueueQuerySchema
+>;
+
 export type CreateProposalInput = z.infer<typeof createProposalSchema>;
 export type EditProposalInput = z.infer<typeof editProposalSchema>;
 export type UpdateProposalStatusInput = z.infer<

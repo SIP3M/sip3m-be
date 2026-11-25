@@ -3,13 +3,16 @@ import { Prisma } from "../generated/prisma/client";
 import { prisma } from "../prisma";
 import { HttpError } from "../common/errors/http-error";
 import {
+  AdminVerificationDecision,
   PengabdianStatus,
   ProposalStatus,
 } from "../generated/prisma/enums";
+import { recordAudit } from "../audit/audit.service";
 import { resolveSkemaForSearch } from "../master/referensi/referensi.service";
 import { ROLES } from "../auth/role";
 import type { ProposalFiles } from "./proposal.types";
 import type {
+  AdminVerificationDecisionInput,
   CreateProposalInput,
   EvaluateProposalInput,
   EditProposalInput,
@@ -361,6 +364,12 @@ export const getAllProposals = async ({
           orderBy: { created_at: "desc" },
           take: 1,
         },
+        // Status klaim verifikasi administrasi (pool bersama)
+        admin_verifier_id: true,
+        admin_claimed_at: true,
+        admin_verifier: {
+          select: { id: true, name: true },
+        },
         // Penugasan reviewer (plotting) — nama reviewer hasil auto/manual
         // supaya FE bisa menampilkan siapa reviewer pada tiap proposal.
         reviewers: {
@@ -703,6 +712,23 @@ export const getProposalById = async (proposalId: number) => {
         },
         orderBy: { created_at: "desc" }, // Ambil revisi yang paling baru di urutan teratas
       },
+      // Verifikasi administrasi: klaim aktif + riwayat keputusan
+      admin_verifier_id: true,
+      admin_claimed_at: true,
+      admin_verifier: {
+        select: { id: true, name: true },
+      },
+      adminVerifications: {
+        orderBy: { created_at: "desc" },
+        select: {
+          id: true,
+          decision: true,
+          catatan: true,
+          checklist: true,
+          created_at: true,
+          verifier: { select: { id: true, name: true } },
+        },
+      },
     },
   });
 
@@ -737,10 +763,11 @@ export const editProposal = async (
   // === PERUBAHAN 1: Izinkan edit untuk DRAFT dan REVISION ===
   if (
     existingProposal.status !== ProposalStatus.DRAFT &&
-    existingProposal.status !== ProposalStatus.REVISION
+    existingProposal.status !== ProposalStatus.REVISION &&
+    existingProposal.status !== ProposalStatus.ADMIN_REVISION
   ) {
     throw new HttpError(
-      "Hanya proposal dengan status DRAFT atau REVISION yang dapat diedit.",
+      "Hanya proposal berstatus DRAFT, REVISION, atau ADMIN_REVISION yang dapat diedit.",
       400,
     );
   }
@@ -956,10 +983,11 @@ export const submitProposal = async (proposalId: number, userId: number) => {
 
   if (
     proposal.status !== ProposalStatus.DRAFT &&
-    proposal.status !== ProposalStatus.REVISION
+    proposal.status !== ProposalStatus.REVISION &&
+    proposal.status !== ProposalStatus.ADMIN_REVISION
   ) {
     throw new HttpError(
-      "Hanya proposal dengan status DRAFT atau REVISION yang dapat disubmit.",
+      "Hanya proposal berstatus DRAFT, REVISION, atau ADMIN_REVISION yang dapat disubmit.",
       400,
     );
   }
@@ -1009,10 +1037,8 @@ const ROLE_STATUS_TRANSITIONS: Record<
   Partial<Record<ProposalStatus, ProposalStatus[]>>
 > = {
   KETUA_LPPM: {
-    [ProposalStatus.SUBMITTED]: [
-      ProposalStatus.ADMIN_VERIFIED,
-      ProposalStatus.REJECTED,
-    ],
+    // SUBMITTED dipindah ke endpoint verifikasi administrasi (override Ketua),
+    // agar setiap keputusan menyimpan checklist + jejak verifikator.
     // Keputusan akhir: hanya Ketua LPPM yang menentukan Diterima/Tolak
     // setelah reviewer memberi rekomendasi (status REVIEW_DONE).
     [ProposalStatus.REVIEW_DONE]: [
@@ -1020,12 +1046,10 @@ const ROLE_STATUS_TRANSITIONS: Record<
       ProposalStatus.REJECTED,
     ],
   },
-  STAFF_LPPM: {
-    [ProposalStatus.SUBMITTED]: [
-      ProposalStatus.ADMIN_VERIFIED,
-      ProposalStatus.REJECTED,
-    ],
-  },
+  // STAFF_LPPM TIDAK lagi boleh memutuskan verifikasi administratif:
+  // keputusan itu wajib lewat endpoint /proposals/:id/admin-verification
+  // supaya checklist & riwayatnya tercatat. Plotting reviewer tetap milik staff.
+  STAFF_LPPM: {},
   REVIEWER: {
     [ProposalStatus.ADMIN_VERIFIED]: [ProposalStatus.UNDER_REVIEW],
     // Reviewer TIDAK punya hak menetapkan ACCEPTED/REJECTED —
@@ -1380,12 +1404,9 @@ export const assignReviewerManualService = async (
     );
   }
 
-  if (
-    proposal.status !== ProposalStatus.SUBMITTED &&
-    proposal.status !== ProposalStatus.UNDER_REVIEW
-  ) {
+  if (proposal.status !== ProposalStatus.ADMIN_VERIFIED) {
     throw new HttpError(
-      `Plotting reviewer hanya bisa dilakukan saat proposal SUBMITTED atau UNDER_REVIEW tanpa reviewer (sekarang: ${proposal.status}).`,
+      `Plotting reviewer hanya bisa dilakukan setelah proposal lolos verifikasi administrasi (status ADMIN_VERIFIED). Status saat ini: ${proposal.status}.`,
       409,
     );
   }
@@ -1504,8 +1525,10 @@ export const autoAssignReviewerService = async (proposalIds: number[]) => {
         throw new Error(`Proposal ID ${proposalId} tidak ditemukan.`);
       }
 
-      if (proposal.status !== ProposalStatus.SUBMITTED) {
-        throw new Error(`Proposal ID ${proposalId} tidak berstatus SUBMITTED.`);
+      if (proposal.status !== ProposalStatus.ADMIN_VERIFIED) {
+        throw new Error(
+          `Proposal ID ${proposalId} belum lolos verifikasi administrasi (status: ${proposal.status}).`,
+        );
       }
 
       if (!proposal.faculty) {
@@ -1897,4 +1920,534 @@ export const getProposalReviews = async (proposalId: number) => {
   });
 
   return reviews;
+};
+
+// =============================================
+// Verifikasi Administrasi (REVIEWER_ADMINISTRASI)
+// Gate wajib sebelum proposal boleh di-plotting ke reviewer substansi.
+// =============================================
+
+const CHECKLIST_JENIS = "CHECKLIST_ADMINISTRASI";
+
+/** Checklist kelengkapan aktif dari MasterReferensi (jenis CHECKLIST_ADMINISTRASI). */
+export const getAdminVerificationChecklist = async () => {
+  const items = await prisma.masterReferensi.findMany({
+    where: { jenis: CHECKLIST_JENIS, is_aktif: true },
+    orderBy: [{ urut: "asc" }, { nama: "asc" }],
+    select: { id: true, nama: true, urut: true },
+  });
+
+  return items.map((item) => ({
+    kode: String(item.id),
+    label: item.nama,
+    urut: item.urut,
+  }));
+};
+
+/** Proposal yang boleh masuk antrean verifikasi administrasi. */
+const ADMIN_QUEUE_STATUSES: ProposalStatus[] = [
+  ProposalStatus.SUBMITTED,
+  ProposalStatus.ADMIN_REVISION,
+];
+
+const adminQueueSelect = {
+  id: true,
+  title: true,
+  lead_researcher_id: true,
+  faculty: true,
+  funding_request_amount: true,
+  status: true,
+  skema: true,
+  proposal_file_path: true,
+  rab_file_path: true,
+  submitted_at: true,
+  created_at: true,
+  updated_at: true,
+  admin_verifier_id: true,
+  admin_claimed_at: true,
+  admin_verifier: { select: { id: true, name: true } },
+  user: { select: { name: true, nidn_nip: true } },
+  adminVerifications: {
+    orderBy: { created_at: "desc" as const },
+    take: 1,
+    select: {
+      decision: true,
+      catatan: true,
+      created_at: true,
+      verifier: { select: { name: true } },
+    },
+  },
+} satisfies Prisma.proposalsSelect;
+
+export const getAdminVerificationQueue = async ({
+  page,
+  search,
+  skema,
+  adminStatus,
+  userId,
+}: {
+  page: number;
+  search?: string;
+  skema?: string;
+  adminStatus?: "unclaimed" | "mine" | "all";
+  userId: number;
+}) => {
+  const skip = (page - 1) * PROPOSALS_PER_PAGE;
+  const skemaFilterNormalized = await normalizeSkemaSearch(skema);
+
+  const andFilters: Prisma.proposalsWhereInput[] = [
+    { status: { in: ADMIN_QUEUE_STATUSES } },
+  ];
+
+  if (skemaFilterNormalized) {
+    andFilters.push({ skema: skemaFilterNormalized });
+  }
+
+  if (adminStatus === "unclaimed") {
+    andFilters.push({ admin_verifier_id: null });
+  } else if (adminStatus === "mine") {
+    andFilters.push({ admin_verifier_id: userId });
+  }
+
+  const orFilters: Prisma.proposalsWhereInput[] = [];
+  if (search) {
+    orFilters.push(
+      { title: { contains: search, mode: "insensitive" } },
+      { faculty: { contains: search, mode: "insensitive" } },
+      { nama_ketua: { contains: search, mode: "insensitive" } },
+      { nidn_ketua: { contains: search, mode: "insensitive" } },
+      { user: { is: { name: { contains: search, mode: "insensitive" } } } },
+      {
+        user: {
+          is: { nidn_nip: { contains: search, mode: "insensitive" } },
+        },
+      },
+    );
+
+    const skemaFromSearch = await normalizeSkemaSearch(search);
+    if (skemaFromSearch) {
+      orFilters.push({ skema: skemaFromSearch });
+    }
+  }
+
+  if (orFilters.length > 0) {
+    andFilters.push({ OR: orFilters });
+  }
+
+  const whereClause: Prisma.proposalsWhereInput = { AND: andFilters };
+
+  const [totalData, rawData] = await prisma.$transaction([
+    prisma.proposals.count({ where: whereClause }),
+    prisma.proposals.findMany({
+      where: whereClause,
+      select: adminQueueSelect,
+      orderBy: { submitted_at: "asc" },
+      skip,
+      take: PROPOSALS_PER_PAGE,
+    }),
+  ]);
+
+  const data = rawData.map(({ adminVerifications, ...proposal }) => ({
+    ...proposal,
+    latest_admin_verification: adminVerifications[0] ?? null,
+    claimed_by_me: proposal.admin_verifier_id === userId,
+  }));
+
+  return {
+    data,
+    meta: {
+      totalData,
+      totalPages: Math.max(1, Math.ceil(totalData / PROPOSALS_PER_PAGE)),
+      currentPage: page,
+      limit: PROPOSALS_PER_PAGE,
+    },
+  };
+};
+
+export const getAdminVerificationStats = async (userId: number) => {
+  const startOfDay = new Date();
+  startOfDay.setHours(0, 0, 0, 0);
+
+  const [antrean, belumDiklaim, diklaimSaya, revisi, lolosHariIni, totalLolos] =
+    await prisma.$transaction([
+      prisma.proposals.count({ where: { status: { in: ADMIN_QUEUE_STATUSES } } }),
+      prisma.proposals.count({
+        where: {
+          status: { in: ADMIN_QUEUE_STATUSES },
+          admin_verifier_id: null,
+        },
+      }),
+      prisma.proposals.count({
+        where: {
+          status: { in: ADMIN_QUEUE_STATUSES },
+          admin_verifier_id: userId,
+        },
+      }),
+      prisma.proposals.count({
+        where: { status: ProposalStatus.ADMIN_REVISION },
+      }),
+      prisma.proposalAdminVerifications.count({
+        where: {
+          decision: AdminVerificationDecision.LOLOS,
+          created_at: { gte: startOfDay },
+        },
+      }),
+      prisma.proposalAdminVerifications.count({
+        where: { decision: AdminVerificationDecision.LOLOS },
+      }),
+    ]);
+
+  return {
+    antrean,
+    belum_diklaim: belumDiklaim,
+    diklaim_saya: diklaimSaya,
+    revisi,
+    lolos_hari_ini: lolosHariIni,
+    total_lolos: totalLolos,
+  };
+};
+
+export const getAdminVerificationHistory = async ({
+  page,
+  userId,
+  hanyaSaya,
+}: {
+  page: number;
+  userId: number;
+  hanyaSaya?: boolean;
+}) => {
+  const perPage = 10;
+  const where: Prisma.ProposalAdminVerificationsWhereInput = hanyaSaya
+    ? { verifier_id: userId }
+    : {};
+
+  const [totalData, data] = await prisma.$transaction([
+    prisma.proposalAdminVerifications.count({ where }),
+    prisma.proposalAdminVerifications.findMany({
+      where,
+      orderBy: { created_at: "desc" },
+      skip: (page - 1) * perPage,
+      take: perPage,
+      include: {
+        proposal: { select: { id: true, title: true } },
+        verifier: { select: { id: true, name: true } },
+      },
+    }),
+  ]);
+
+  return {
+    data,
+    meta: {
+      totalData,
+      totalPages: Math.max(1, Math.ceil(totalData / perPage)),
+      currentPage: page,
+      limit: perPage,
+    },
+  };
+};
+
+/** Pastikan proposal ada & masih di antrean verifikasi administrasi. */
+const assertVerifiableProposal = async (proposalId: number) => {
+  const proposal = await prisma.proposals.findUnique({
+    where: { id: proposalId },
+    select: {
+      id: true,
+      title: true,
+      status: true,
+      lead_researcher_id: true,
+      admin_verifier_id: true,
+    },
+  });
+
+  if (!proposal) {
+    throw new HttpError("Proposal tidak ditemukan.", 404);
+  }
+
+  if (!ADMIN_QUEUE_STATUSES.includes(proposal.status)) {
+    throw new HttpError(
+      `Proposal tidak berada di antrean verifikasi administrasi (status: ${proposal.status}).`,
+      409,
+    );
+  }
+
+  return proposal;
+};
+
+export const claimAdminVerification = async (
+  proposalId: number,
+  userId: number,
+) => {
+  const proposal = await assertVerifiableProposal(proposalId);
+
+  if (proposal.admin_verifier_id === userId) {
+    return {
+      message: "Proposal ini sudah Anda klaim.",
+      data: { proposalId, admin_verifier_id: userId },
+    };
+  }
+
+  if (proposal.admin_verifier_id) {
+    throw new HttpError(
+      "Proposal ini sedang diverifikasi oleh verifikator lain. Lepas klaim atau tunggu hingga selesai.",
+      409,
+    );
+  }
+
+  // updateMany + guard admin_verifier_id null → aman dari dua klaim bersamaan.
+  const claimed = await prisma.proposals.updateMany({
+    where: { id: proposalId, admin_verifier_id: null },
+    data: { admin_verifier_id: userId, admin_claimed_at: new Date() },
+  });
+
+  if (claimed.count === 0) {
+    throw new HttpError(
+      "Proposal ini baru saja diklaim verifikator lain. Muat ulang antrean.",
+      409,
+    );
+  }
+
+  return {
+    message: "Proposal berhasil diklaim. Selesaikan verifikasi atau lepaskan klaim.",
+    data: { proposalId, admin_verifier_id: userId },
+  };
+};
+
+export const releaseAdminVerificationClaim = async (
+  proposalId: number,
+  userId: number,
+) => {
+  await assertVerifiableProposal(proposalId);
+
+  const released = await prisma.proposals.updateMany({
+    where: { id: proposalId, admin_verifier_id: userId },
+    data: { admin_verifier_id: null, admin_claimed_at: null },
+  });
+
+  if (released.count === 0) {
+    throw new HttpError(
+      "Klaim tidak ditemukan — proposal ini bukan milik Anda atau sudah dilepas.",
+      409,
+    );
+  }
+
+  return { message: "Klaim verifikasi dilepas." };
+};
+
+export const submitAdminVerification = async (
+  proposalId: number,
+  userId: number,
+  input: AdminVerificationDecisionInput,
+) => {
+  const proposal = await assertVerifiableProposal(proposalId);
+
+  if (proposal.admin_verifier_id && proposal.admin_verifier_id !== userId) {
+    throw new HttpError(
+      "Proposal ini sedang diverifikasi oleh verifikator lain.",
+      409,
+    );
+  }
+
+  const checklistMaster = await getAdminVerificationChecklist();
+  const checkedMap = new Map(
+    input.checklist.map((item) => [item.kode, item.checked]),
+  );
+  const belumLengkap = checklistMaster.filter(
+    (item) => !checkedMap.get(item.kode),
+  );
+
+  const catatan = input.catatan?.trim() ?? "";
+
+  if (input.keputusan === "LOLOS") {
+    if (checklistMaster.length === 0) {
+      throw new HttpError(
+        "Checklist administrasi belum diatur. Hubungi Admin LPPM untuk mengisi Master Referensi jenis CHECKLIST_ADMINISTRASI.",
+        400,
+      );
+    }
+
+    if (belumLengkap.length > 0) {
+      throw new HttpError(
+        `Semua item checklist wajib dicentang sebelum Lolos Administrasi. Belum: ${belumLengkap
+          .map((item) => item.label)
+          .join("; ")}.`,
+        400,
+      );
+    }
+  }
+
+  if (input.keputusan !== "LOLOS" && !catatan) {
+    throw new HttpError(
+      input.keputusan === "REVISI"
+        ? "Catatan wajib diisi saat meminta revisi administrasi."
+        : "Alasan wajib diisi saat menolak proposal.",
+      400,
+    );
+  }
+
+  const snapshot = checklistMaster.map((item) => ({
+    kode: item.kode,
+    label: item.label,
+    checked: Boolean(checkedMap.get(item.kode)),
+  }));
+
+  const newStatus =
+    input.keputusan === "LOLOS"
+      ? ProposalStatus.ADMIN_VERIFIED
+      : input.keputusan === "REVISI"
+        ? ProposalStatus.ADMIN_REVISION
+        : ProposalStatus.REJECTED;
+
+  const decision =
+    input.keputusan === "LOLOS"
+      ? AdminVerificationDecision.LOLOS
+      : input.keputusan === "REVISI"
+        ? AdminVerificationDecision.REVISI
+        : AdminVerificationDecision.TOLAK;
+
+  const notif =
+    input.keputusan === "LOLOS"
+      ? {
+          title: "Proposal Lolos Verifikasi Administrasi",
+          message: `Proposal "${proposal.title}" lolos verifikasi administrasi LPPM dan akan diteruskan ke tahap penugasan reviewer.`,
+        }
+      : input.keputusan === "REVISI"
+        ? {
+            title: "Revisi Administrasi",
+            message: `Proposal "${proposal.title}" perlu perbaikan administrasi. Catatan verifikator: ${catatan}`,
+          }
+        : {
+            title: "Proposal Ditolak (Administrasi)",
+            message: `Mohon maaf, proposal "${proposal.title}" tidak lolos verifikasi administrasi. Alasan: ${catatan}`,
+          };
+
+  const updated = await prisma.$transaction(async (tx) => {
+    const result = await tx.proposals.update({
+      where: { id: proposalId },
+      data: {
+        status: newStatus,
+        admin_verifier_id: null,
+        admin_claimed_at: null,
+      },
+    });
+
+    await tx.proposalAdminVerifications.create({
+      data: {
+        proposal_id: proposalId,
+        verifier_id: userId,
+        decision,
+        catatan: catatan || null,
+        checklist: snapshot as Prisma.InputJsonValue,
+      },
+    });
+
+    await tx.notifications.create({
+      data: {
+        user_id: proposal.lead_researcher_id,
+        title: notif.title,
+        message: notif.message,
+      },
+    });
+
+    return result;
+  });
+
+  void recordAudit({
+    userId,
+    modul: "Proposal",
+    aksi: "VERIFY_ADMIN",
+    objek: `Verifikasi administrasi proposal: ${proposal.title} (${input.keputusan})`,
+    objekId: proposalId,
+    status: "SUCCESS",
+  });
+
+  const pesan =
+    input.keputusan === "LOLOS"
+      ? "Proposal lolos verifikasi administrasi."
+      : input.keputusan === "REVISI"
+        ? "Proposal dikembalikan untuk revisi administrasi."
+        : "Proposal ditolak pada tahap administrasi.";
+
+  return {
+    message: pesan,
+    data: {
+      proposal: updated,
+      decision,
+      checklist: snapshot,
+    },
+  };
+};
+
+/** Tarik kembali proposal yang sudah ADMIN_VERIFIED — hanya Ketua LPPM. */
+export const revokeAdminVerification = async (
+  proposalId: number,
+  userId: number,
+  catatan?: string,
+) => {
+  const proposal = await prisma.proposals.findUnique({
+    where: { id: proposalId },
+    select: {
+      id: true,
+      title: true,
+      status: true,
+      lead_researcher_id: true,
+    },
+  });
+
+  if (!proposal) {
+    throw new HttpError("Proposal tidak ditemukan.", 404);
+  }
+
+  if (proposal.status !== ProposalStatus.ADMIN_VERIFIED) {
+    throw new HttpError(
+      `Penarikan hanya berlaku untuk proposal berstatus ADMIN_VERIFIED (sekarang: ${proposal.status}).`,
+      409,
+    );
+  }
+
+  const alasan = catatan?.trim() ?? "";
+
+  const updated = await prisma.$transaction(async (tx) => {
+    const result = await tx.proposals.update({
+      where: { id: proposalId },
+      data: {
+        status: ProposalStatus.SUBMITTED,
+        admin_verifier_id: null,
+        admin_claimed_at: null,
+      },
+    });
+
+    await tx.proposalAdminVerifications.create({
+      data: {
+        proposal_id: proposalId,
+        verifier_id: userId,
+        decision: AdminVerificationDecision.TARIK_KEMBALI,
+        catatan: alasan || null,
+      },
+    });
+
+    await tx.notifications.create({
+      data: {
+        user_id: proposal.lead_researcher_id,
+        title: "Verifikasi Administrasi Ditarik",
+        message: `Verifikasi administrasi proposal "${proposal.title}" ditarik kembali oleh Ketua LPPM dan akan diperiksa ulang.${alasan ? ` Catatan: ${alasan}` : ""}`,
+      },
+    });
+
+    return result;
+  });
+
+  void recordAudit({
+    userId,
+    modul: "Proposal",
+    aksi: "REVOKE",
+    objek: `Tarik verifikasi administrasi proposal: ${proposal.title}`,
+    objekId: proposalId,
+    status: "SUCCESS",
+  });
+
+  return {
+    message:
+      "Verifikasi administrasi ditarik. Proposal kembali ke antrean verifikasi.",
+    data: updated,
+  };
 };
