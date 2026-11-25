@@ -8,6 +8,7 @@ import { handleProposalUploadError, uploadMiddleware } from "../config/storage";
 import {
   assignReviewersController,
   assignReviewerManuallyController,
+  reassignReviewerManuallyController,
   createProposalController,
   deleteProposalController,
   editProposalController,
@@ -202,12 +203,21 @@ router.get(
 );
 
 // Admin/Staff LPPM: Assign reviewer MANUAL untuk 1 proposal.
-// Hanya berlaku selama BELUM terplot — setelah terplot bersifat final.
+// Hanya berlaku selama BELUM terplot — setelah terplot gunakan PUT.
 router.post(
   "/proposals/:id/reviewer",
   authMiddleware,
   requirePermission(PERMISSIONS.PROPOSAL_PLOTTING),
   assignReviewerManuallyController,
+);
+
+// Admin/Staff LPPM: Ubah (reassign) reviewer pada proposal SUDAH terplot.
+// Konflik kepentingan tetap diblokir; lintas fakultas diizinkan.
+router.put(
+  "/proposals/:id/reviewer",
+  authMiddleware,
+  requirePermission(PERMISSIONS.PROPOSAL_PLOTTING),
+  reassignReviewerManuallyController,
 );
 
 router.put(

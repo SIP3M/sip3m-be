@@ -315,17 +315,28 @@ export const assignReviewerSchema = z.object({
   proposalIds: z
     .array(z.number({ message: "Setiap ID proposal harus berupa angka." }))
     .min(1, "Minimal memilih 1 proposal untuk diproses."),
+  // Opsional — bila diisi, SEMUA proposal yang valid ditugaskan ke reviewer
+  // ini (plotting massal manual). Tanpa field ini → auto per proposal.
+  reviewerId: z
+    .number({ message: "reviewerId harus berupa angka." })
+    .int("reviewerId harus berupa bilangan bulat.")
+    .positive("reviewerId harus lebih besar dari 0.")
+    .optional(),
 });
 
 // Assign reviewer MANUAL per proposal (plotting manual oleh admin).
-// Berlaku hanya selama proposal BELUM terplot — setelah ada reviewer,
-// plotting bersifat final dan ditolak di service (409).
+// Berlaku selama proposal BELUM terplot — untuk mengganti reviewer yang
+// sudah terplot gunakan PUT /proposals/:id/reviewer (reassign).
 export const assignManualReviewerSchema = z.object({
   reviewerId: z
     .number({ message: "reviewerId harus berupa angka." })
     .int("reviewerId harus berupa bilangan bulat.")
     .positive("reviewerId harus lebih besar dari 0."),
 });
+
+// Ubah reviewer pada proposal yang SUDAH terplot (reassign) — request
+// body sama dengan assign manual.
+export const reassignReviewerSchema = assignManualReviewerSchema;
 
 export type AssignManualReviewerInput = z.infer<
   typeof assignManualReviewerSchema

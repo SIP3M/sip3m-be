@@ -11,6 +11,7 @@ import {
   updateProposalStatusSchema,
   assignReviewerSchema,
   assignManualReviewerSchema,
+  reassignReviewerSchema,
   getAllProposalsQuerySchema,
   adminVerificationQueueQuerySchema,
   adminVerificationDecisionSchema,
@@ -33,6 +34,7 @@ import {
   updateProposalStatus,
   autoAssignReviewerService,
   assignReviewerManualService,
+  reassignReviewerService,
   getReviewerCandidatesService,
   getAdminVerificationQueue,
   getAdminVerificationChecklist,
@@ -465,8 +467,12 @@ export const assignReviewersController = async (
     // Tangkap dan validasi body request yang berisi array proposalIds
     const validatedData = assignReviewerSchema.parse(req.body);
 
-    // Panggil Service Bulk Auto-Assign
-    const result = await autoAssignReviewerService(validatedData.proposalIds);
+    // Panggil Service Bulk Assign — otomatis bila reviewerId tidak diisi,
+    // ke reviewer pilihan admin bila diisi (plotting massal manual).
+    const result = await autoAssignReviewerService(
+      validatedData.proposalIds,
+      validatedData.reviewerId,
+    );
 
     return res.status(200).json(result);
   } catch (error) {
@@ -528,7 +534,7 @@ export const getReviewerCandidatesController = async (
 /**
  * POST /proposals/:id/reviewer
  * Assign reviewer MANUAL — hanya untuk proposal yang BELUM terplot;
- * setelah terplot, plotting bersifat final dan ditolak dengan 409.
+ * bila sudah terplot ditolak dengan 409 (gunakan PUT untuk reassign).
  */
 export const assignReviewerManuallyController = async (
   req: AuthenticatedRequest,
@@ -569,6 +575,54 @@ export const assignReviewerManuallyController = async (
     console.error("[ASSIGN_REVIEWER_MANUAL_ERROR]", error);
     return res.status(500).json({
       message: "Terjadi kesalahan pada server saat menugaskan reviewer.",
+    });
+  }
+};
+
+/**
+ * PUT /proposals/:id/reviewer
+ * Ubah (reassign) reviewer pada proposal yang SUDAH terplot.
+ * Konflik kepentingan tetap diblokir; tanpa notifikasi in-app.
+ */
+export const reassignReviewerManuallyController = async (
+  req: AuthenticatedRequest,
+  res: Response,
+): Promise<Response> => {
+  try {
+    if (!req.user?.userId) {
+      throw new HttpError("Unauthorized", 401);
+    }
+
+    const proposalId = Number(req.params.id);
+    if (isNaN(proposalId)) {
+      return res.status(400).json({ message: "ID proposal tidak valid." });
+    }
+
+    const validatedData = reassignReviewerSchema.parse(req.body);
+
+    const result = await reassignReviewerService(
+      proposalId,
+      validatedData.reviewerId,
+    );
+
+    return res.status(200).json(result);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      const zodError = error as z.ZodError;
+
+      return res.status(400).json({
+        message: "Validasi gagal.",
+        errors: zodError.issues,
+      });
+    }
+
+    if (error instanceof HttpError) {
+      return res.status(error.statusCode).json({ message: error.message });
+    }
+
+    console.error("[REASSIGN_REVIEWER_ERROR]", error);
+    return res.status(500).json({
+      message: "Terjadi kesalahan pada server saat mengubah penugasan reviewer.",
     });
   }
 };
